@@ -1,22 +1,24 @@
-# 마지막 갱신: 2026-11-18 15:23 / 작성: Claude Code
+# 마지막 갱신: 2026-11-18 15:50 / 작성: Claude Code
 
 ## 지금 하던 것
-- 1일차 [C] 작업 모두 끝. 마지막: spec 예시를 실제 Tool로 따라가기 → spec v1.6
-  - 결과: django·requests 둘 다 Python 3.8 최신(4.2.30·2.32.4)에서도 취약점 남음 → Python 3.10 필요 → 3.10은 종료(2026-10-01) → 3.11 확정 (재계획 2회)
-  - 기록: docs/planning-check.md "설계 시험", 스크립트 scripts/walk_example.py
+- 2일차 [C] planner 순수 함수 끝 (전체 테스트 155개 통과, spec 예시 끝까지 재현)
+  - app/agent/planner/versions.py: is_final·python_allows·pick_latest·is_major_change (packaging)
+  - python_upgrade.py: plan_python_upgrade(현재 Python, 위반 패키지 versions, check_vulns, check_eol) → UpgradePlan(status·python·targets·attempts)
+    check_vulns(name, version)->건수|None, check_eol("3.11")->{eol_date, is_eol}|None 를 넘겨받음. 같은 조회는 캐시
+  - items.py: PackageResult → build_items → items / safe / unchecked / held
+  - priority.py: sort_items(items, today) / rounds.py: split_rounds(items, N, 첫 날짜, 간격)
 
 ## 다음에 할 것
-- 2일차 [C] 목표 버전 고르기 + 우선순위 정렬 + 회차 나누기 (순수 함수 + 테스트)
-  - spec v1.6 규칙: 정식 버전만, 필요한 가장 낮은 Python 구하기, 재계획 1회 = Python 줄기 하나 get_eol 확인, Python 항목 합치기, 순서 제약이 우선순위보다 먼저
-  - 버전 비교·정식 버전 판별·requires_python 판정은 packaging 사용 (packaging==26.3 추가함)
+- 2일차 [C] LangGraph 흐름 (F3005~F3009, F3011) — docs/architecture.md 3절 노드 순서
+  - judge 노드가 PackageResult를 만들고, replan 노드가 plan_python_upgrade에 레지스트리를 감싼 함수를 넘김
+  - "호환 제약 위반 → Python 업그레이드 재계획 테스트(상한 3회)"는 planner 단위로는 이미 있음. 그래프 단위 테스트를 그 작업에서 추가
 
 ## 주의
+- spec v1.8: 확인 못 함 목록, os 항목, flags. Python 항목은 항상 HIGH (전제 조건)
 - 구조는 docs/architecture.md (v1): web/ + app/api·agent·events·db. /chat은 ndjson 스트리밍, Agent는 작업 스레드(동기), 병렬 4개
-- FastAPI: app/main.py 뼈대(/health만). 실습 원본은 docs/course/1일차_FastAPI/(참고용, 영화 예제·/api/plans). 라우터는 app/api/에 추가 예정
-- scripts/walk_example.py의 버전 계산은 임시(>=3.N 위주). 실제 판정 코드로 쓰지 말 것
 - OSV는 없는 패키지도 200 {} → 0건. endoflife.date는 없는 제품·줄기 모두 같은 404
-- 세션 캐시·동시 호출 수 제한은 아직 없음 (2~3일차 실행 흐름에서)
+- 세션 캐시·동시 호출 수 제한은 아직 없음 (runner.py에서)
 - LLM: GMS gpt-6-luna, Responses API, temperature 생략 (app/llm.py)
-- 되묻기 프롬프트는 2일차에 (spec 밖 정보까지 묻는 경향)
+- 되묻기 프롬프트: spec 밖 정보까지 묻는 경향 → 빠진 것만 묻게
 - docs/course/는 대외비 (.gitignore). requirements.txt 버전 고정 (packaging만 수업 목록 밖: docs/decisions/2026-11-18-packaging.md)
 - .venv는 Python 3.14.7
