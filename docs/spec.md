@@ -1,4 +1,6 @@
-# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.7 · 2026-11-18)
+# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.8 · 2026-11-18)
+
+> v1.7 → v1.8 (2026-11-18): "확인 못 함" 패키지는 회차에서 빼고 따로 표시, 항목 kind에 os 추가, flags, Python 줄기 판정 주의.
 
 > v1.6 → v1.7 (2026-11-18): packaging 추가 확정.
 
@@ -171,6 +173,9 @@ Tool이 아니라 실행 흐름이 직접 한다 (`app/parsing/requirements.py`)
 
 ### 우선순위
 CRITICAL > HIGH(지원 종료된 OS·Python 포함) > MODERATE > LOW > 심각도 미상 (패키지의 등급 = 가진 취약점 중 가장 높은 등급) → 같으면 지원 종료까지 남은 일수가 적은 순. 취약점 0건 항목은 계획에 넣지 않고 "안전" 목록으로.
+- Tool 실패로 취약점·버전을 확인 못 한 패키지는 회차에 넣지 않고 **"확인 못 함" 목록**으로 따로 보여준다 (등급을 모르므로 순서를 정할 근거가 없음).
+- 지원 중인 OS·Python은 항목이 아니다 (재계획으로 Python 업그레이드가 필요할 때만 Python 항목이 생김).
+- Python 버전은 줄기("3.8")로 받으므로 3.8.0으로 보고 requires_python을 판정한다. `>=3.8.1`처럼 패치 단위 조건은 제외될 수 있다 (드묾).
 
 ## LLM이 하는 일 / 코드가 하는 일
 | LLM | 코드 |
@@ -205,7 +210,7 @@ CRITICAL > HIGH(지원 종료된 OS·Python 포함) > MODERATE > LOW > 심각도
 | plans | id, session_id, round_no, date, window_start, window_end, items_json, created_at, updated_at |
 | events | id, session_id, seq, type, payload_json, created_at |
 
-items_json 항목: name, current_version, target_version, severity, eol_date, reason, kind(package / python_upgrade)
+items_json 항목: name, current_version, target_version, severity, eol_date, reason, kind(package / python_upgrade / os), flags(큰 변경·호환 미확인·종료 이후 처리)
 
 ## 백엔드 API (FastAPI)
 | 메서드·경로 | 하는 일 |
