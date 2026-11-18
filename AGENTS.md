@@ -10,7 +10,7 @@ Python 3.10+, FastAPI, SQLite, LangGraph + langchain-openai, 화면은 HTML/CSS/
 ## 규칙 (이 프로젝트에서만 해당되는 것)
 - LLM은 Tool의 종류와 순서만 계획한다. 패키지마다 Tool을 반복 호출하는 건 코드가 펼친다.
 - 버전 비교, requires_python 판정, 우선순위 정렬, 회차 나누기는 코드로 계산한다. LLM에게 맡기지 않는다.
-- 외부 API는 `app/tools/` 안에서만 호출한다. 모든 Tool은 예외를 던지지 않고 `{ok:false, error:{code, message}}`로 반환한다.
+- 데이터 API(endoflife.date, OSV, PyPI)는 `app/tools/` 안에서만 호출한다. LLM 호출은 `app/llm.py`에서만 만든다. 모든 Tool은 예외를 던지지 않고 `{ok:false, error:{code, message}}`로 반환한다.
 - API로 확인하지 못한 값(심각도, 지원 종료일 등)을 지어내지 않는다. 없으면 "미상" / "확인 못 함"으로 둔다.
 - 테스트는 네트워크를 쓰지 않는다. 외부 응답은 `tests/fixtures/`의 저장본을 쓴다.
 - requirements.txt의 라이브러리 버전은 수업 명세서 버전으로 고정한다. 새 라이브러리를 추가하기 전에 먼저 물어본다.
