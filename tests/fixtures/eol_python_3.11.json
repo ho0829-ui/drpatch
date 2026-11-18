@@ -1,0 +1,29 @@
+{
+  "status": 200,
+  "body": {
+    "schema_version": "1.2.1",
+    "generated_at": "2026-11-18T01:46:12+00:00",
+    "result": {
+      "name": "3.11",
+      "codename": null,
+      "label": "3.11",
+      "releaseDate": "2022-10-24",
+      "isLts": false,
+      "ltsFrom": null,
+      "isEoas": true,
+      "eoasFrom": "2024-04-01",
+      "isEol": false,
+      "eolFrom": "2027-10-31",
+      "isMaintained": true,
+      "latest": {
+        "name": "3.11.18",
+        "date": "2026-10-25",
+        "link": "https://www.python.org/downloads/release/python-31118/"
+      },
+      "custom": {
+        "pep": "PEP-0664"
+      }
+    }
+  },
+  "text": null
+}

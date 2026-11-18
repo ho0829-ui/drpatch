@@ -71,7 +71,7 @@ def _package_item(pkg: PackageResult, target: Candidate, needs_upgrade: bool, py
         flags.append(FLAG_COMPAT_UNKNOWN)
     reason = f"현재 버전 취약점 최고 {pkg.severity}"
     if needs_upgrade:
-        reason += f", Python {python} 이상에서만 안전한 버전 설치 가능"
+        reason += f", Python {python}로 올린 뒤 설치"
     return Item("package", pkg.name, pkg.current_version, target.version, pkg.severity,
                 None, reason, tuple(flags), needs_upgrade)
 

@@ -1,4 +1,4 @@
-"""결과 없음·없는 대상의 실제 응답을 한 번 받아 tests/fixtures/에 저장한다 (요구사항 2.7 Tool 설계 확인).
+"""결과 없음·없는 대상·재계획 경로의 실제 응답을 한 번 받아 tests/fixtures/에 저장한다 (요구사항 2.7 Tool 설계 확인).
 
     .venv/bin/python scripts/capture_failure_fixtures.py
 
@@ -26,6 +26,14 @@ CASES = [
      {"package": {"name": "no-such-package-xyz-123", "ecosystem": "PyPI"}, "version": "1.0"}),
     ("pypi_no_package", "GET", "https://pypi.org/pypi/no-such-package-xyz-123/json", None),
     ("pypi_requests_all", "GET", "https://pypi.org/pypi/requests/json", None),
+    ("eol_python_3.10", "GET", "https://endoflife.date/api/v1/products/python/releases/3.10", None),
+    ("eol_python_3.11", "GET", "https://endoflife.date/api/v1/products/python/releases/3.11", None),
+    ("osv_django_4.2.30", "POST", "https://api.osv.dev/v1/query",
+     {"package": {"name": "django", "ecosystem": "PyPI"}, "version": "4.2.30"}),
+    ("osv_django_5.2.19", "POST", "https://api.osv.dev/v1/query",
+     {"package": {"name": "django", "ecosystem": "PyPI"}, "version": "5.2.19"}),
+    ("osv_requests_2.32.4", "POST", "https://api.osv.dev/v1/query",
+     {"package": {"name": "requests", "ecosystem": "PyPI"}, "version": "2.32.4"}),
 ]
 
 for name, method, url, body in CASES:

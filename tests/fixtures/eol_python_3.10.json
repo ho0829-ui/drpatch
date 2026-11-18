@@ -1,0 +1,29 @@
+{
+  "status": 200,
+  "body": {
+    "schema_version": "1.2.1",
+    "generated_at": "2026-11-18T01:46:12+00:00",
+    "result": {
+      "name": "3.10",
+      "codename": null,
+      "label": "3.10",
+      "releaseDate": "2021-10-04",
+      "isLts": false,
+      "ltsFrom": null,
+      "isEoas": true,
+      "eoasFrom": "2023-04-05",
+      "isEol": true,
+      "eolFrom": "2026-10-01",
+      "isMaintained": false,
+      "latest": {
+        "name": "3.10.22",
+        "date": "2026-10-01",
+        "link": "https://www.python.org/downloads/release/python-31022/"
+      },
+      "custom": {
+        "pep": "PEP-0619"
+      }
+    }
+  },
+  "text": null
+}
