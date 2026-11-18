@@ -4,7 +4,7 @@
 
 ## 0일차 (오늘, 수업 전 준비)
 - [x] [나] Mac mini에서 `python check_apis.py` 실행 → spec v1.0 확정
-- [ ] [G·Flash] 세 API 이용 조건 조사 → docs/research/api-terms.md (agy-guide ①)
+- [x] [G·Flash] 세 API 이용 조건 조사 → docs/research/api-terms.md (agy-guide ①)
 - [ ] [나] `packaging` 라이브러리 추가 가능한지 강사님께 확인
 - [x] [C] 저장소 만들기: AGENTS.md, CLAUDE.md(`@AGENTS.md`), docs/spec.md, docs/tasks.md, docs/HANDOFF.md
 - [x] [C] Claude Code 권한 설정: `rm -rf`, `git push --force` 차단
@@ -12,7 +12,7 @@
 ## 1일차 — 16시 게이트 통과가 최우선
 - [ ] [나] 오전 FastAPI 실습 결과(app 폴더)를 저장소에 넣기
 - [x] [C] LLM 한 번 호출 + Tool 명세를 넘겼을 때 Tool 호출을 고르는지 확인 (명세서 2.7 도구 연결 확인)
-- [ ] [C] 기획 검증 기록 작성: 대표 요청별 "LLM만 답하면 틀리는 점", API 출처·이용 조건 (docs/planning-check.md)
+- [x] [C] 기획 검증 기록 작성: 대표 요청별 "LLM만 답하면 틀리는 점", API 출처·이용 조건 (docs/planning-check.md)
 - [ ] **16:00 게이트: 세 API 호출 + LLM 호출 확인 완료**
 - [ ] [C] Tool 공통 응답 형식 + 레지스트리 (F3001)
 - [ ] [C] get_eol / get_vulns / get_package_versions 구현 + fixture 테스트 (F3002~F3004)

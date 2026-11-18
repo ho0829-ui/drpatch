@@ -1,4 +1,7 @@
-# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.1 · 2026-11-18)
+# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.2 · 2026-11-18)
+
+> v1.1 → v1.2 (2026-11-18): 세 API 이용 조건 확정(docs/research/api-terms.md), 동시 호출 수 제한·출처 표기 추가.
+
 
 > v1.0 → v1.1 (2026-11-18): 대표 요청 표를 실측(LLM만 답한 결과) 근거로 고침. "Ubuntu 20.04 언제까지?"를 "지금 뭐부터?"로 교체.
 
@@ -52,12 +55,14 @@
 ## 외부 API (3종)
 | API | 쓰는 정보 | 키 | 이용 조건 |
 |---|---|---|---|
-| endoflife.date | `GET /api/v1/products/{product}/releases/{cycle}` → eolFrom(일반 지원 종료), eoesFrom(ESM 종료), isEol, isLts, latest | 불필요 | 베타라 형식이 바뀔 수 있음. 출처 표기 |
-| OSV.dev | `POST /v1/query` → 취약점, 등급, 수정 버전, aliases | 불필요 | 문서상 현재 제한 없음 |
-| PyPI JSON API | `GET /pypi/{name}/json` 한 번 → 최신 버전, 버전별 requires_python·yanked | 불필요 | 이용 정책 `[확인 필요]` |
+| endoflife.date | `GET /api/v1/products/{product}/releases/{cycle}` → eolFrom(일반 지원 종료), eoesFrom(ESM 종료), isEol, isLts, latest | 불필요 | 베타라 형식이 바뀔 수 있음. 수치 한도 없음, 429(Retry-After) 응답 있음. 출처 표기 |
+| OSV.dev | `POST /v1/query` → 취약점, 등급, 수정 버전, aliases | 불필요 | 현재 한도 없음. 데이터는 원본 라이선스(PyPI·GitHub 권고 CC-BY 4.0) → 출처 표기 |
+| PyPI JSON API | `GET /pypi/{name}/json` 한 번 → 최신 버전, 버전별 requires_python·yanked | 불필요 | 엣지 한도 없음. 몇 분에 수천 건 자제·직렬 권장, 과도한 자동 요청은 정지 가능(ToS·AUP). 고유 User-Agent 설정 |
+
+이용 조건 상세·출처: `docs/research/api-terms.md` (2026-11-18 확인). 화면 하단에 세 API 출처를 표기한다.
 
 실측(2026-11-18): 호출당 0.1~0.7초. django OSV 응답 297KB(75건), PyPI 전체 616KB.
-→ 패키지 20개를 순서대로 부르면 30초 안팎이라 **병렬 호출이 필수**.
+→ 패키지 20개를 순서대로 부르면 30초 안팎이라 **병렬 호출이 필수**. 단, PyPI 직렬 권장을 고려해 **동시 호출 수를 작게 제한**하고(값은 3일차 측정 때 결정) 세션 캐시로 같은 호출을 반복하지 않는다.
 
 ## Tool 명세 (모두 `{ok, data}` 또는 `{ok:false, error:{code, message}}`)
 | Tool | 언제 쓰나 (Agent에게 주는 설명) | 입력 | data | 실패 코드 |
@@ -165,7 +170,7 @@ items_json 항목: name, current_version, target_version, severity, eol_date, re
 - [x] 세 API 실제 호출 (2026-11-18, 모두 200)
 - [x] PyPI 버전별 requires_python 있음 (django 4.2 `>=3.8`, 5.0 `>=3.10`)
 - [x] OSV 중복 제거 후 등급 없음 0건 (django 75→43건, requests 2.19.0 10→5건, 2.32.3 4→2건). "심각도 미상" 칸은 대비용으로만 유지
-- [ ] PyPI 이용 정책
+- [x] PyPI 이용 정책 (ToS API 조항·AUP 확인, 2026-11-18 → 외부 API 표)
 - [ ] `packaging` 라이브러리 추가 가능 여부
 
 ## 예시 한 건 따라가기
