@@ -250,12 +250,15 @@ def desk():
     objs += [mug, handle, tea]
     # 화분 (앞쪽 왼쪽 모서리): 다육이 잎을 겹겹이
     px, py = -8.0, -3.6
-    pot = C.lathe("Pot", [(0.0, 0.0), (0.45, 0.0), (0.58, 0.8), (0.62, 0.86), (0.62, 0.95), (0.0, 0.95)], m["white"])
+    # 화분은 속이 빈 그릇: 테두리(0.95) 안쪽으로 내려가 바닥(0.84)에서 막힘 → 흙이 그 위(0.86~0.91)에 따로 놓여 면이 겹치지 않는다
+    pot = C.lathe("Pot", [(0.0, 0.0), (0.45, 0.0), (0.58, 0.8), (0.62, 0.86), (0.62, 0.95), (0.56, 0.95), (0.53, 0.84), (0.0, 0.84)], m["white"])
     pot.location = (px, py, 0)
-    band = C.lathe("PotBand", [(0.6, 0.6), (0.625, 0.6), (0.625, 0.75), (0.6, 0.75)], m["teal"])
+    band = C.lathe("PotBand", [(0.54, 0.6), (0.565, 0.6), (0.588, 0.75), (0.563, 0.75)], m["teal"])  # 비스듬한 화분 벽을 따라 붙임
     band.location = (px, py, 0)
-    soil = C.cylinder("Soil", (px, py, 0.93), 0.56, 0.04, C.material("soil", "#4E5B55", rough=0.9, coat=0.0))
-    objs += [pot, band, soil]
+    soil_m = C.material("soil", "#4A3F36", rough=0.95, coat=0.0)
+    soil = C.cylinder("Soil", (px, py, 0.885), 0.535, 0.05, soil_m)
+    crumbs = [C.sphere(f"Crumb{i}", (px + 0.38 * math.cos(i * 2.4), py + 0.38 * math.sin(i * 2.4), 0.915), (0.05, 0.05, 0.025), soil_m, segs=10, rings=6) for i in range(9)]
+    objs += [pot, band, soil, C.join(crumbs, "SoilCrumbs")]
     leaves = []
     for ring, (count, length, width, tilt, col) in enumerate(((8, 0.75, 0.26, 0.55, "#4F9E7E"), (6, 0.6, 0.24, 0.85, "#69B592"), (4, 0.42, 0.2, 1.15, "#8ACBA8"))):
         lm = C.material(f"leaf{ring}", col, rough=0.45, coat=0.45, sheen=0.3)
@@ -263,7 +266,7 @@ def desk():
             a = k * 2 * PI / count + ring * 0.4
             lf = C.leaf(f"Leaf{ring}_{k}", length, width, 0.12, lm)
             # 밑동을 링마다 높이고 바깥으로 벌려, 잎끼리 같은 자리에서 겹쳐 깜빡이지 않게
-            lf.location = (px + 0.06 * (2 - ring) * math.cos(a), py + 0.06 * (2 - ring) * math.sin(a), 0.97 + ring * 0.09)
+            lf.location = (px + 0.06 * (2 - ring) * math.cos(a), py + 0.06 * (2 - ring) * math.sin(a), 0.93 + ring * 0.09)
             lf.rotation_euler = (tilt * 0.6, 0, a)
             leaves.append(lf)
     objs += leaves

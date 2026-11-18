@@ -761,6 +761,7 @@ async function init() {
     camera.position.copy(TARGET).add(dir);
     camera.position.x += cmx * 1.4; camera.position.y -= cmy * 0.6;
     camera.lookAt(TARGET);
+    if (window.__freeze) { camera.position.copy(window.__freeze.pos); camera.lookAt(window.__freeze.at); }
 
     if (!reduced) {
       const breathe = Math.sin(t * 1.8);
@@ -791,7 +792,7 @@ async function init() {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.__dbg = { renderer, scene, ao: () => useAO }; // 성능 확인용 (콘솔)
+  window.__dbg = { renderer, scene, camera, ao: () => useAO, freeze: (on) => (window.__freeze = on) }; // 성능 확인용 (콘솔)
 }
 </script>
 </body>
