@@ -17,7 +17,8 @@
 - 디자인 2차 (인터뷰): 팔레트 '병원 청록'(흰 가구·민트 벽·청록·코랄 강조, 코랄은 소품에만), 3D는 Blender 스크립트로 .glb
   - design/blender/common.py(팔레트·재질·도형) + 소품별 스크립트 → prototype/drpatch-desk/models/*.glb, 미리보기 design/blender/previews/
   - 실행: blender -b --factory-startup -P design/blender/doctor.py (Blender 5.3)
-  - 닥터 패치 1차 완료 → 사용자 확인 후 수액·약병·블리스터·책상 소품, 그다음 로고. docs/design.md 팔레트 갱신은 확정 후
+  - 완료: 닥터 패치(나이 든 박사님) + 소품 7종(capsule·blister·iv·bottle·chart·stamp·desk) → 시제품이 .glb 사용, 팔레트 병원 청록. docs/design.md 갱신함
+  - 다음: 사용자 피드백 → 로고(캐릭터 기반) → 명세에 이름·말투 반영 → 하이드로젠용 작업 쪼개기
 - 화면은 Vite + Vue (frontend/, 빌드 결과를 FastAPI가 제공) + Three.js 책상 장면
 - (선택) GoogleCalendar 구현체: app/calendar/google.py — 같은 인터페이스, OAuth 키는 사용자가 준비
 

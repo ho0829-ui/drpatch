@@ -298,7 +298,7 @@ def export_glb(filename):
     return path
 
 
-def render_preview(filename, cam_loc, target, lens=55, size=(900, 900)):
+def render_preview(filename, cam_loc, target, lens=55, size=(900, 900), floor_z=0.0, fov=None):
     """미리보기 이미지: 민트 바탕 + 부드러운 조명. 내보내기가 끝난 뒤에 호출한다 (바닥·조명은 모델에 안 들어감)."""
     os.makedirs(PREVIEWS, exist_ok=True)
     scene = bpy.context.scene
@@ -316,7 +316,7 @@ def render_preview(filename, cam_loc, target, lens=55, size=(900, 900)):
     bg.inputs[0].default_value = srgb(PALETTE["mint"])
     bg.inputs[1].default_value = 0.55
 
-    bpy.ops.mesh.primitive_plane_add(size=40, location=(0, 0, 0))
+    bpy.ops.mesh.primitive_plane_add(size=80, location=(0, 0, floor_z))
     _active().data.materials.append(material("floor", "#CDE9E1", rough=0.8, coat=0.0, sheen=0.0))
 
     def light(name, loc, energy, size_, color="#FFFFFF"):
@@ -333,6 +333,10 @@ def render_preview(filename, cam_loc, target, lens=55, size=(900, 900)):
 
     cd = bpy.data.cameras.new("cam")
     cd.lens = lens
+    if fov:
+        cd.sensor_fit = "VERTICAL"
+        cd.lens_unit = "FOV"
+        cd.angle = math.radians(fov)
     cam = _link(bpy.data.objects.new("cam", cd))
     cam.location = cam_loc
     cam.rotation_euler = (Vector(target) - Vector(cam_loc)).to_track_quat("-Z", "Y").to_euler()
@@ -340,3 +344,41 @@ def render_preview(filename, cam_loc, target, lens=55, size=(900, 900)):
     scene.render.filepath = os.path.join(PREVIEWS, filename)
     bpy.ops.render.render(write_still=True)
     print("RENDERED", scene.render.filepath)
+
+
+# ── 여러 물체 다루기 ─────────────────────────────────────
+def select_only(objs):
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
+
+
+def apply_rot(objs, rot):
+    """회전을 메시에 굳힌다 (내보낸 뒤 코드가 회전을 0부터 쓰도록)."""
+    for o in objs:
+        o.rotation_euler = rot
+    select_only(objs)
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+
+
+def join(objs, name):
+    """작은 조각 여러 개(점선, 눈금, 홈)를 한 메시로 합친다 (모디파이어는 먼저 적용)."""
+    for o in objs:
+        select_only([o])
+        for m in list(o.modifiers):
+            bpy.ops.object.modifier_apply(modifier=m.name)
+    select_only(objs)
+    bpy.ops.object.join()
+    ob = bpy.context.active_object
+    ob.name = name
+    return ob
+
+
+def capsule_profile(r, half):
+    """세운 캡슐 단면 (아래 극점 → 위 극점)."""
+    return hemi(r, -half, up=False) + hemi(r, half, up=True)
+
+
+def roots():
+    return [o for o in bpy.context.scene.objects if o.parent is None]
