@@ -55,9 +55,6 @@ bed.append(C.cylinder("RollCore", (0, -L / 2 + 0.2, H - 0.5), 0.25, W - 1.0, C.m
 for s in (-1, 1):
     bed.append(C.rbox(f"RollArm{s}", (s * (W / 2 - 0.4), -L / 2 + 0.5, H - 1.0), (0.2, 1.0, 1.8), steel, 0.06))
 group("ExamBed", bed, (20.6, 1.6, FLOOR))
-step = [C.rbox("StepLow", (0, 0, 1.1), (4.2, 3.2, 2.2), white, 0.15), C.rbox("StepLowTread", (0, 0, 2.24), (4.0, 3.0, 0.1), deep, 0.04),
-        C.rbox("StepHigh", (0.9, 0, 3.3), (2.4, 3.2, 2.2), white, 0.15), C.rbox("StepHighTread", (0.9, 0, 4.44), (2.2, 3.0, 0.1), deep, 0.04)]
-group("Step", step, (14.4, 0.2, FLOOR))
 gas = [C.rbox("GasRail", (0, 0, 0), (8.0, 0.4, 1.6), white, 0.12), C.rbox("GasStripe", (0, -0.21, 0.55), (8.0, 0.02, 0.18), teal, 0.02)]
 for i, col in enumerate(("#3E9E98", "#F8FBFA", "#F5C518")):
     gas.append(C.cylinder(f"Outlet{i}", (-2.4 + i * 2.4, -0.25, -0.15), 0.45, 0.2, C.material(f"outlet{i}", col, rough=0.4, coat=0.5), rot=FRONT, bevel=0.05))
@@ -69,7 +66,7 @@ lamp = [C.rbox("LampWall", (0, 0, 0), (1.0, 0.3, 1.6), white, 0.1),
 head = C.lathe("ExamLampHead", [(0.0, 0.5), (0.4, 0.5), (1.2, 0.0), (1.25, -0.15), (0.0, -0.1)], white, segs=48)
 head.location = (0, -5.8, -0.9)
 lamp += [head, C.cylinder("ExamLampGlow", (0, -5.8, -1.05), 1.0, 0.05, C.emissive("lamp_glow", "#FFF7E6", 2.5))]
-group("ExamLamp", lamp, (17.4, 12.8, 9.0))
+group("ExamLamp", lamp, (21.4, 12.8, 7.6))  # 침대 머리 쪽 위 (커튼 x≈16.3과 떨어지게)
 objs.append(C.rbox("CurtainTrack", (16.3, 1.6, CEIL - 0.25), (0.18, 20.5, 0.12), metal, 0.04))
 objs.append(C.rbox("CurtainTrackEnd", (20.5, -8.7, CEIL - 0.25), (8.4, 0.18, 0.12), metal, 0.04))
 curtain_m = C.material("curtain", "#BFE3DA", rough=0.85, coat=0.0, sheen=0.8)
@@ -85,12 +82,6 @@ cur = C.mesh_obj("Curtain", verts, faces, curtain_m)
 C.solidify(cur, 0.04)
 objs.append(cur)
 objs.append(C.join([C.torus(f"Hook{i}", (16.3, y0 + i * 0.45, CEIL - 0.45), 0.08, 0.02, metal, rot=(PI / 2, 0, PI / 2)) for i in range(10)], "CurtainHooks"))
-stool = [C.cylinder("StoolSeat", (0, 0, 5.0), 1.7, 0.7, vinyl, bevel=0.3), C.cylinder("StoolPost", (0, 0, 2.6), 0.18, 4.4, steel)]
-for k in range(5):
-    a = k * 2 * PI / 5
-    stool.append(C.rbox(f"StoolLeg{k}", (0.9 * math.cos(a), 0.9 * math.sin(a), 0.5), (1.9, 0.3, 0.2), ink, 0.08, rot=(0, 0, a)))
-    stool.append(C.sphere(f"StoolCaster{k}", (1.8 * math.cos(a), 1.8 * math.sin(a), 0.22), (0.22, 0.22, 0.22), ink, segs=16, rings=8))
-group("Stool", stool, (14.2, -8.6, FLOOR))  # 휴지통(11.6,-3.4)과 안 겹치게
 
 # ── 벽걸이 혈압계 (침대 머리 위) ────────────────────────
 bp = [C.rbox("BPMount", (0, 0.05, -1.0), (2.2, 0.18, 4.0), white, 0.12),
@@ -102,7 +93,7 @@ bp += [C.rbox("BPNeedle", (0.24, -0.4, 0.2), (0.05, 0.02, 0.68), coral, 0.015, r
        C.rbox("BPCuff", (0, -0.55, -2.05), (1.7, 0.55, 0.75), C.material("cuff", "#2F5E8E", rough=0.8, coat=0.0, sheen=0.4), 0.2),
        C.tube("BPHose", C.catmull([(0, -0.3, -0.9), (-0.8, -0.45, -1.5), (-1.0, -0.6, -2.7), (-0.5, -0.65, -3.6), (0.5, -0.6, -3.3), (0.5, -0.5, -2.2)], 8), 0.06, ink),
        C.sphere("BPBulb", (1.0, -0.6, -3.1), (0.26, 0.26, 0.38), ink, segs=20, rings=10)]
-group("BPMonitor", bp, (23.8, 12.85, 5.6))
+group("BPMonitor", bp, (24.62, 9.2, 6.4), rot_z=-PI / 2)  # 오른쪽 벽, 침대 머리맡 위 (가스 패널과 안 겹침)
 
 # ── 대기 번호 모니터 (오른쪽 벽) ────────────────────────
 tv = [C.rbox("TVBody", (0, 0, 0), (0.45, 9.0, 5.2), ink, 0.15), C.rbox("TVMount", (0.4, 0, 0), (0.5, 2.0, 1.6), steel, 0.08)]
@@ -117,11 +108,12 @@ group("WaitingTV", tv, (24.5, -6.0, 6.8))
 # ── 휠체어 (오른쪽 앞 바닥, 실제 크기: 바퀴 지름 60cm) ─────────────────
 wc = []
 R = 1.45
+ZC = R + 0.1  # 바퀴 중심 높이: 타이어 바닥이 z=0
 for s in (-1, 1):
-    wc += [C.torus(f"WheelTire{s}", (0, s * 1.15, R), R, 0.1, ink, rot=FRONT),
-           C.torus(f"WheelRim{s}", (0, s * 1.22, R), R - 0.18, 0.035, metal, rot=FRONT),
-           C.cylinder(f"Hub{s}", (0, s * 1.12, R), 0.15, 0.12, metal, rot=FRONT),
-           C.join([C.rbox(f"Spoke{s}{k}", (0, s * 1.13, R), (0.03, 0.02, 2 * R - 0.25), metal, 0.008, rot=(0, k * PI / 6, 0)) for k in range(6)], f"Spokes{s}"),
+    wc += [C.torus(f"WheelTire{s}", (0, s * 1.15, ZC), R, 0.1, ink, rot=FRONT),
+           C.torus(f"WheelRim{s}", (0, s * 1.22, ZC), R - 0.18, 0.035, metal, rot=FRONT),
+           C.cylinder(f"Hub{s}", (0, s * 1.12, ZC), 0.15, 0.12, metal, rot=FRONT),
+           C.join([C.rbox(f"Spoke{s}{k}", (0, s * 1.13, ZC), (0.03, 0.02, 2 * R - 0.25), metal, 0.008, rot=(0, k * PI / 6, 0)) for k in range(6)], f"Spokes{s}"),
            C.sphere(f"Caster{s}", (-1.9, s * 0.95, 0.32), (0.32, 0.12, 0.32), ink, segs=20, rings=10),
            C.tube(f"Frame{s}", C.catmull([(-1.9, s * 0.95, 0.65), (-1.6, s * 1.0, 1.7), (0.0, s * 1.0, 1.75), (0.35, s * 1.0, 3.6), (0.75, s * 1.0, 4.0)], 8), 0.05, metal),
            C.cylinder(f"Grip{s}", (0.95, s * 1.0, 4.0), 0.08, 0.5, ink, rot=(0, PI / 2, 0)),

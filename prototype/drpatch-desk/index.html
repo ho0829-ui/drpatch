@@ -247,7 +247,7 @@ const MODELS = ['room', 'ward', 'desk', 'eggs', 'blister_cell', 'blister_end', '
 // 배치 (three 좌표: x 오른쪽, y 위, z 사용자 쪽). design/blender/scene_preview.py와 같게.
 const LAYOUT = {
   bottle: [-5.9, 0, -1.9], tray: [-5.4, 0.075, 2.7] /* 곡반은 패드보다 살짝 높여 겹치지 않게 */, chart: [7.1, 0, 0.1, -0.08], stamp: [8.2, 0, 3.0],
-  iv: [-12.0, -8.05, -9.6, 0, 4.4] /* 실제 높이 ≈1.8m */, pad: { x: 0.6, z: 0.9, w: 10.0, d: 4.8 },
+  iv: [-12.0, -8.05, -9.6, 0, 3.3] /* 높이 ≈1.3m: 책상 옆에서 튀지 않게 */, pad: { x: 0.6, z: 0.9, w: 10.0, d: 4.8 },
   doctor: { x: 0, z: -7.0, seat: -2.6, scale: 2.8 },
 };
 const CELL = { w: 1.4, d: 1.24 }, END_W = 1.2;
@@ -309,8 +309,8 @@ async function init() {
   scene.add(new THREE.HemisphereLight(0xffffff, 0x9fcfc4, 0.6));
   const key = new THREE.DirectionalLight(0xfff8ef, 2.1); // 천장 조명 쪽 (앞 위 왼쪽)
   key.position.set(-7, 20, 12); key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
-  Object.assign(key.shadow.camera, { left: -16, right: 16, top: 14, bottom: -14, near: 1, far: 60 });
+  key.shadow.mapSize.set(3072, 3072);
+  Object.assign(key.shadow.camera, { left: -27, right: 27, top: 30, bottom: -30, near: 1, far: 80 }); // 방 전체 (앞쪽 휠체어·휴지통도 그림자가 생겨 바닥에 붙어 보이게)
   key.shadow.bias = -0.0006; key.shadow.normalBias = 0.06; key.shadow.radius = 4; // 얇은 잎·패드의 그림자 얼룩 방지
   scene.add(key);
   const windowLight = new THREE.DirectionalLight(0xe3f6ff, 0.7); windowLight.position.set(14, 8, -16); scene.add(windowLight);

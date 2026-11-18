@@ -141,7 +141,7 @@ bn = [C.lathe("bin_body", [(0, 0), (0.78, 0), (0.9, 2.3), (0, 2.3)], white, segs
 binroot = C.empty("bin_scale")
 C.parent(bn, binroot)
 binroot.location = (tx, ty, FLOOR)
-binroot.scale = (2.2,) * 3
+binroot.scale = (1.7,) * 3
 egg("devnull", [binroot])
 
 # ── node_modules 이름표 (큰 화분) ───────────────────────────
@@ -179,7 +179,7 @@ xr.append(C.text("xr_text", "CHEST PA  ·  PROD-01", (xx, 12.705, xz - 1.38), 0.
 egg("xray", xr)
 
 # ── 학위증 (뒷벽, 박사님 머리 위 왼쪽) ─────────────────────
-dx2, dz2 = 0.4, 7.9
+dx2, dz2 = 6.6, 9.75  # 금지 표지판 위 (박사님 머리에 가리지 않게)
 gold = C.material("gold", "#C9A23F", rough=0.35, metal=0.6, coat=0.5)
 dip = [C.rbox("dip_frame", (dx2, 12.92, dz2), (3.0, 0.14, 2.3), C.material("dip_wood", "#6B4A35", rough=0.5, coat=0.4), 0.06),
        C.rbox("dip_paper", (dx2, 12.84, dz2), (2.6, 0.04, 1.9), C.material("dip_paper", "#FBF6EA", rough=0.8, coat=0.0), 0.02),
