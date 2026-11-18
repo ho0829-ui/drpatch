@@ -140,11 +140,37 @@ bin_parts.append(C.text("bin_text", "/dev/null", (tx, ty - 0.875, FLOOR + 1.45),
 egg("devnull", bin_parts)
 
 # ── node_modules 이름표 (큰 화분) ───────────────────────────
-px, py = 19.0, 6.0
+px, py = 22.0, 1.8  # room.py 큰 화분과 같은 자리
 tag = [C.rbox("nm_card", (px - 0.2, py - 1.86, FLOOR + 2.55), (1.5, 0.03, 0.5), paper, 0.05, rot=(0, 0.12, 0)),
        C.text("nm_text", "node_modules", (px - 0.2, py - 1.885, FLOOR + 2.57), 0.15, ink, rot=(PI / 2, 0.12, 0), extrude=0.004),
        C.text("nm_sub", "WATER: npm install", (px - 0.2, py - 1.885, FLOOR + 2.4), 0.07, C.plastic("deep"), rot=(PI / 2, 0.12, 0), extrude=0.003),
        C.tube("nm_string", C.catmull([(px - 0.85, py - 1.85, FLOOR + 2.8), (px - 1.1, py - 1.7, FLOOR + 3.3), (px - 1.3, py - 1.5, FLOOR + 3.38)], 6), 0.012, ink)]
 egg("nodemods", tag)
+
+# ── X-ray 판독기 (뒷벽, IV 옆): 갈비뼈 사이에 '버그' ─────────────────
+xx, xz = -10.2, 5.4
+film = C.material("film", "#1B2A3A", rough=0.4, coat=0.3)
+bone_glow = C.emissive("xray_bone", "#CFE6F2", 1.2)
+xr = [C.rbox("xr_box", (xx, 12.9, xz), (3.0, 0.3, 3.8), white, 0.08),
+      C.rbox("xr_panel", (xx, 12.74, xz), (2.6, 0.04, 3.3), C.emissive("xray_light", "#EAF6FF", 0.6), 0.03),
+      C.rbox("xr_film", (xx, 12.715, xz - 0.05), (2.2, 0.01, 2.9), film, 0.02),
+      C.rbox("xr_clip", (xx, 12.7, xz + 1.55), (0.8, 0.06, 0.16), metal, 0.03)]
+spine = [C.rbox(f"vert{i}", (xx, 12.705, xz + 1.0 - i * 0.24), (0.16, 0.01, 0.16), bone_glow, 0.03) for i in range(9)]
+xr.append(C.join(spine, "xr_spine"))
+for side in (-1, 1):
+    ribs = []
+    for i in range(6):
+        z0 = xz + 0.9 - i * 0.3
+        pts = [(xx + side * 0.1, 12.705, z0), (xx + side * 0.55, 12.705, z0 + 0.06), (xx + side * 0.85, 12.705, z0 - 0.15), (xx + side * 0.8, 12.705, z0 - 0.45)]
+        ribs.append(C.tube(f"rib{side}{i}", C.catmull(pts, 6), 0.03, bone_glow))
+    xr.append(C.join(ribs, f"xr_ribs{side}"))
+bug_m = C.material("bug", "#E5484D", rough=0.5, coat=0.3)
+bx2, bz2 = xx + 0.35, xz + 0.05
+xr += [C.sphere("bug_body", (bx2, 12.7, bz2), (0.12, 0.01, 0.17), bug_m, segs=16, rings=8),
+       C.sphere("bug_head", (bx2, 12.7, bz2 + 0.2), (0.07, 0.01, 0.07), bug_m, segs=12, rings=6)]
+legs = [C.rbox(f"leg{s}{k}", (bx2 + s * 0.17, 12.7, bz2 + 0.08 - k * 0.1), (0.16, 0.008, 0.02), bug_m, 0.005, rot=(0, s * (0.4 - k * 0.4), 0)) for s in (-1, 1) for k in range(3)]
+xr.append(C.join(legs, "bug_legs"))
+xr.append(C.text("xr_text", "CHEST PA  ·  PROD-01", (xx, 12.705, xz - 1.38), 0.1, C.material("xr_label", "#9FD6CB", rough=0.5, coat=0.0), rot=FRONT, extrude=0.003))
+egg("xray", xr)
 
 C.export_glb("eggs.glb")

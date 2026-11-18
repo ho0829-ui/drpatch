@@ -69,7 +69,10 @@ objs.append(C.rbox("Sill", (wx, 12.5, wz - wh / 2 - 0.35), (ww + 1.2, 0.9, 0.25)
 slats = [C.rbox(f"Slat{i}", (wx, 12.6, wz + wh / 2 - 0.35 - i * 0.32), (ww - 0.2, 0.05, 0.2), C.material("slat", "#F4FAF8", rough=0.5, coat=0.2), 0.02, rot=(0.5, 0, 0)) for i in range(8)]
 objs.append(C.join(slats, "Blinds"))
 objs.append(C.rbox("BlindRail", (wx, 12.6, wz + wh / 2 - 0.1), (ww, 0.25, 0.22), white, 0.04))
-objs.append(C.cylinder("BlindCord", (wx + ww / 2 - 0.5, 12.55, wz + 0.3), 0.025, 2.6, ink))
+cord_m = C.material("cord", "#F4FAF8", rough=0.7, coat=0.0)
+objs.append(C.tube("BlindCord", C.catmull([(wx + ww / 2 - 0.5, 12.5, wz + wh / 2 - 0.2), (wx + ww / 2 - 0.48, 12.47, wz + 1.0), (wx + ww / 2 - 0.5, 12.45, wz + 0.2)], 6), 0.018, cord_m))
+objs.append(C.lathe("BlindTassel", [(0.0, -0.32), (0.07, -0.3), (0.05, 0.0), (0.0, 0.02)], teal, segs=16))
+objs[-1].location = (wx + ww / 2 - 0.5, 12.45, wz + 0.18)
 # 창틀 위 작은 화분
 objs.append(C.lathe("SillPot", [(0, 0), (0.35, 0), (0.42, 0.55), (0, 0.55)], coral))
 objs[-1].location = (wx - 2.5, 12.5, wz - wh / 2 - 0.22)
@@ -150,7 +153,7 @@ for k in range(5):
     objs.append(C.sphere(f"Caster{k}", (2.0 * math.cos(a), 7.4 + 2.0 * math.sin(a), FLOOR + 0.22), (0.22, 0.22, 0.22), ink, segs=16, rings=8))
 
 # 큰 화분 (오른쪽 앞 바닥)
-pxx, pyy = 19.0, 6.0
+pxx, pyy = 22.0, 1.8  # 침대(뒤)와 휠체어(앞) 사이 빈자리
 objs.append(C.lathe("FloorPot", [(0, 0), (1.3, 0), (1.7, 3.2), (1.8, 3.4), (0, 3.4)], white))
 objs[-1].location = (pxx, pyy, FLOOR)
 objs.append(C.lathe("FloorPotBand", [(1.66, 2.6), (1.72, 2.6), (1.74, 3.0), (1.68, 3.0)], teal))

@@ -152,7 +152,7 @@
   <span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
 
 <div class="ticker" id="ticker" aria-hidden="true"></div>
-<div class="note">예시 데이터 · 실제 조회 아님 · 휠로 줌 · <span id="egg-count">숨은 것 0/13</span></div>
+<div class="note">예시 데이터 · 실제 조회 아님 · 드래그 회전 · 오른쪽 드래그 이동 · 휠 줌 · 더블클릭 처음으로 · <span id="egg-count">숨은 것 0/14</span></div>
 
 <div class="bubble" id="bubble" aria-hidden="true"><b>DR.PATCH</b><span id="bubble-text"></span></div>
 <div class="sr-only" aria-live="polite" id="live"></div>
@@ -187,6 +187,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // ── 예시 데이터 (실제 조회 아님) ─────────────────────────
 // 실제 서비스처럼: 회차는 최대 3, 회차당 N개. 패치할 필요 없는 건 곡반(안전), 회차에 못 든 건 약병에 남아 '다음 진료'.
@@ -236,8 +237,9 @@ const EGGS = {
   eyechart: { tip: '시력표', say: '맨 아래 줄까지 읽으셨다면 시력이 아주 좋으신 겁니다. D… R… P… A… T… C… H… S… U… D… O.' },
   konami: { say: '↑↑↓↓←→←→BA! 무적 모드입니다. 오늘은 버그가 없을 겁니다. 아마도요.' },
   sudo: { say: '사용자는 sudoers 파일에 없습니다. 이 일은 보고될 겁니다.' },
+  xray: { tip: '흉부 X-ray · PROD-01', say: '갈비뼈 사이에 버그가 보이네요. 꽤 오래 산 녀석입니다. 재현이 안 돼서 아무도 못 잡았죠.' },
 };
-const MODELS = ['room', 'desk', 'eggs', 'blister_cell', 'blister_end', 'capsule', 'pills', 'bottle', 'tray', 'iv', 'chart', 'stamp', 'doctor'];
+const MODELS = ['room', 'ward', 'desk', 'eggs', 'blister_cell', 'blister_end', 'capsule', 'pills', 'bottle', 'tray', 'iv', 'chart', 'stamp', 'doctor'];
 
 // 배치 (three 좌표: x 오른쪽, y 위, z 사용자 쪽). design/blender/scene_preview.py와 같게.
 const LAYOUT = {
@@ -299,7 +301,7 @@ async function init() {
   const BASE = new THREE.Vector3(0, 13.2, 18.6);
   const TARGET = new THREE.Vector3(0, 0.6, -1.4);
   const ROOM = { x: 23.5, y: 16.5, z: 40 }; // 카메라가 진료실 밖으로 나가지 않는 한계
-  let distScale = 1, zoom = 1, zoomTarget = 1;
+  let distScale = 1;
 
   scene.add(new THREE.HemisphereLight(0xffffff, 0x9fcfc4, 0.6));
   const key = new THREE.DirectionalLight(0xfff8ef, 2.1); // 천장 조명 쪽 (앞 위 왼쪽)
@@ -370,7 +372,8 @@ async function init() {
   world.add(prep(M.desk));
   const bulb = M.desk.getObjectByName('LampBulb');
   if (bulb) { const lamp = new THREE.PointLight(0xffe7b8, 6, 14, 1.6); bulb.getWorldPosition(lamp.position); scene.add(lamp); }
-  mergeStatic(M.room, [], false); mergeStatic(M.desk);
+  world.add(prep(M.ward));
+  mergeStatic(M.room, [], false); mergeStatic(M.ward); mergeStatic(M.desk);
 
   const pickRoots = [];
   const addPick = (obj, kind, data = {}) => { obj.userData = { ...obj.userData, kind, ...data }; pickRoots.push(obj); };
@@ -774,13 +777,32 @@ async function init() {
     else tip.classList.remove('show');
   });
   canvas.addEventListener('pointerleave', () => { hovered = null; $('tip').classList.remove('show'); });
-  const maxZoom = () => { const d = BASE.clone().sub(TARGET).multiplyScalar(distScale); return Math.min((ROOM.y - TARGET.y) / d.y, (ROOM.z - TARGET.z) / d.z, 1.9); };
-  canvas.addEventListener('wheel', (e) => { e.preventDefault(); zoomTarget = THREE.MathUtils.clamp(zoomTarget * Math.exp(e.deltaY * 0.0012), 0.6, maxZoom()); }, { passive: false });
+  // ── 카메라: 드래그로 돌려 보기 · 오른쪽 드래그(또는 Shift)로 이동 · 휠 줌 · 더블클릭으로 처음 시점 ──
+  // 박사님 뒤로는 못 돌아가고(좌우 ±54°), 바닥 아래·방 밖으로도 못 나간다.
+  const controls = new OrbitControls(camera, canvas);
+  const BASE_DIST = BASE.distanceTo(TARGET);
+  controls.target.copy(TARGET);
+  Object.assign(controls, { enableDamping: !reduced, dampingFactor: 0.08, rotateSpeed: 0.55, zoomSpeed: 0.8, panSpeed: 0.7, screenSpacePanning: true,
+                            minDistance: BASE_DIST * 0.4, maxDistance: BASE_DIST * 1.7, minPolarAngle: 0.28, maxPolarAngle: 1.36,
+                            minAzimuthAngle: -0.95, maxAzimuthAngle: 0.95 });
+  const TARGET_BOX = new THREE.Box3(new THREE.Vector3(-14, -3, -10), new THREE.Vector3(14, 6, 6));
+  const CAMERA_BOX = new THREE.Box3(new THREE.Vector3(-ROOM.x, -6.5, -11), new THREE.Vector3(ROOM.x, ROOM.y, ROOM.z));
+  const homeView = () => ({ pos: TARGET.clone().add(BASE.clone().sub(TARGET).multiplyScalar(distScale)), at: TARGET.clone() });
+  function resetView() {
+    const from = { pos: camera.position.clone(), at: controls.target.clone() }; const to = homeView();
+    tween(700, (t) => { camera.position.lerpVectors(from.pos, to.pos, t); controls.target.lerpVectors(from.at, to.at, t); });
+  }
+  canvas.addEventListener('dblclick', resetView);
   addEventListener('keydown', (e) => {
-    if (e.key === '+' || e.key === '=') zoomTarget = Math.max(0.6, zoomTarget / 1.15);
-    if (e.key === '-') zoomTarget = Math.min(maxZoom(), zoomTarget * 1.15);
+    const off = camera.position.clone().sub(controls.target);
+    if (e.key === '+' || e.key === '=') camera.position.copy(controls.target).add(off.multiplyScalar(1 / 1.15));
+    if (e.key === '-') camera.position.copy(controls.target).add(off.multiplyScalar(1.15));
+    if (e.key === '0') resetView();
   });
+  let downAt = null;
+  canvas.addEventListener('pointerdown', (e) => (downAt = [e.clientX, e.clientY]));
   canvas.addEventListener('click', async (e) => {
+    if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return; // 드래그로 시점을 돌린 건 누르기가 아님
     const o = pick(e); if (!o) { closeSheet(); return; }
     const d = o.userData;
     if (d.kind === 'egg') { runEgg(d.egg); return; }
@@ -818,10 +840,11 @@ async function init() {
     const w = innerWidth, h = innerHeight;
     renderer.setSize(w, h, false); composer?.setSize(w, h); camera.aspect = w / h;
     distScale = Math.min(2.2, Math.max(1, 1.55 / camera.aspect)); // 세로 화면은 멀리서
-    zoomTarget = Math.min(zoomTarget, maxZoom());
+    controls.maxDistance = BASE_DIST * 1.7 * distScale;
     camera.updateProjectionMatrix();
   }
   addEventListener('resize', resize); resize();
+  camera.position.copy(homeView().pos);
 
   // ── 매 프레임 ───────────────────────────────────────
   const headPos = new THREE.Vector3(); const dir = new THREE.Vector3(); let blinkAt = 2, blinkUntil = 0;
@@ -831,18 +854,19 @@ async function init() {
     const t = now / 1000;
     for (const tw of tweens) { const p = Math.min(1, (now - tw.t0) / tw.dur); tw.update(tw.e(p)); if (p >= 1) { tweens.delete(tw); tw.res(); } }
 
-    cmx += ((reduced ? 0 : mx) - cmx) * 0.05; cmy += ((reduced ? 0 : my) - cmy) * 0.05;
-    zoom += (zoomTarget - zoom) * (reduced ? 1 : 0.08);
-    dir.copy(BASE).sub(TARGET).multiplyScalar(distScale * zoom);
-    camera.position.copy(TARGET).add(dir);
-    camera.position.x += cmx * 1.4; camera.position.y -= cmy * 0.6;
-    camera.lookAt(TARGET);
     if (window.__freeze) { camera.position.copy(window.__freeze.pos); camera.lookAt(window.__freeze.at); }
+    else {
+      controls.enableDamping = !reduced;
+      controls.update();
+      TARGET_BOX.clampPoint(controls.target, controls.target);
+      CAMERA_BOX.clampPoint(camera.position, camera.position); // 방 밖으로 못 나가게
+      camera.lookAt(controls.target);
+    }
 
     if (!reduced) {
       const breathe = Math.sin(t * 1.8);
       docBody.scale.set(1 + breathe * 0.008, 1 + breathe * 0.014, 1 + breathe * 0.008);
-      doctor.rotation.y += ((cmx * 0.25) - doctor.rotation.y) * 0.05;
+      doctor.rotation.y += ((controls.getAzimuthalAngle() * 0.35) - doctor.rotation.y) * 0.05; // 박사님이 보는 사람 쪽으로 고개
       if (t > blinkAt) { blinkUntil = t + 0.13; blinkAt = t + 2.8 + Math.random() * 3; }
       for (const p of pills) if (p.inJar && state === 'idle') p.inner.rotation.z = Math.sin(t * 1.6 + p.phase) * 0.08;
     }
@@ -855,7 +879,7 @@ async function init() {
     headPos.set(-0.75, 2.25, 0); doctor.localToWorld(headPos); headPos.project(camera);
     const b = $('bubble'); b.style.right = `${innerWidth - ((headPos.x + 1) / 2 * innerWidth) + 10}px`; b.style.top = `${(1 - headPos.y) / 2 * innerHeight}px`;
 
-    const showTags = zoom < 1.3;
+    const showTags = camera.position.distanceTo(controls.target) < BASE_DIST * 1.3 * distScale;
     for (const p of pills) {
       if (!p.tag) continue;
       tmpV.set(0, 0.45, 0); p.root.localToWorld(tmpV); const [x, y, front] = toScreen(tmpV);

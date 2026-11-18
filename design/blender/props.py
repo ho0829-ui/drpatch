@@ -222,24 +222,30 @@ def desk():
     objs.append(C.rbox("Memo", (4.6, 3.5, 0.12), (1.3, 1.3, 0.24), m["paper"], 0.03, rot=(0, 0, -0.15)))
     objs.append(C.rbox("Sticky1", (4.65, 3.45, 0.25), (1.0, 1.0, 0.02), m["mint"], 0.01, rot=(0, 0, -0.05)))
     objs.append(C.rbox("Sticky2", (5.0, 3.1, 0.27), (0.7, 0.7, 0.02), C.material("sticky_coral", "#FFC7B5", rough=0.8, coat=0.0), 0.01, rot=(0, 0, 0.25)))
-    # 볼펜 (머그컵 왼쪽): 금속 촉 · 고무 그립 · 흰 몸통 · 청록 뒤캡 · 노크 버튼 · 클립
-    chrome = C.material("chrome", "#E9EEF0", rough=0.12, metal=1.0, coat=0.0)
-    rubber = C.material("rubber", "#1F3A40", rough=0.8, coat=0.0, sheen=0.3)
-    gloss = C.material("pen_body", "#FFFFFF", rough=0.18, coat=1.0, coat_rough=0.05)
+    # 볼펜 (머그컵 왼쪽): 실제 비율 — 길이 1.6(≈14cm) · 지름 0.11(≈1cm). 클립이 위를 보게 눕힌다
+    chrome = C.material("chrome", "#E9EEF0", rough=0.1, metal=1.0, coat=0.0)
+    rubber = C.material("rubber", "#2E7A75", rough=0.75, coat=0.0, sheen=0.4)
+    gloss = C.material("pen_body", "#FFFFFF", rough=0.15, coat=1.0, coat_rough=0.05)
+    r = 0.055
     parts = [
-        C.lathe("PenTip", [(0.0, 0.0), (0.012, 0.012), (0.03, 0.09), (0.06, 0.16), (0.0, 0.16)], chrome, segs=32),
-        C.lathe("PenGrip", [(0.0, 0.15), (0.068, 0.15), (0.074, 0.2), (0.074, 0.5), (0.07, 0.55), (0.0, 0.55)], rubber, segs=32),
-        C.lathe("PenRing", [(0.0, 0.54), (0.078, 0.54), (0.078, 0.6), (0.0, 0.6)], chrome, segs=32),
-        C.lathe("PenBody", [(0.0, 0.6), (0.078, 0.6), (0.08, 1.1), (0.076, 1.42), (0.0, 1.42)], gloss, segs=32),
-        C.lathe("PenCap", [(0.0, 1.41), (0.08, 1.41), (0.08, 1.6), (0.07, 1.64), (0.0, 1.64)], m["teal"], segs=32),
-        C.lathe("PenClick", [(0.0, 1.63), (0.04, 1.63), (0.04, 1.73), (0.0, 1.76)], chrome, segs=24),
+        C.sphere("PenBall", (0, 0, 0.004), (0.008, 0.008, 0.008), chrome, segs=8, rings=4),
+        C.lathe("PenTip", [(0.0, 0.0), (0.008, 0.006), (0.016, 0.05), (0.04, 0.17), (r * 0.95, 0.22), (0.0, 0.22)], chrome, segs=32),
+        C.lathe("PenGrip", [(0.0, 0.215), (r * 0.98, 0.215), (r * 1.08, 0.26), (r * 1.08, 0.52), (r, 0.56), (0.0, 0.56)], rubber, segs=32),
+        C.lathe("PenBody", [(0.0, 0.55), (r, 0.55), (r * 1.02, 0.9), (r * 0.97, 1.36), (0.0, 1.36)], gloss, segs=32),
+        C.lathe("PenRing", [(0.0, 1.355), (r * 1.02, 1.355), (r * 1.02, 1.39), (0.0, 1.39)], chrome, segs=32),
+        C.lathe("PenCap", [(0.0, 1.385), (r * 0.98, 1.385), (r * 0.98, 1.52), (r * 0.85, 1.55), (0.0, 1.55)], m["teal"], segs=32),
+        C.lathe("PenClick", [(0.0, 1.545), (0.03, 1.545), (0.03, 1.62), (0.0, 1.64)], chrome, segs=24),
     ]
-    clip = C.rbox("PenClip", (0, -0.095, 1.35), (0.05, 0.02, 0.5), chrome, 0.008)
-    clip_top = C.rbox("PenClipTop", (0, -0.055, 1.59), (0.05, 0.07, 0.04), chrome, 0.01)
-    parts += [clip, clip_top]
-    C.apply_rot(parts, (0, PI / 2, 0))  # 눕힌다 (+X로 뻗음)
+    grips = [C.torus(f"GripRib{i}", (0, 0, 0.29 + i * 0.045), r * 1.08, 0.006, rubber) for i in range(6)]
+    parts.append(C.join(grips, "GripRibs"))
+    # 클립: 뒤캡에서 몸통을 따라 내려오는 얇은 금속 띠 + 끝 구슬 (회전 뒤 위쪽 = 지금의 -X)
+    parts.append(C.tube("PenClip", C.catmull([(-r * 0.9, 0, 1.5), (-r - 0.035, 0, 1.44), (-r - 0.03, 0, 1.12), (-r - 0.012, 0, 0.98)], 8), 0.011, chrome))
+    parts.append(C.sphere("PenClipBead", (-r - 0.015, 0, 0.975), (0.018, 0.016, 0.022), chrome, segs=12, rings=6))
+    C.select_only(parts)
+    C.bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)  # 회전 전에 기준점을 모두 원점으로 (각자 기준점으로 돌면 어긋남)
+    C.apply_rot(parts, (0, PI / 2, 0))  # 눕힌다 (+X로 뻗음, 클립은 위)
     for o in parts:
-        o.location = (6.3, 3.1, 0.081)  # 메모지(x≤5.3)와 머그컵(x≥7.55) 사이 빈자리
+        o.location = (6.3, 3.1, r + 0.004)  # 메모지(x≤5.3)와 머그컵(x≥7.55) 사이 빈자리
         o.rotation_euler = (0, 0, 2.55)
     objs += parts
     # 머그컵
