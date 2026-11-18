@@ -20,6 +20,7 @@
   - 완료: 닥터 패치(나이 든 박사님) + 소품 7종(capsule·blister·iv·bottle·chart·stamp·desk) → 시제품이 .glb 사용, 팔레트 병원 청록. docs/design.md 갱신함
   - 3차: 진료실(room.glb), 진짜 책상(나무 상판), 앉은 박사님, 줌, 블리스터 자동 조립(blister_cell/end), 곡반·다음 진료, 특별 알약(pills.glb), GTAO
   - 4차: 최적화(유리·합치기·AO 자동), 유격, 덮개 제거, 수액 관, 이름표·검사 결과 칩, 천장·줌 한계 → docs/design.md 4-2
+  - 이스터에그 13개 (eggs.py, design.md 4-3). 약장 위 칸을 앞이 뚫린 틀로 고침. 화분 깨짐 원인 = 막힌 윗면과 흙이 같은 높이
   - 다음: 사용자 피드백 → 로고(캐릭터 기반) → 명세에 이름·말투 반영 → 하이드로젠용 작업 쪼개기
 - 화면은 Vite + Vue (frontend/, 빌드 결과를 FastAPI가 제공) + Three.js 책상 장면
 - (선택) GoogleCalendar 구현체: app/calendar/google.py — 같은 인터페이스, OAuth 키는 사용자가 준비

@@ -87,7 +87,11 @@ for i, dx in enumerate((-1.8, 1.8)):
     objs.append(C.rbox(f"Door{i}", (cx + dx, 10.48, FLOOR + 2.7), (3.4, 0.06, 5.0), C.material("door", "#F2F8F6", rough=0.45, coat=0.3), 0.05))
     objs.append(C.rbox(f"Handle{i}", (cx + dx * 0.15, 10.4, FLOOR + 4.2), (0.12, 0.12, 0.9), teal, 0.05))
 objs.append(C.rbox("Counter", (cx, 11.6, FLOOR + 5.95), (7.6, 2.7, 0.3), deep, 0.06))
-objs.append(C.rbox("CabinetHigh", (cx, 12.25, 4.6), (7.2, 1.5, 5.4), white, 0.08))
+# 위 진열장은 앞이 뚫린 틀 (꽉 찬 상자면 안의 약병이 앞판에 가려 안 보인다)
+objs.append(C.rbox("CabinetBack", (cx, 12.92, 4.6), (7.2, 0.1, 5.4), C.material("cab_back", "#E4F3EF", rough=0.7, coat=0.1), 0.02))
+for name, loc, size in (("CabinetTop", (cx, 12.25, 7.24), (7.2, 1.5, 0.12)), ("CabinetBottom", (cx, 12.25, 1.96), (7.2, 1.5, 0.12)),
+                        ("CabinetL", (cx - 3.54, 12.25, 4.6), (0.12, 1.5, 5.4)), ("CabinetR", (cx + 3.54, 12.25, 4.6), (0.12, 1.5, 5.4))):
+    objs.append(C.rbox(name, loc, size, white, 0.04))
 C.bpy.ops.mesh.primitive_plane_add(size=1, location=(cx, 11.48, 4.6), rotation=(PI / 2, 0, 0))
 cab_glass = C.bpy.context.active_object
 cab_glass.name = "CabinetGlass"
@@ -99,6 +103,8 @@ bottle_cols = ["#C98A3B", "#FFFFFF", "#3E9E98", "#F2734A", "#B9E2D9", "#C98A3B",
 for row, z in enumerate((2.3, 4.6)):
     objs.append(C.rbox(f"Shelf{row}", (cx, 12.2, z - 0.05), (6.8, 1.3, 0.1), white, 0.02))
     for k in range(8):
+        if row == 0 and k in (1, 3, 5, 6):
+            continue  # 이스터에그 약병 자리 (eggs.py)
         h = 0.9 + 0.35 * ((k * 7 + row * 3) % 3)
         r = 0.28 + 0.06 * ((k + row) % 2)
         col = bottle_cols[(k + row * 3) % len(bottle_cols)]
@@ -130,15 +136,7 @@ for i in range(5):
     objs.append(C.sphere(f"RackLed{i}", (gx - 0.5, 12.76, gz + 0.9 - i * 0.42), (0.05, 0.02, 0.05), mint, segs=12, rings=6))
 objs.append(C.text("RackTitle", "SERVER", (gx, 12.79, gz - 1.15), 0.2, ink, rot=(PI / 2, 0, 0), extrude=0.005))
 
-# 벽시계 (박사님 머리 위 오른쪽)
-kx, kz = 3.4, 8.2
-objs.append(C.cylinder("WallClock", (kx, 12.9, kz), 1.2, 0.3, teal, rot=(PI / 2, 0, 0), bevel=0.08))
-objs.append(C.cylinder("WallClockFace", (kx, 12.72, kz), 1.0, 0.06, C.material("clockface", "#FFFFFF", rough=0.5, coat=0.3), rot=(PI / 2, 0, 0)))
-ticks = [C.rbox(f"Tk{i}", (kx + 0.85 * math.sin(i * PI / 6), 12.672, kz + 0.85 * math.cos(i * PI / 6)), (0.05, 0.02, 0.16 if i % 3 == 0 else 0.09), ink, 0.01, rot=(0, -i * PI / 6, 0)) for i in range(12)]
-objs.append(C.join(ticks, "ClockTicks"))
-objs.append(C.rbox("HourHand", (kx + 0.15, 12.65, kz + 0.25), (0.08, 0.02, 0.6), ink, 0.02, rot=(0, -0.5, 0)))
-objs.append(C.rbox("MinHand", (kx - 0.3, 12.64, kz + 0.1), (0.06, 0.02, 0.85), coral, 0.02, rot=(0, 1.3, 0)))
-objs.append(C.sphere("ClockPin", (kx, 12.62, kz), (0.07, 0.03, 0.07), ink, segs=12, rings=6))
+# 벽시계는 이스터에그(03:14:07에 멈춤)라 eggs.py로 옮김
 
 # 박사님 의자 (y=+7 자리 뒤) — 등받이만 어깨 너머로 보인다
 chair = C.material("chair", "#2F8A84", rough=0.6, coat=0.2, sheen=0.5)
