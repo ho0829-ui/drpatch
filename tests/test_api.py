@@ -186,3 +186,18 @@ def test_screen_is_served_from_same_server(client):
         assert client.get(path).status_code == 200, path
     assert client.get("/plans").headers["content-type"].startswith("application/json")  # API가 먼저
     assert client.get("/health").json() == {"ok": True}
+
+
+def test_confirm_only_named_round(client):
+    """시나리오 점검: '1회차 확정해줘'는 1회차만 저장."""
+    sid = client.post("/upload", content=FREEZE).json()["session_id"]
+    chat(client, "계획 짜줘", sid)
+    brain = FakeBrain(Analysis(intent="confirm", intent_reason="확정", confirm_rounds=[1]))
+    final = chat(client, "1회차 확정해줘", sid, brain)[-1]
+    assert [p["round_no"] for p in final["confirmed"]] == [1]
+    assert [p["round_no"] for p in client.get("/plans", params={"session_id": sid}).json()] == [1]
+
+
+def test_fact_question_has_no_missing_list(client):
+    final = chat(client, "Ubuntu 20.04 언제까지?", None, FakeBrain(Analysis(intent="fact", intent_reason="질문")))[-1]
+    assert final["missing"] == []

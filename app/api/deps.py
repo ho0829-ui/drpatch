@@ -21,11 +21,15 @@ def with_overlaps(conn: sqlite3.Connection, plan: dict) -> dict:
     return {**plan, "overlaps": find_overlaps(plan, repo.plans_on_date(conn, plan["date"]))}
 
 
-def save_confirmed_plan(conn: sqlite3.Connection, session_id: str, plan: dict) -> list[dict]:
-    """직전 제안 계획을 회차마다 계획 1개로 저장한다. 같은 세션·회차·날짜·항목이 이미 있으면 다시 만들지 않는다."""
+def save_confirmed_plan(conn: sqlite3.Connection, session_id: str, plan: dict,
+                        rounds: list[int] | None = None) -> list[dict]:
+    """직전 제안 계획을 회차마다 계획 1개로 저장한다. rounds를 주면 그 회차만 ("1회차 확정해줘").
+    같은 세션·회차·날짜·항목이 이미 있으면 다시 만들지 않는다."""
     existing = repo.list_plans(conn, session_id)
     saved = []
     for r in plan.get("rounds", []):
+        if rounds and r["round_no"] not in rounds:
+            continue
         row = {"session_id": session_id, "round_no": r["round_no"], "date": r["date"],
                "window_start": plan.get("window", {}).get("start"), "window_end": plan.get("window", {}).get("end"),
                "items": r["items"]}

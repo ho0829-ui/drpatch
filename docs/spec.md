@@ -1,4 +1,6 @@
-# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.12 · 2026-11-18)
+# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.13 · 2026-11-18)
+
+> v1.12 → v1.13 (2026-11-18): 응답 시간 기준(20개 60초), "1회차 확정"은 그 회차만 저장.
 
 > v1.11 → v1.12 (2026-11-18): 백엔드 API 요청·응답 형식 확정 (업로드는 본문 그대로, /chat ndjson, 확정 저장, 오류 안내).
 
@@ -230,7 +232,7 @@ items_json 항목: name, current_version, target_version, severity, eol_date, re
 | 메서드·경로 | 하는 일 |
 |---|---|
 | POST /upload?session_id= | 요청 본문 = 파일 내용 그대로(1MB까지, python-multipart 없이) → 파싱 → 세션에 저장 → `{session_id, packages, excluded, saved}` |
-| POST /chat | `{session_id?, message}` → ndjson 스트리밍: 첫 줄 `session`, 실행 이벤트들(이 세션 것만, 발생 순서), 마지막 줄 `final{intent, answer, plan, missing, conditions, confirmed, saved}`. "확정해줘"면 직전 제안 계획을 회차마다 저장해 `confirmed`에 (같은 계획 재확정은 중복 저장 안 함) |
+| POST /chat | `{session_id?, message}` → ndjson 스트리밍: 첫 줄 `session`, 실행 이벤트들(이 세션 것만, 발생 순서), 마지막 줄 `final{intent, answer, plan, missing, conditions, confirmed, saved}`. "확정해줘"면 직전 제안 계획을 회차마다 저장해 `confirmed`에 ("1회차 확정해줘"처럼 회차를 말하면 그 회차만) (같은 계획 재확정은 중복 저장 안 함) |
 | GET·POST /plans, GET·PUT·DELETE /plans/{id} | 계획 CRUD. 목록은 날짜순. 저장·수정·조회 응답에 `overlaps`(같은 날 시간이 겹치는 다른 계획). 수정은 날짜·시각·항목만 |
 | GET /logs, GET·DELETE /logs/{session_id} | 실행 로그 목록·상세(순서대로)·삭제. 수정 주소 없음(405) |
 
@@ -255,7 +257,7 @@ items_json 항목: name, current_version, target_version, severity, eol_date, re
 - 같은 날 시간이 겹치는 계획을 저장하면 둘 다 저장되고 겹친다는 알림이 뜬다.
 - 로그 탭에서 왜 이 순서·이 버전으로 정했는지, 왜 재계획했는지 볼 수 있다.
 - 로깅이 멈춰도 대화는 정상 응답한다.
-- 패키지 20개짜리 파일도 응답이 사용에 지장 없는 시간 안에 나온다 `[기준 시간 정하기]`
+- 패키지 20개짜리 파일도 **60초 안에** 응답이 나오고, 기다리는 동안 실행 단계가 실시간으로 보인다 (실측 35.2초, docs/scenario-check.md)
 
 ## 남은 확인
 - [x] 세 API 실제 호출 (2026-11-18, 모두 200)

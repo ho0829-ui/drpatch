@@ -33,7 +33,8 @@ CASES = [
     ("osv_django_5.2.19", "POST", "https://api.osv.dev/v1/query",
      {"package": {"name": "django", "ecosystem": "PyPI"}, "version": "5.2.19"}),
     ("osv_requests_2.32.4", "POST", "https://api.osv.dev/v1/query",
-     {"package": {"name": "requests", "ecosystem": "PyPI"}, "version": "2.32.4"}),
+     {"package": {"name": "requests", "ecosystem": "PyPI"}, "version": "2.32.4"}),    ("osv_django_6.1.3", "POST", "https://api.osv.dev/v1/query",
+     {"package": {"name": "django", "ecosystem": "PyPI"}, "version": "6.1.3"}),
 ]
 
 for name, method, url, body in CASES:

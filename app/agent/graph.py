@@ -16,7 +16,7 @@ from langgraph.graph import END, START, StateGraph
 from app.agent.brain import AgentBrain
 from app.agent.planner.items import PackageResult, build_items, top_severity
 from app.agent.planner.priority import sort_items
-from app.agent.planner.python_upgrade import UpgradePlan, plan_python_upgrade
+from app.agent.planner.python_upgrade import UpgradePlan, candidate_versions, plan_python_upgrade
 from app.agent.planner.rounds import split_rounds
 from app.agent.planner.versions import is_newer, pick_latest
 from app.agent.render import fallback_text, plan_dict
@@ -110,7 +110,8 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         conditions = merge_conditions(state["conditions"], a)
         emit("llm_decision", {"decision": "intent", "intent": a.intent, "reason": a.intent_reason})
         return {"intent": a.intent, "intent_reason": a.intent_reason, "conditions": conditions,
-                "missing": missing_inputs(conditions)}
+                "missing": missing_inputs(conditions) if a.intent == "plan" else [],  # 계획일 때만 (시나리오 점검)
+                "confirm_rounds": a.confirm_rounds}
 
     def ask(state: AgentState) -> dict:
         return {"answer": ask_message(state["missing"])}
@@ -219,6 +220,9 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
 
         names = {v["name"] for v in state["violations"]}
         packages = {n: r["data"]["versions"] for n, r in state["results"]["versions"].items() if n in names}
+        # 후보 버전 취약점을 미리 병렬로 조회 (요청 안 캐시에 남아 아래 탐색은 기다리지 않음, 3일차 응답 시간 개선)
+        runner.call_many([("get_vulns", {"name": n, "version": v})
+                          for n, v in candidate_versions(c.python_version, packages)])
         upgrade = plan_python_upgrade(c.python_version, packages, runner.vuln_count, runner.python_eol)
         for no, attempt in enumerate(upgrade.attempts, 1):
             emit("replan", {"no": no, "python": attempt.python, "is_eol": attempt.is_eol, "reason": attempt.reason})
@@ -327,4 +331,5 @@ def run_agent(
         "tool_plan": state.get("tool_plan", []),
         "plan": state.get("plan"),
         "tool_calls": runner.calls,
+        "confirm_rounds": state.get("confirm_rounds"),
     }

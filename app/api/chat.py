@@ -96,7 +96,7 @@ def chat(body: ChatIn, request: Request):
             if out["intent"] == "confirm" and out["last_plan"]:
                 conn = repo.connect(app.state.db_path)
                 try:
-                    confirmed = save_confirmed_plan(conn, session_id, out["last_plan"])
+                    confirmed = save_confirmed_plan(conn, session_id, out["last_plan"], out.get("confirm_rounds"))
                 finally:
                     conn.close()
             yield _line(_final(session_id, out, confirmed=confirmed))

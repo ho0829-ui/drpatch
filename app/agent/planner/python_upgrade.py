@@ -75,6 +75,26 @@ def package_min_minor(
     return None, saw_unknown
 
 
+def search_range(current_python: str, packages: dict[str, list[dict]]) -> tuple[int, int]:
+    """(시작 줄기, 끝 줄기). 시작 = 현재 다음 줄기(2.x면 3.0), 끝 = 조건에 나오는 가장 높은 줄기 + 1."""
+    major, minor_text = current_python.split(".")[:2]
+    start = int(minor_text) + 1 if major == "3" else 0
+    mentioned = [m for v in packages.values() for m in mentioned_minors(v)]
+    return start, max([start, *(m + 1 for m in mentioned)])
+
+
+def candidate_versions(current_python: str, packages: dict[str, list[dict]]) -> list[tuple[str, str]]:
+    """재계획에서 조회할 수 있는 (패키지, 버전) 전부. 미리 병렬로 조회해 두면 순서대로 기다리지 않는다."""
+    start, end = search_range(current_python, packages)
+    seen: list[tuple[str, str]] = []
+    for name, versions in packages.items():
+        for minor in range(start, end + 1):
+            candidate = pick_latest(versions, f"3.{minor}")
+            if candidate and (name, candidate.version) not in seen:
+                seen.append((name, candidate.version))
+    return seen
+
+
 def plan_python_upgrade(
     current_python: str,
     packages: dict[str, list[dict]],
@@ -87,11 +107,8 @@ def plan_python_upgrade(
     재계획 1회 = Python 후보 줄기 하나를 정해 get_eol로 확인하는 것 (줄기 훑기의 get_vulns는 세지 않음).
     """
     check_vulns = _cached(check_vulns)
-    major, minor_text = current_python.split(".")[:2]
-    start = int(minor_text) + 1 if major == "3" else 0  # Python 2.x면 3.0부터
-    # 어디까지 올려 볼지: 조건에 나오는 가장 높은 줄기 + 1 (>3.9, ~=3.10, ==3.11.* 모두 다음 줄기에서 열림)
-    mentioned = [m for v in packages.values() for m in mentioned_minors(v)]
-    bound = max([start, *(m + 1 for m in mentioned)])
+    # 시작 = 현재 다음 줄기(2.x면 3.0), 끝 = 조건에 나오는 가장 높은 줄기 + 1 (>3.9, ~=3.10, ==3.11.* 모두 다음 줄기에서 열림)
+    start, bound = search_range(current_python, packages)
 
     plan = UpgradePlan(status="hold")
     active = dict(packages)

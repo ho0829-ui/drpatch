@@ -77,6 +77,7 @@ class AgentState(TypedDict, total=False):
     conditions: Conditions
     intent: str  # plan | fact | confirm | other
     intent_reason: str
+    confirm_rounds: list[int] | None  # "1회차 확정해줘" → [1], 없으면 전체
     missing: list[str]
     tool_plan: list[str]
     tool_plan_reason: str

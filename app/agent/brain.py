@@ -37,6 +37,8 @@ class Analysis(BaseModel):
     window_start: str | None = Field(None, description="시작 시각 HH:MM. '22~24시'면 22:00. 없으면 null")
     window_end: str | None = Field(None, description="끝 시각 HH:MM. '22~24시'면 24:00. 없으면 null")
     interval_days: int | None = Field(None, description="매주=7, 격주=14, 매월=30, 'N일마다'=N. 없으면 null")
+    confirm_rounds: list[int] | None = Field(
+        None, description="확정 요청에서 회차를 말했으면 그 번호들. '1회차 확정해줘' → [1]. 회차를 말하지 않았으면 null(전체)")
 
 
 class ToolPlan(BaseModel):
