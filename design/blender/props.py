@@ -239,8 +239,8 @@ def desk():
     parts += [clip, clip_top]
     C.apply_rot(parts, (0, PI / 2, 0))  # 눕힌다 (+X로 뻗음)
     for o in parts:
-        o.location = (5.6, 3.6, 0.081)
-        o.rotation_euler = (0, 0, 2.7)
+        o.location = (6.3, 3.1, 0.081)  # 메모지(x≤5.3)와 머그컵(x≥7.55) 사이 빈자리
+        o.rotation_euler = (0, 0, 2.55)
     objs += parts
     # 머그컵
     mug = C.lathe("Mug", [(0.0, 0.0), (0.42, 0.0), (0.45, 0.8), (0.4, 0.8), (0.38, 0.08), (0.0, 0.08)], m["coral"])
