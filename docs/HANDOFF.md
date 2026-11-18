@@ -7,10 +7,9 @@
 
 ## 다음에 할 것
 - [나] 오전 FastAPI 실습 결과(app 폴더) 넣기 — 폴더 위치 확인 필요
-- [나] packaging 허용 여부 확인 — 근거는 spec "남은 확인"
 - 2일차 [C] 목표 버전 고르기 + 우선순위 정렬 + 회차 나누기 (순수 함수 + 테스트)
   - spec v1.6 규칙: 정식 버전만, 필요한 가장 낮은 Python 구하기, 재계획 1회 = Python 줄기 하나 get_eol 확인, Python 항목 합치기, 순서 제약이 우선순위보다 먼저
-  - packaging 답에 따라 버전 비교 구현 방식이 갈림 (허용 → packaging / 불가 → PEP 440 일부 직접 구현)
+  - 버전 비교·정식 버전 판별·requires_python 판정은 packaging 사용 (packaging==26.3 추가함)
 
 ## 주의
 - scripts/walk_example.py의 버전 계산은 임시(>=3.N 위주). 실제 판정 코드로 쓰지 말 것
@@ -18,5 +17,5 @@
 - 세션 캐시·동시 호출 수 제한은 아직 없음 (2~3일차 실행 흐름에서)
 - LLM: GMS gpt-6-luna, Responses API, temperature 생략 (app/llm.py)
 - 되묻기 프롬프트는 2일차에 (spec 밖 정보까지 묻는 경향)
-- docs/course/는 대외비 (.gitignore). requirements.txt 버전 고정
+- docs/course/는 대외비 (.gitignore). requirements.txt 버전 고정 (packaging만 수업 목록 밖: docs/decisions/2026-11-18-packaging.md)
 - .venv는 Python 3.14.7

@@ -5,7 +5,7 @@
 ## 0일차 (오늘, 수업 전 준비)
 - [x] [나] Mac mini에서 `python check_apis.py` 실행 → spec v1.0 확정
 - [x] [G·Flash] 세 API 이용 조건 조사 → docs/research/api-terms.md (agy-guide ①)
-- [ ] [나] `packaging` 라이브러리 추가 가능한지 강사님께 확인
+- [x] [나] `packaging` 라이브러리 추가 가능한지 강사님께 확인 → 문의 없이 추가하기로 결정 (packaging==26.3)
 - [x] [C] 저장소 만들기: AGENTS.md, CLAUDE.md(`@AGENTS.md`), docs/spec.md, docs/tasks.md, docs/HANDOFF.md
 - [x] [C] Claude Code 권한 설정: `rm -rf`, `git push --force` 차단
 

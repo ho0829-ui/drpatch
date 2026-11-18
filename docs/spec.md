@@ -1,4 +1,6 @@
-# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.6 · 2026-11-18)
+# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.7 · 2026-11-18)
+
+> v1.6 → v1.7 (2026-11-18): packaging 추가 확정.
 
 > v1.5 → v1.6 (2026-11-18): 예시를 실측으로 다시 씀(둘 다 위반, Python 3.11). 필요한 가장 낮은 Python 구하기·재계획 횟수 세는 법·정식 버전만·Python 항목 합치기·회차 나누기(순서 제약 먼저) 추가.
 
@@ -192,7 +194,7 @@ CRITICAL > HIGH(지원 종료된 OS·Python 포함) > MODERATE > LOW > 심각도
 
 ## 구현 방식
 - 백엔드: FastAPI + SQLite. Agent: LangGraph 상태 그래프, LLM은 OpenAI(langchain-openai). 화면: HTML/CSS/JS.
-- 버전 비교·requires_python 판정은 `packaging` 라이브러리 사용 `[필수 목록에 없음, 추가 가능한지 확인 — 근거는 "남은 확인"]`
+- 버전 비교·requires_python 판정은 `packaging` 라이브러리 사용 (수업 필수 목록 밖, 추가 결정: docs/decisions/2026-11-18-packaging.md)
 - 로깅 Agent 분리: 메인 Agent는 이벤트를 큐에 넣기만 하고, 로깅 Agent가 따로 꺼내 저장. 로깅이 죽어도 메인은 기다리지 않음.
 - 같은 세션 안에서 같은 API 호출 결과는 캐시해서 재사용.
 
@@ -239,11 +241,10 @@ items_json 항목: name, current_version, target_version, severity, eol_date, re
 - [x] PyPI 버전별 requires_python 있음 (django 4.2 `>=3.8`, 5.0 `>=3.10`)
 - [x] OSV 중복 제거 후 등급 없음 0건 (django 75→43건, requests 2.19.0 10→5건, 2.32.3 4→2건). "심각도 미상" 칸은 대비용으로만 유지
 - [x] PyPI 이용 정책 (ToS API 조항·AUP 확인, 2026-11-18 → 외부 API 표)
-- [ ] `packaging` 라이브러리 추가 가능 여부. 필요한 근거(설계 시험, 2026-11-18):
+- [x] `packaging` 라이브러리 추가 (2026-11-18, 강사 문의 없이 추가하기로 결정 → docs/decisions/2026-11-18-packaging.md). 필요한 근거(설계 시험):
   - 버전 정렬: `4.2.30` > `4.2.3`, `1!2.0`(epoch), `.post1`·`.dev0` 같은 형식
   - 정식 버전 판별: 시험판(rc·a·b·dev) 빼기 (django 56개)
   - requires_python 조건 판정: `>=3.8`뿐 아니라 `!=3.0.*`, `~=3.7`, `>=2.7,!=3.0.*,<4` 등
-  - 없으면 위 셋을 PEP 440 일부만 직접 구현해야 함 (틀릴 위험이 큼)
 
 ## 예시 한 건 따라가기
 입력: requests==2.19.0, django==2.2.0, `-e git+...` / "Ubuntu 20.04, Python 3.8" / N=2 / 11/21 22~24시 / 격주
