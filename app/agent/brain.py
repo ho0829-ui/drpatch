@@ -51,7 +51,8 @@ class ReplanChoice(BaseModel):
 
 
 class AgentBrain(Protocol):
-    def analyze(self, message: str, conditions: Conditions, today: date) -> Analysis: ...
+    def analyze(self, message: str, conditions: Conditions, today: date,
+                last_turn: dict | None = None) -> Analysis: ...
     def plan_tools(self, conditions: Conditions) -> ToolPlan: ...
     def choose_replan(self, violations: list[dict], python_version: str) -> ReplanChoice: ...
     def answer_fact(self, message: str, runner: ToolRunner) -> str: ...
@@ -79,11 +80,16 @@ class GmsBrain:
     def _structured(self, schema, prompt: str):
         return self.llm.with_structured_output(schema).invoke([SystemMessage(SYSTEM), HumanMessage(prompt)])
 
-    def analyze(self, message: str, conditions: Conditions, today: date) -> Analysis:
+    def analyze(self, message: str, conditions: Conditions, today: date,
+                last_turn: dict | None = None) -> Analysis:
         known = conditions.model_dump(mode="json", exclude={"packages", "excluded"})
+        previous = ""
+        if last_turn and last_turn.get("message"):
+            previous = (f"직전 대화 — 사용자: {last_turn['message']} / 너의 답(앞부분): "
+                        f"{(last_turn.get('answer') or '')[:400]}\n")
         prompt = (
             f"오늘은 {today.isoformat()}이다. 지금까지 알고 있는 조건: {json.dumps(known, ensure_ascii=False)}. "
-            f"올린 패키지 수: {len(conditions.packages)}개.\n"
+            f"올린 패키지 수: {len(conditions.packages)}개.\n{previous}"
             "아래 사용자 메시지의 의도를 분류하고, **이번 메시지에 새로 나온 조건만** 채워라. 나오지 않은 값은 null.\n"
             f"사용자 메시지: {message}"
         )

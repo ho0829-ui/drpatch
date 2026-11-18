@@ -87,7 +87,7 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
     # ── 노드 ────────────────────────────────────────────
     def analyze(state: AgentState) -> dict:
         try:
-            a = brain.analyze(state["message"], state["conditions"], state["today"])
+            a = brain.analyze(state["message"], state["conditions"], state["today"], state.get("last_turn"))
         except Exception as e:  # LLM이 죽어도 서비스는 안내로 끝낸다 (NF3003)
             emit("error", {"step": "analyze", "kind": type(e).__name__})
             return {"intent": "error", "answer": "지금은 AI 응답을 받지 못했어요. 잠시 후 다시 시도해 주세요."}
@@ -260,11 +260,13 @@ def run_agent(
     today: date | None = None,
     emit: Emit = no_emit,
     runner: ToolRunner | None = None,
+    last_turn: dict | None = None,
 ) -> dict:
     """요청 하나를 처리한다. 결과: intent, answer, conditions(갱신됨), plan(계획 수립일 때), missing, tool_plan."""
     runner = runner or ToolRunner(build_registry(), emit)
     graph = build_graph(brain, runner, emit)
-    state = graph.invoke({"message": message, "conditions": conditions, "today": today or date.today()})
+    state = graph.invoke({"message": message, "conditions": conditions, "today": today or date.today(),
+                          "last_turn": last_turn})
     return {
         "intent": state.get("intent"),
         "answer": state.get("answer"),

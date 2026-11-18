@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS sessions (
     window_start    TEXT,
     window_end      TEXT,
     interval_days   INTEGER,
+    last_message    TEXT,
+    last_answer     TEXT,
+    last_plan_json  TEXT,
     created_at      TEXT NOT NULL,
     updated_at      TEXT NOT NULL
 );

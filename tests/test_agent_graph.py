@@ -76,8 +76,9 @@ class FakeBrain:
         if name in self.fail:
             raise RuntimeError(f"fake {name} failure")
 
-    def analyze(self, message, conditions, today):
+    def analyze(self, message, conditions, today, last_turn=None):
         self._maybe_fail("analyze")
+        self.seen_last_turn = last_turn
         return self.analysis
 
     def plan_tools(self, conditions):

@@ -1,11 +1,12 @@
 """SQLite 읽기·쓰기 (표준 라이브러리 sqlite3). 연결은 쓰는 스레드마다 따로 연다.
 
-이번 범위: 스키마 준비 + events. sessions·plans는 Memory·계획 CRUD 작업에서 채운다.
+범위: 스키마 준비, sessions(Memory), events(실행 로그). plans는 계획 CRUD 작업에서 채운다.
 """
 
 import json
 import os
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -28,9 +29,68 @@ def connect(path: str | None = None) -> sqlite3.Connection:
     return conn
 
 
+# 나중에 추가한 칸: 예전에 만든 DB 파일에도 붙인다 (CREATE TABLE IF NOT EXISTS는 칸을 추가하지 않음)
+ADDED_COLUMNS = {"sessions": ["last_message TEXT", "last_answer TEXT", "last_plan_json TEXT"]}
+
+
 def init_db(path: str | None = None) -> None:
     with connect(path) as conn:
         conn.executescript(SCHEMA.read_text(encoding="utf-8"))
+        for table, columns in ADDED_COLUMNS.items():
+            existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+            for column in columns:
+                if column.split()[0] not in existing:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column}")
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+# ── sessions (Memory) ────────────────────────────────────
+CONDITION_COLUMNS = {  # Conditions 필드 → 표 칸
+    "os_name": "os", "os_version": "os_version", "python_version": "python_version", "capacity": "capacity_n",
+    "first_date": "first_date", "window_start": "window_start", "window_end": "window_end",
+    "interval_days": "interval_days",
+}
+
+
+def get_session(conn: sqlite3.Connection, session_id: str) -> dict | None:
+    """{conditions: dict, last_message, last_answer, last_plan} 또는 없으면 None."""
+    row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+    if row is None:
+        return None
+    conditions = {field: row[column] for field, column in CONDITION_COLUMNS.items()}
+    conditions["packages"] = json.loads(row["packages_json"])
+    conditions["excluded"] = json.loads(row["excluded_json"])
+    return {
+        "conditions": conditions,
+        "last_message": row["last_message"],
+        "last_answer": row["last_answer"],
+        "last_plan": json.loads(row["last_plan_json"]) if row["last_plan_json"] else None,
+    }
+
+
+def save_session(conn: sqlite3.Connection, session_id: str, conditions: dict, **last) -> None:
+    """조건을 통째로 저장한다. last_message·last_answer·last_plan은 넘긴 것만 바꾼다."""
+    values = {column: conditions.get(field) for field, column in CONDITION_COLUMNS.items()}
+    values["packages_json"] = json.dumps(conditions.get("packages", []), ensure_ascii=False)
+    values["excluded_json"] = json.dumps(conditions.get("excluded", []), ensure_ascii=False)
+    for key in ("last_message", "last_answer"):
+        if key in last:
+            values[key] = last[key]
+    if "last_plan" in last:
+        values["last_plan_json"] = None if last["last_plan"] is None else json.dumps(last["last_plan"], ensure_ascii=False)
+    now = _now()
+    columns = ", ".join(values)
+    marks = ", ".join("?" for _ in values)
+    updates = ", ".join(f"{c} = excluded.{c}" for c in values)
+    conn.execute(
+        f"INSERT INTO sessions (id, {columns}, created_at, updated_at) VALUES (?, {marks}, ?, ?) "
+        f"ON CONFLICT(id) DO UPDATE SET {updates}, updated_at = excluded.updated_at",
+        (session_id, *values.values(), now, now),
+    )
+    conn.commit()
 
 
 # ── events (실행 로그) ───────────────────────────────────

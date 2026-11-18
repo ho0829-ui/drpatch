@@ -73,6 +73,7 @@ def normalize_python(version: str | None) -> str | None:
 class AgentState(TypedDict, total=False):
     message: str
     today: date
+    last_turn: dict | None  # 직전 요청·응답 (F3010)
     conditions: Conditions
     intent: str  # plan | fact | confirm | other
     intent_reason: str
