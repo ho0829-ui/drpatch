@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-18 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/fe-02-api] T2 완료: `frontend/src/api.js` 구현 (`upload`, `chat` ndjson 스트림, `plans`, `logs`, `calendar`), 실제 서버(127.0.0.1:8000)로 동작 확인
 - [agy/fe-01-scene] T1 완료: `frontend/` Vite + Vue 3 + Three.js 진료실 장면 이식 (`app/main.py` dist 우선 서빙, `tests/test_api.py::test_screen_is_served_from_same_server`는 구 web/ 탭 문자열 검사로 1건 실패 — Claude Code 확인 필요)
 - 심화 F3023 캘린더 연동 끝 (테스트 255개, 실제 서버+GMS: 11/21 23시 일정 → 1회차 11/22로 이동, 확정 시 캘린더 등록)
   - app/calendar/backend.py: CalendarBackend 인터페이스 + LocalCalendar(SQLite calendar_events), make_calendar(.env CALENDAR_BACKEND=local|google|off)
