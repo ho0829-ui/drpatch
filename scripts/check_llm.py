@@ -42,13 +42,17 @@ def main() -> int:
     except Exception as e:  # 확인 스크립트라 원인을 그대로 보여준다
         print(f"  실패: {type(e).__name__}: {e}")
         return 1
-    print(f"  응답: {reply.content}\n")
+    print(f"  응답: {reply.text}\n")
 
     print("② Tool 선택 확인")
     llm_with_tools = llm.bind_tools(TOOL_SPECS)
     passed = 0
     for question, expected in CASES:
-        msg = llm_with_tools.invoke([("system", SYSTEM), ("human", question)])
+        try:
+            msg = llm_with_tools.invoke([("system", SYSTEM), ("human", question)])
+        except Exception as e:
+            print(f"  [실패] {question}\n      {type(e).__name__}: {e}")
+            continue
         chosen = {call["name"] for call in msg.tool_calls}
         ok = chosen == expected
         passed += ok
@@ -57,7 +61,7 @@ def main() -> int:
         for call in msg.tool_calls:
             print(f"      {call['name']}({call['args']})")
         if not msg.tool_calls:
-            print(f"      응답: {str(msg.content)[:120]}")
+            print(f"      응답: {msg.text[:150]}")
     print(f"\n결과: {passed}/{len(CASES)} 예상대로")
     return 0 if passed == len(CASES) else 2
 

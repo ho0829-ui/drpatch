@@ -25,13 +25,20 @@ def load_llm_config() -> dict[str, str]:
     return values
 
 
-def get_llm(temperature: float = 0, timeout: float = 30) -> ChatOpenAI:
+def get_llm(temperature: float | None = None, timeout: float = 60) -> ChatOpenAI:
+    """temperature를 주지 않으면 보내지 않는다.
+    gpt-6-luna처럼 추론형 모델은 temperature 기본값(1) 외에는 400 오류를 낸다(2026-11-18 확인).
+
+    Responses API(/v1/responses)를 쓴다. gpt-6-luna는 /v1/chat/completions에서
+    추론과 Tool 호출을 함께 쓰면 400 오류를 낸다(2026-11-18 확인). GMS 안내 예시도 /v1/responses다."""
     config = load_llm_config()
+    options = {"temperature": temperature} if temperature is not None else {}
     return ChatOpenAI(
         api_key=config["GMS_KEY"],
         base_url=config["GMS_BASE_URL"],
         model=config["LLM_MODEL"],
-        temperature=temperature,
         timeout=timeout,
         max_retries=1,
+        use_responses_api=True,
+        **options,
     )

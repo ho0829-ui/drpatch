@@ -30,6 +30,9 @@ def test_get_llm_uses_env(monkeypatch, no_dotenv):
     llm = get_llm()
     assert llm.model_name == "test-model"
     assert llm.openai_api_base == "https://example.invalid/v1"
+    # 추론형 모델 대응: temperature는 보내지 않고, Tool 호출은 Responses API로
+    assert llm.temperature is None
+    assert llm.use_responses_api is True
 
 
 def test_tool_specs_match_spec():
