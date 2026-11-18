@@ -8,6 +8,7 @@ import FallbackList from './components/FallbackList.vue';
 import PaperSheet from './components/PaperSheet.vue';
 import SpeechBubble from './components/SpeechBubble.vue';
 import StatusChip from './components/StatusChip.vue';
+import TopTools from './components/TopTools.vue';
 
 const sceneRef = ref(null);
 const fileInputRef = ref(null);
@@ -152,32 +153,30 @@ function reloadPage() {
       <div v-for="(line, i) in tickerLines" :key="i">{{ line }}</div>
     </div>
 
-    <div class="note">
-      드래그 회전 · 오른쪽 드래그 이동 · 휠 줌 · 더블클릭 처음으로 ·
-      <span>숨은 것 {{ eggCount.found }}/{{ eggCount.total }}</span>
-    </div>
-
-    <SpeechBubble :text="bubbleText" :reduced="reduced" :pos="bubblePos" />
-
-    <Controls
-      :state="state"
+    <TopTools
       :reduced="reduced"
+      :eggs="eggCount"
       @update:reduced="reduced = $event"
-      @upload="triggerUpload"
-      @start="sceneRef?.runVisit()"
-      @confirm="sceneRef?.confirmPlan()"
-      @calendar="activeSheet = { kind: 'calendar', color: '#3E9E98' }"
-      @logs="activeSheet = { kind: 'log', color: '#3E9E98' }"
       @toggle-list="listView = true"
       @reset="reloadPage"
     />
+
+    <SpeechBubble :text="bubbleText" :reduced="reduced" :pos="bubblePos" />
 
     <ChatBar
       :messages="chatMessages"
       :busy="isBusy"
       @send="onSendChat"
       @upload="triggerUpload"
-    />
+    >
+      <Controls
+        :state="state"
+        @start="sceneRef?.runVisit()"
+        @confirm="sceneRef?.confirmPlan()"
+        @calendar="activeSheet = { kind: 'calendar', color: '#3E9E98' }"
+        @logs="activeSheet = { kind: 'log', color: '#3E9E98' }"
+      />
+    </ChatBar>
   </div>
 
   <FallbackList

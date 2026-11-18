@@ -177,12 +177,21 @@ def test_logs_list_detail_delete_and_no_update(client):
 
 # ── 화면 파일 (F3018) ────────────────────────────────────
 def test_screen_is_served_from_same_server(client):
+    """빌드한 Vue 화면(frontend/dist)이 있으면 그것을, 없으면 예전 web/을 같은 서버가 내보낸다."""
+    from app.main import DIST_DIR, WEB_DIR
+
     page = client.get("/")
     assert page.status_code == 200 and "text/html" in page.headers["content-type"]
-    for tab in ("대화", "계획 관리", "실행 로그"):
-        assert tab in page.text
-    assert "참고용 정보" in page.text and "OSV.dev" in page.text  # 출처 표기 (NF3007)
-    for path in ("/style.css", "/js/api.js", "/js/render.js", "/js/chat.js", "/js/plans.js", "/js/logs.js", "/js/main.js"):
+    assert "참고용 정보" in page.text and "OSV.dev" in page.text  # 출처 표기 (NF3007) — 두 화면 모두 HTML에 직접
+    if WEB_DIR == DIST_DIR:
+        assert '<div id="app">' in page.text and "DR.PATCH" in page.text
+        assets = ["/brand/icon.svg", "/brand/mascot.svg", "/models/doctor.glb", "/models/desk.glb"]
+        assets += [line.split('"')[1] for line in page.text.split() if line.startswith(("src=\"/assets/", "href=\"/assets/"))]
+    else:
+        for tab in ("대화", "계획 관리", "실행 로그"):
+            assert tab in page.text
+        assets = ["/style.css", "/js/api.js", "/js/render.js", "/js/chat.js", "/js/plans.js", "/js/logs.js", "/js/main.js"]
+    for path in assets:
         assert client.get(path).status_code == 200, path
     assert client.get("/plans").headers["content-type"].startswith("application/json")  # API가 먼저
     assert client.get("/health").json() == {"ok": True}

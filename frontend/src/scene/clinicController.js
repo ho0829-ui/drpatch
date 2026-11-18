@@ -646,6 +646,17 @@ export async function createClinicController(canvas, callbacks) {
         visible: showTags && front && popped !== p,
       });
     }
+    // 이름표가 서로 겹치면 위로 한 칸씩 올려 놓는다 (최대 3칸). 너비는 글자 수로 어림.
+    const placed = [];
+    for (const t of tagList.filter((t) => t.visible).sort((a, b) => b.y - a.y)) {
+      const w = t.name.length * 6.6 + 22, h = 19;
+      for (let k = 0; k < 4; k++) {
+        const hit = placed.some((q) => Math.abs(q.x - t.x) < (q.w + w) / 2 + 2 && Math.abs(q.y - t.y) < h);
+        if (!hit) break;
+        t.y -= h;
+      }
+      placed.push({ x: t.x, y: t.y, w });
+    }
     onPillTagsUpdate(tagList);
 
     rafId = requestAnimationFrame(frame);

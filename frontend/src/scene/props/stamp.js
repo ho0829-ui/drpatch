@@ -19,7 +19,7 @@ export function setupStamp(world, M, addPick, tween) {
       });
       await tween(160, (t) => (stamp.position.y = 0.6 - t * 0.45), ease.lin);
       bl.label.redraw(true);
-      onStamped?.(bl.round.no);
+      onStamped?.(bl.round.round_no ?? bl.round.no); // 실제 API 필드는 round_no
       await tween(220, (t) => (stamp.position.y = 0.15 + t * 0.6), ease.out);
     }
     const from = stamp.position.clone();

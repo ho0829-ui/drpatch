@@ -1,34 +1,15 @@
 <script setup>
-defineProps({
-  state: { type: String, default: 'idle' },
-  reduced: Boolean,
-});
-
-const emit = defineEmits(['upload', 'start', 'confirm', 'calendar', 'logs', 'toggle-list', 'reset', 'update:reduced']);
+// 진료 도크 윗줄: 주요 동작만. (파일 올리기는 입력줄의 첨부 버튼 하나, 보조 동작은 TopTools)
+defineProps({ state: { type: String, default: 'idle' } });
+const emit = defineEmits(['start', 'confirm', 'calendar', 'logs']);
 </script>
 
 <template>
-  <nav class="controls" aria-label="진료 제어">
-    <button
-      class="btn"
-      :disabled="state === 'running' || state === 'confirming'"
-      @click="emit('upload')"
-    >
-      파일 올리기
-    </button>
-    <button class="btn primary" :disabled="state !== 'ready'" @click="emit('start')">진료 시작</button>
-    <button class="btn hot" :disabled="state !== 'planned'" @click="emit('confirm')">처방 확정</button>
-    <button class="btn" @click="emit('calendar')">진료 예약</button>
-    <button class="btn" @click="emit('logs')">진료 기록</button>
-    <button class="btn" @click="emit('toggle-list')">목록으로 보기</button>
-    <button class="btn" @click="emit('reset')">처음부터</button>
-    <label class="motion">
-      <input
-        type="checkbox"
-        :checked="reduced"
-        @change="emit('update:reduced', $event.target.checked)"
-      >
-      움직임 줄이기
-    </label>
+  <nav class="dock-actions" aria-label="진료 제어">
+    <button class="btn btn-sm primary" :disabled="state !== 'ready'" @click="emit('start')">진료 시작</button>
+    <button class="btn btn-sm hot" :disabled="state !== 'planned'" @click="emit('confirm')">처방 확정</button>
+    <span class="dock-sep" aria-hidden="true"></span>
+    <button class="btn btn-sm ghost" @click="emit('calendar')">진료 예약</button>
+    <button class="btn btn-sm ghost" @click="emit('logs')">진료 기록</button>
   </nav>
 </template>
