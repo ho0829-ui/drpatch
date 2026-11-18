@@ -1,17 +1,16 @@
-# 마지막 갱신: 2026-11-18 16:03 / 작성: Claude Code
+# 마지막 갱신: 2026-11-18 16:25 / 작성: Claude Code
 
 ## 지금 하던 것
-- 2일차 [C] LangGraph 흐름 + 재계획 상한 테스트 끝 (전체 테스트 169개 통과, 실제 GMS로 계획·사실 조회·되묻기 3경로 확인)
-  - app/agent/graph.py: build_graph / run_agent(message, conditions, brain, today, emit) → intent·answer·conditions·plan·missing·tool_plan·tool_calls
-  - app/agent/brain.py: AgentBrain 인터페이스 + GmsBrain (analyze·plan_tools·choose_replan·answer_fact·write_response·chat, 구조화 출력)
-  - app/agent/state.py: Conditions(Memory), 빠진 입력·되묻는 문장(코드), 우분투 20→20.04·3.8.10→3.8
-  - app/agent/runner.py: ToolRunner (동시 4개, 요청 안 캐시, tool_call/tool_result 이벤트)
-  - app/agent/render.py: 계획 dict, LLM 실패 시 기본 문장
-  - scripts/run_agent.py: 실제 GMS+API 확인 (예시: Tool 13번, 약 25~28초)
+- 2일차 [C] 이벤트 버스 + 로깅 Agent 끝 (전체 테스트 183개 통과, 실제 GMS 한 건 → 이벤트 46개 SQLite 저장 확인)
+  - app/events/bus.py: EventBus.publish(session_id, type, payload) — 큐에 넣고 바로 돌아옴, 예외 없음, 세션별 seq. emitter(session_id)를 run_agent(emit=)에 꽂음
+  - app/events/logger.py: LoggingAgent(bus, db_path).start()/stop() — 별도 스레드, 원본 그대로 INSERT, LLM 안 씀, DB 실패해도 계속
+  - app/db/schema.sql(sessions·plans·events) + repo.py(events: insert·list_log_sessions·get_events·delete_events, 수정 함수 없음)
+  - app/main.py lifespan: init_db → EventBus → LoggingAgent 시작/정지 (app.state.bus, app.state.logger)
+  - graph: step_end에 단계 요약 (analyze 종료 = 의도·이유)
 
 ## 다음에 할 것
-- 2일차 [C] 대화 맥락(Memory) F3010: 세션 조건을 SQLite sessions 표에 저장·불러오기 (run_agent는 이미 이전 조건 위에 바뀐 것만 덮어씀)
-- 2일차 [C] 이벤트 버스 + 로깅 Agent(F3012~F3013): run_agent의 emit 자리에 EventBus.publish 연결
+- 2일차 [C] 대화 맥락(Memory) F3010: 세션 조건을 SQLite sessions 표에 저장·불러오기 (run_agent는 이미 이전 조건 위에 바뀐 것만 덮어씀. 표는 schema.sql에 있음)
+- 그다음 [G·Carbon] 2일차 교차 리뷰 (agy-guide ②)
 
 ## 주의
 - 응답 시간: 예시 한 건 25~28초. 대부분 LLM 4번(analyze·plan·replan·respond). judge의 목표 버전 재조회는 패키지마다 순서대로 → 3일차 측정 때 병렬화 후보

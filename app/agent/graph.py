@@ -34,6 +34,20 @@ from app.tools.default import build_registry
 PLAN_TOOLS = ["get_eol", "get_vulns", "get_package_versions"]  # 계획 수립에 셋 다 필요
 LLM_FAILED = "LLM 응답을 받지 못해 기본값을 썼어요"
 
+# 단계 종료 이벤트에 싣는 요약 (F3012: 의도 분석 종료에는 의도와 이유)
+STEP_SUMMARY: dict[str, Callable[[dict], dict]] = {
+    "analyze": lambda o: {"intent": o.get("intent"), "reason": o.get("intent_reason"), "missing": o.get("missing")},
+    "ask": lambda o: {"asked": True},
+    "plan_tools": lambda o: {"tool_plan": o.get("tool_plan"), "reason": o.get("tool_plan_reason")},
+    "call_tools": lambda o: {"eol": [k for k in ("eol_os", "eol_python") if k in o.get("results", {})],
+                             "packages": len(o.get("results", {}).get("vulns", {}))},
+    "judge": lambda o: {"violations": len(o.get("violations", []))},
+    "replan": lambda o: {"strategy": o.get("replan_strategy"),
+                         "result": getattr(o.get("upgrade"), "status", None),
+                         "python": getattr(o.get("upgrade"), "python", None)},
+    "build": lambda o: {"rounds": len(o.get("plan", {}).get("rounds", []))},
+}
+
 
 def merge_conditions(prev: Conditions, analysis) -> Conditions:
     """이번 메시지에서 나온 값만 덮어쓴다 (F3010: 바뀐 조건만 갱신)."""
@@ -65,7 +79,7 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         def wrapped(state: AgentState) -> dict:
             emit("step_start", {"step": name})
             out = fn(state)
-            emit("step_end", {"step": name})
+            emit("step_end", {"step": name, **STEP_SUMMARY.get(name, lambda o: {})(out)})
             return out
 
         return wrapped

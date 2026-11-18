@@ -72,6 +72,8 @@ web/
 - 이벤트 모양: `{session_id, seq, type, payload, created_at}`. seq는 세션 안 순번.
 - `bus.publish()`는 구독자 큐에 `put_nowait`만 한다. 큐가 가득 차거나 로깅 Agent가 죽어도 메인은 기다리지 않음 → "로깅 꺼도 대화 정상" 테스트.
 - 로깅 Agent = 앱 시작 때 뜨는 스레드 하나. 큐 → events 표 INSERT. UPDATE 없음 (로그 수정 불가, F3014).
+- 구현 (2026-11-18): `app/events/bus.py`(EventBus, 큐 10,000개, 넘치면 버리고 `dropped`로 셈), `app/events/logger.py`(LoggingAgent), `app/db/`(schema.sql·repo.py, DB 파일은 `.env`의 `DB_PATH`, 기본 `data/sudo_patch.db`).
+- 이벤트 종류: `step_start` / `step_end`(단계 요약 포함: analyze 종료에 의도·이유) / `tool_call` / `tool_result`(ms·error_code) / `llm_decision`(intent·tool_plan·replan_strategy와 이유) / `judgment` / `replan`(회차·Python·이유) / `error`.
 
 ## 5. 동기·비동기 방식
 

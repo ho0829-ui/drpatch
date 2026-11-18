@@ -14,6 +14,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.agent.brain import GmsBrain  # noqa: E402
 from app.agent.graph import run_agent  # noqa: E402
 from app.agent.state import Conditions  # noqa: E402
+from app.db import repo  # noqa: E402
+from app.events.bus import EventBus  # noqa: E402
+from app.events.logger import LoggingAgent  # noqa: E402
 from app.parsing.requirements import parse  # noqa: E402
 
 FILE = "requests==2.19.0\ndjango==2.2.0\n-e git+https://github.com/me/tool.git#egg=tool\n"
@@ -40,8 +43,22 @@ def show(event_type: str, payload: dict) -> None:
         print(f"   [{event_type}] {json.dumps(payload, ensure_ascii=False)}")
 
 
+repo.init_db()
+bus = EventBus()
+logger = LoggingAgent(bus).start()
+session_id = f"script-{int(time.time())}"
+bus_emit = bus.emitter(session_id)
+
+
+def emit(event_type: str, payload: dict) -> None:
+    show(event_type, payload)
+    bus_emit(event_type, payload)
+
+
 start = time.perf_counter()
-out = run_agent(message, conditions, GmsBrain(), emit=show)
+out = run_agent(message, conditions, GmsBrain(), emit=emit)
+logger.stop()
 print(f"\n=== 의도: {out['intent']} / Tool 호출 {out['tool_calls']}번 / {time.perf_counter() - start:.1f}초")
 print(f"=== 조건: {out['conditions'].model_dump(mode='json', exclude={'packages', 'excluded'})}")
+print(f"=== 로그: {session_id} 이벤트 {logger.saved}개 저장 (실패 {logger.failed}, 버림 {logger.dropped}) → {repo.db_path()}")
 print(f"=== 답:\n{out['answer']}")
