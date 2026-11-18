@@ -67,14 +67,8 @@ def blister_cell():
     m = mats()
     foil = C.material("foil", "#E9EEEE", rough=0.24, metal=0.8, coat=0.6)
     objs = [C.rbox("CellFoil", (0, 0, 0.07), (CELL_W, CELL_D, 0.14), foil, 0.035)]
-    objs.append(C.sphere("Well", (0, 0, 0.141), (0.62, 0.4, 0.012), C.material("foil_well", "#C9D3D4", rough=0.3, metal=0.6, coat=0.3), segs=48, rings=12))
-    d = C.lathe("Dome", C.capsule_profile(0.4, 0.25), C.glass_mat("#FFFFFF", "dome"), segs=40)
-    C.apply_rot([d], (0, PI / 2, 0))
-    d.scale = (1, 1, 0.78)
-    C.select_only([d])
-    C.bpy.ops.object.transform_apply(scale=True)
-    d.location = (0, 0, 0.14)
-    objs.append(d)
+    # 홈은 은박 위로 1mm 띄운다 (맞닿는 면이 서로 깜빡이지 않게). 투명 덮개는 따로 놀아서 뺐다.
+    objs.append(C.sphere("Well", (0, 0, 0.148), (0.62, 0.4, 0.006), C.material("foil_well", "#C9D3D4", rough=0.3, metal=0.6, coat=0.3), segs=48, rings=12))
     return finish("Cell", objs)
 
 
@@ -83,7 +77,7 @@ def blister_end():
     m = mats()
     foil = C.material("foil", "#E9EEEE", rough=0.24, metal=0.8, coat=0.6)
     objs = [C.rbox("EndFoil", (0, 0, 0.07), (END_W, 2 * CELL_D, 0.14), foil, 0.035)]
-    C.bpy.ops.mesh.primitive_plane_add(size=1, location=(-0.04, 0, 0.142))
+    C.bpy.ops.mesh.primitive_plane_add(size=1, location=(-0.04, 0, 0.146))
     label = C.bpy.context.active_object
     label.name = "Label"
     label.scale = (1.0, 2.3, 1)
@@ -91,7 +85,7 @@ def blister_end():
     C.bpy.ops.object.transform_apply(scale=True)
     label.data.materials.append(C.material("label", P["ink"], rough=0.6, coat=0.2))
     objs.append(label)
-    dots = [C.sphere(f"Perf{i}", (END_W / 2 - 0.05, -1.15 + i * 0.115, 0.142), (0.018, 0.018, 0.006), m["faint"], segs=8, rings=4) for i in range(21)]
+    dots = [C.sphere(f"Perf{i}", (END_W / 2 - 0.05, -1.15 + i * 0.115, 0.148), (0.018, 0.018, 0.005), m["faint"], segs=8, rings=4) for i in range(21)]
     objs.append(C.join(dots, "Perforation"))
     return finish("BlisterEnd", objs)
 
@@ -129,9 +123,10 @@ def iv():
     objs.append(C.cylinder("Chamber", (1.05, 0, 1.64), 0.11, 0.38, m["glass"]))
     objs.append(C.cylinder("ChamberCap", (1.05, 0, 1.43), 0.08, 0.06, m["white"]))
     objs.append(C.sphere("Drop", (1.05, 0, 1.76), (0.045, 0.045, 0.055), C.material("drop", "#6CC6B4", rough=0.1, coat=1.0), segs=16, rings=8))
-    tube_pts = C.catmull([(1.05, 0, 1.4), (1.05, -0.02, 1.0), (0.85, -0.1, 0.55), (0.4, -0.25, 0.3), (0.0, -0.45, 0.25)], 8)
+    # 관은 거치대에 감아 둔다 (장식용 — 어디에도 꽂지 않음)
+    tube_pts = C.catmull([(1.05, 0, 1.4), (1.0, -0.05, 1.05), (0.6, -0.12, 0.95), (0.18, -0.12, 1.0), (0.12, 0.12, 1.05), (0.25, 0.2, 1.15)], 8)
     objs.append(C.tube("Line", tube_pts, 0.022, C.material("line", "#E2F2EE", rough=0.2, transmission=0.4)))
-    objs.append(C.rbox("RollerClamp", (1.05, -0.02, 1.05), (0.13, 0.12, 0.24), m["teal"], 0.03))
+    objs.append(C.rbox("RollerClamp", (0.62, -0.12, 0.95), (0.24, 0.13, 0.12), m["teal"], 0.03))
     return finish("IV", objs)
 
 
@@ -142,7 +137,7 @@ def bottle():
                    C.glass_mat("#D2F0E8", "bottle_glass"))
     base = C.lathe("BottleBase", [(0.0, 0.0), (1.12, 0.0), (1.18, 0.05), (1.18, 0.1), (0.0, 0.1)], m["white"])
     lab = C.lathe("BottleLabel", [(1.212, 0.32), (1.212, 0.95)], m["paper"])
-    stripe = C.lathe("BottleStripe", [(1.218, 0.86), (1.218, 0.95)], m["teal"])
+    stripe = C.lathe("BottleStripe", [(1.226, 0.86), (1.226, 0.95)], m["teal"])
     t1 = C.text("BottleText", "DR.PATCH", (0, -1.235, 0.66), 0.22, m["ink"], rot=(PI / 2, 0, 0))
     t2 = C.text("BottleSub", "Rx  requirements.txt", (0, -1.235, 0.46), 0.09, m["deep"], rot=(PI / 2, 0, 0))
     lid = C.empty("Lid", (0, 0, 2.2))
@@ -160,7 +155,7 @@ def chart():
     m = mats()
     objs = [C.rbox("Board", (0, 0, 0.05), (2.6, 3.3, 0.1), m["deep"], 0.08)]
     objs.append(C.rbox("Sheets", (0.02, -0.12, 0.105), (2.3, 2.92, 0.03), C.material("sheets", "#EEF5F3", rough=0.8, coat=0.0), 0.01))
-    C.bpy.ops.mesh.primitive_plane_add(size=1, location=(0, -0.1, 0.123))
+    C.bpy.ops.mesh.primitive_plane_add(size=1, location=(0, -0.1, 0.127))
     paper = C.bpy.context.active_object
     paper.name = "Paper"
     paper.scale = (2.25, 2.86, 1)
@@ -204,8 +199,8 @@ def desk():
             objs.append(C.rbox(f"Leg{sx}{sy}", (sx * (DESK_W / 2 - 0.55), sy * (DESK_D / 2 - 0.55), -0.45 - LEG / 2), (0.6, 0.6, LEG), frame, 0.08))
             objs.append(C.cylinder(f"Foot{sx}{sy}", (sx * (DESK_W / 2 - 0.55), sy * (DESK_D / 2 - 0.55), -0.45 - LEG - 0.06), 0.32, 0.12, m["deep"], bevel=0.03))
     # 데스크 패드 (블리스터를 놓는 자리)
-    objs.append(C.rbox("Pad", (0.6, -0.9, 0.025), (10.4, 5.0, 0.05), C.material("pad", "#2E7A75", rough=0.7, coat=0.15, sheen=0.4), 0.04))
-    stitch = [C.rbox(f"St{i}", (0.6 - 5.0 + i * 0.25, -0.9 + s * 2.3, 0.052), (0.12, 0.025, 0.006), C.material("stitch", "#9FD6CB", rough=0.8, coat=0.0), 0.004)
+    objs.append(C.rbox("Pad", (0.6, -0.9, 0.033), (10.4, 5.0, 0.05), C.material("pad", "#2E7A75", rough=0.7, coat=0.15, sheen=0.4), 0.04))
+    stitch = [C.rbox(f"St{i}", (0.6 - 5.0 + i * 0.25, -0.9 + s * 2.3, 0.062), (0.12, 0.025, 0.006), C.material("stitch", "#9FD6CB", rough=0.8, coat=0.0), 0.004)
               for s in (-1, 1) for i in range(41)]
     objs.append(C.join(stitch, "PadStitch"))
     # 명패 (환자 쪽을 봄)

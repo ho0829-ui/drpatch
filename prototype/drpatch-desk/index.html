@@ -67,6 +67,16 @@
   .tip { position: fixed; z-index: 6; pointer-events: none; padding: 6px 10px; border-radius: 10px; background: var(--color-ink);
          color: #fff; font: 500 12px var(--mono); transform: translate(14px, 14px); opacity: 0; transition: opacity .12s; }
   .tip.show { opacity: 1; }
+  #tags { position: fixed; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
+  .tag { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 4px; padding: 3px 7px 3px 5px; border-radius: 999px;
+         background: rgba(255,255,255,.94); color: var(--color-ink); font: 600 10.5px/1 var(--mono); white-space: nowrap;
+         box-shadow: 0 2px 6px rgba(22,49,58,.18); transition: opacity .2s; }
+  .tag i, .chip-float i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .chip-float { position: absolute; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #fff;
+                font: 600 12px/1 var(--mono); color: var(--color-ink); white-space: nowrap; box-shadow: 0 4px 12px rgba(22,49,58,.2);
+                transform: translate(-50%, -100%); animation: chipUp 1.5s ease-out forwards; }
+  @keyframes chipUp { 0% { opacity: 0; translate: 0 10px; } 15% { opacity: 1; translate: 0 0; } 80% { opacity: 1; } 100% { opacity: 0; translate: 0 -46px; } }
+  body.reduced .chip-float { animation-duration: .4s; }
 
   /* 누르면 펼쳐지는 종이 */
   .sheet { position: fixed; top: 84px; right: 24px; width: min(380px, calc(100vw - 32px)); perspective: 1400px; z-index: 5; pointer-events: none; }
@@ -147,6 +157,7 @@
 <div class="bubble" id="bubble" aria-hidden="true"><b>DR.PATCH</b><span id="bubble-text"></span></div>
 <div class="sr-only" aria-live="polite" id="live"></div>
 <div class="tip" id="tip"></div>
+<div id="tags" aria-hidden="true"></div>
 
 <div class="sheet" id="sheet"><div class="paper" role="dialog" aria-labelledby="sheet-title">
   <div class="band" id="sheet-band"></div>
@@ -175,6 +186,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ── 예시 데이터 (실제 조회 아님) ─────────────────────────
 // 실제 서비스처럼: 회차는 최대 3, 회차당 N개. 패치할 필요 없는 건 곡반(안전), 회차에 못 든 건 약병에 남아 '다음 진료'.
@@ -256,7 +268,7 @@ async function init() {
   // ── 렌더러·장면·조명 ────────────────────────────────
   const canvas = $('scene');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.NeutralToneMapping;
@@ -267,15 +279,16 @@ async function init() {
   scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environmentIntensity = 0.42;
 
-  const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 200);
-  const BASE = new THREE.Vector3(0, 11.2, 19.5);
-  const TARGET = new THREE.Vector3(0, 1.2, -1.6);
+  const camera = new THREE.PerspectiveCamera(36, 1, 0.5, 150); // near를 키워 깊이 정밀도 확보 (맞닿는 면 깜빡임 방지)
+  const BASE = new THREE.Vector3(0, 13.2, 18.6);
+  const TARGET = new THREE.Vector3(0, 0.6, -1.4);
+  const ROOM = { x: 23.5, y: 16.5, z: 40 }; // 카메라가 진료실 밖으로 나가지 않는 한계
   let distScale = 1, zoom = 1, zoomTarget = 1;
 
   scene.add(new THREE.HemisphereLight(0xffffff, 0x9fcfc4, 0.6));
   const key = new THREE.DirectionalLight(0xfff8ef, 2.1); // 천장 조명 쪽 (앞 위 왼쪽)
   key.position.set(-7, 20, 12); key.castShadow = true;
-  key.shadow.mapSize.set(4096, 4096);
+  key.shadow.mapSize.set(2048, 2048);
   Object.assign(key.shadow.camera, { left: -16, right: 16, top: 14, bottom: -14, near: 1, far: 60 });
   key.shadow.bias = -0.0003; key.shadow.normalBias = 0.03; key.shadow.radius = 4;
   scene.add(key);
@@ -285,11 +298,36 @@ async function init() {
     obj.traverse((o) => {
       if (!o.isMesh) return;
       o.receiveShadow = true;
-      o.castShadow = cast && !(o.material && o.material.transmission > 0);
-      if (o.material && o.material.transmission > 0) o.material.thickness = Math.min(o.material.thickness ?? 0, 0.08); // 두꺼운 굴절로 뒤가 일그러지지 않게
+      const m = o.material;
+      if (m && m.transmission > 0) { // 굴절 유리는 장면을 한 번 더 그려서 무겁다 → 일반 반투명으로
+        m.opacity = m.transmission >= 0.9 ? 0.28 : 0.72; m.transmission = 0; m.transparent = true; m.depthWrite = false;
+      }
+      o.castShadow = cast && !(m && m.transparent);
     });
     return obj;
   };
+
+  // 움직이지 않는 메시는 재질별로 한 덩어리로 합친다 (그리기 횟수 ↓). exclude에 든 하위 트리는 그대로 둔다.
+  function mergeStatic(parent, exclude = [], cast = true) {
+    parent.updateMatrixWorld(true);
+    const inv = parent.matrixWorld.clone().invert();
+    const groups = new Map(); const remove = [];
+    parent.traverse((o) => {
+      if (!o.isMesh) return;
+      for (let a = o; a && a !== parent; a = a.parent) if (exclude.includes(a)) return;
+      const g = o.geometry.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+      if (!groups.has(o.material.uuid)) groups.set(o.material.uuid, { mat: o.material, geos: [] });
+      groups.get(o.material.uuid).geos.push(g); remove.push(o);
+    });
+    for (const o of remove) o.parent.remove(o);
+    for (const { mat, geos } of groups.values()) {
+      const names = ['position', 'normal', 'uv'].filter((n) => geos.every((g) => g.attributes[n]));
+      let list = geos.map((g) => { const ng = new THREE.BufferGeometry(); names.forEach((n) => ng.setAttribute(n, g.attributes[n])); if (g.index) ng.setIndex(g.index); return ng; });
+      if (list.some((g) => !g.index)) list = list.map((g) => (g.index ? g.toNonIndexed() : g));
+      const merged = mergeGeometries(list, false); if (!merged) continue;
+      const mesh = new THREE.Mesh(merged, mat); mesh.receiveShadow = true; mesh.castShadow = cast && !mat.transparent; parent.add(mesh);
+    }
+  }
 
   function textTexture(w, h, draw) {
     const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -316,6 +354,7 @@ async function init() {
   world.add(prep(M.desk));
   const bulb = M.desk.getObjectByName('LampBulb');
   if (bulb) { const lamp = new THREE.PointLight(0xffe7b8, 6, 14, 1.6); bulb.getWorldPosition(lamp.position); scene.add(lamp); }
+  mergeStatic(M.room, [], false); mergeStatic(M.desk);
   const pickRoots = [];
   const addPick = (obj, kind, data = {}) => { obj.userData = { ...obj.userData, kind, ...data }; pickRoots.push(obj); };
 
@@ -325,6 +364,7 @@ async function init() {
   const packs = ROUNDS.map((r) => {
     const g = new THREE.Group(); world.add(g);
     const end = prep(M.blister_end.clone(true)); end.position.x = END_W / 2; g.add(end);
+    const labelMesh = end.getObjectByName('Label');
     const label = textTexture(220, 520, (c, w, h, stamped) => {
       c.fillStyle = COLOR.ink; c.beginPath(); c.roundRect(0, 0, w, h, 30); c.fill();
       c.fillStyle = '#fff'; c.textAlign = 'center';
@@ -338,15 +378,15 @@ async function init() {
         c.fillStyle = COLOR.coral; c.font = FONT(700, 40, true); c.fillText('Rx 확정', 0, 14); c.restore();
       }
     });
-    end.getObjectByName('Label').material = new THREE.MeshStandardMaterial({ map: label.tex, roughness: 0.6 });
+    labelMesh.material = new THREE.MeshStandardMaterial({ map: label.tex, roughness: 0.6 }); mergeStatic(end);
     const slots = [];
     for (let k = 0; k < PER_ROUND; k++) {
       const cell = prep(M.blister_cell.clone(true));
       const x = END_W + CELL.w / 2 + Math.floor(k / 2) * CELL.w, z = (k % 2 === 0 ? -1 : 1) * CELL.d / 2;
       cell.position.set(x, 0, z); g.add(cell);
-      const dome = cell.getObjectByName('Dome'); dome.scale.setScalar(0.0001); dome.raycast = () => {};
-      const well = cell.getObjectByName('Well'); well.material = well.material.clone();
-      slots.push({ x, z, dome, well });
+      const well = cell.getObjectByName('Well'); const wellMat = well.material = well.material.clone();
+      mergeStatic(cell);
+      slots.push({ x, z, wellMat });
     }
     addPick(g, 'blister', { round: r.no });
     return { group: g, round: r, label, slots, used: 0 };
@@ -375,20 +415,20 @@ async function init() {
   let trayUsed = 0;
 
   // ── 알약: 인기 패키지는 특별 알약, 나머지는 일반 캡슐 ───
+  const JAR_SCALE = 0.72;
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const pills = ITEMS.map((it, i) => {
     const root = new THREE.Group(); world.add(root);
     const lift = new THREE.Group(); root.add(lift);
     const inner = new THREE.Group(); lift.add(inner);
     const special = M.pills.getObjectByName(`Pill_${it.name.toLowerCase()}`);
-    const model = prep((special || M.capsule).clone(true)); model.position.set(0, 0, 0); inner.add(model);
-    const ringMat = new THREE.MeshBasicMaterial({ color: SEV[it.sev][0], transparent: true, opacity: 0, depthWrite: false });
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.52, 0.66, 48), ringMat); ring.rotation.x = -Math.PI / 2; ring.position.y = -0.24; lift.add(ring);
-    const layer = Math.floor(i / 5), k = i % 5;
-    const [rx, rz] = k === 0 ? [0, 0] : [Math.cos(k * Math.PI / 2 + layer) * 0.62, Math.sin(k * Math.PI / 2 + layer) * 0.62];
-    root.position.set(bx + rx, 0.38 + layer * 0.45, bz + rz);
-    root.rotation.set(rnd() * Math.PI, rnd() * Math.PI, rnd() * Math.PI);
-    const pill = { it, root, lift, inner, ringMat, special: !!special, inJar: true, slot: null, liftY: 0, phase: rnd() * 6, home: root.position.clone() };
+    const model = prep((special || M.capsule).clone(true)); model.position.set(0, 0, 0); inner.add(model); mergeStatic(model);
+    // 약병 안: 층마다 4알을 원 둘레 방향으로 눕혀 겹치지 않게 (조금 작게)
+    const layer = Math.floor(i / 4), k = i % 4, a = k * Math.PI / 2 + layer * 0.78;
+    root.position.set(bx + Math.cos(a) * 0.55, 0.32 + layer * 0.4, bz + Math.sin(a) * 0.55);
+    root.rotation.set(0, -a + Math.PI / 2, (rnd() - 0.5) * 0.3);
+    root.scale.setScalar(JAR_SCALE);
+    const pill = { it, root, lift, inner, special: !!special, inJar: true, slot: null, liftY: 0, phase: rnd() * 6, tag: null };
     addPick(root, 'pill', { pill });
     return pill;
   });
@@ -438,6 +478,7 @@ async function init() {
   const REST = -1.0; // 팔을 앞으로 내밀어 손을 책상에
   arms.forEach((a, i) => (a.rotation.x = ARM0[i].x + REST));
   addPick(doctor, 'doctor');
+  mergeStatic(docBody, [...eyes, ...arms]); // 머리카락·가운·청진기 등 수십 조각을 재질별로 합침
   const docAct = {
     nod: async () => { await tween(180, (p) => (docBody.rotation.x = 0.16 * p)); await tween(260, (p) => (docBody.rotation.x = 0.16 * (1 - p))); },
     tilt: async () => { await tween(300, (p) => (docBody.rotation.z = 0.22 * p), ease.out); await sleep(1100); await tween(300, (p) => (docBody.rotation.z = 0.22 * (1 - p))); },
@@ -512,41 +553,53 @@ async function init() {
   let state = 'idle';
   const setButtons = () => { $('btn-start').disabled = state !== 'idle'; $('btn-confirm').disabled = state !== 'planned'; };
 
+  const tmpV = new THREE.Vector3();
+  function toScreen(v) { tmpV.copy(v).project(camera); return [(tmpV.x + 1) / 2 * innerWidth, (1 - tmpV.y) / 2 * innerHeight, tmpV.z < 1]; }
+  function floatChip(it, at, extra = '') { // 검사 결과: 약병 위로 이름표가 떠오른다
+    const [x, y] = toScreen(at); const el = document.createElement('div');
+    el.className = `chip-float sev-${it.sev}`; el.innerHTML = `<i style="background:${SEV[it.sev][0]}"></i>${esc(it.name)} · ${SEV[it.sev][1]}${extra}`;
+    el.style.left = `${x}px`; el.style.top = `${y}px`; $('tags').appendChild(el);
+    setTimeout(() => el.remove(), reduced ? 400 : 1500);
+  }
+  const JAR_TOP = new THREE.Vector3(bx, 3.0, bz);
   async function examine(p) {
-    await tween(320, (t) => {
-      p.inner.position.y = Math.sin(t * Math.PI) * 1.0;
-      if (t > 0.5) p.ringMat.opacity = (t - 0.5) * 2 * 0.95;
-    }, ease.lin);
+    await tween(320, (t) => { p.inner.position.y = Math.sin(t * Math.PI) * 1.4; }, ease.lin);
+    floatChip(p.it, JAR_TOP);
   }
   async function shake(p) {
-    const base = new THREE.Color(SEV[p.it.sev][0]), rp = new THREE.Color(COLOR.replan);
-    p.ringMat.color.copy(rp);
-    await tween(700, (t) => { p.inner.rotation.y = Math.sin(t * Math.PI * 8) * 0.35 * (1 - t); }, ease.lin);
-    await tween(900, (t) => { p.ringMat.color.lerpColors(rp, base, t); }, ease.lin);
+    floatChip(p.it, JAR_TOP, ' · 처방 변경');
+    await tween(700, (t) => { p.inner.rotation.y = Math.sin(t * Math.PI * 8) * 0.35 * (1 - t); p.inner.position.y = Math.sin(t * Math.PI) * 0.8; }, ease.lin);
+  }
+  function addTag(p) { // 포장된 알약 위 이름표 (카메라가 고정이라 이름이 보여야 한다)
+    const el = document.createElement('div'); el.className = 'tag';
+    el.innerHTML = `<i style="background:${SEV[p.it.sev][0]}"></i>${esc(p.it.name)}`;
+    $('tags').appendChild(el); p.tag = el;
   }
   function worldOfSlot(bl, slot) {
     return bl.group.localToWorld(new THREE.Vector3(slot.x, 0.27, slot.z));
   }
-  async function flyTo(p, to, rise = 3.2) {
-    const from = p.root.position.clone(); const rot0 = p.root.rotation.clone();
+  async function flyTo(p, to, scale, rise = 3.2) {
+    const from = p.root.position.clone(); const rot0 = p.root.rotation.clone(); const s0 = p.root.scale.x;
     p.inJar = false;
     await tween(900, (t) => {
       p.root.position.lerpVectors(from, to, t); p.root.position.y += Math.sin(t * Math.PI) * rise;
       p.root.rotation.set(rot0.x * (1 - t), rot0.y * (1 - t), rot0.z * (1 - t));
+      p.root.scale.setScalar(s0 + (scale - s0) * t);
     });
     p.inner.rotation.set(0, 0, 0);
+    await tween(260, (t) => { const q = Math.sin(t * Math.PI); p.inner.scale.set(1 + q * 0.12, 1 - q * 0.18, 1 + q * 0.12); }, ease.lin); // 칸에 쏙: 살짝 눌렸다 복원
+    p.inner.scale.set(1, 1, 1);
   }
   async function packPill(p) {
     const bl = packs[p.it.round - 1]; const slot = bl.slots[bl.used++];
     p.slot = slot; p.pack = bl;
-    p.root.scale.setScalar(bl.group.scale.x);
-    await flyTo(p, worldOfSlot(bl, slot));
-    slot.well.material.color.set(SEV[p.it.sev][0]);
-    await tween(360, (t) => slot.dome.scale.setScalar(Math.max(0.0001, t)), ease.back);
+    await flyTo(p, worldOfSlot(bl, slot), bl.group.scale.x * 1.1);
+    slot.wellMat.color.set(SEV[p.it.sev][0]); addTag(p);
   }
   async function trayPill(p) {
     const [sx, sz] = TRAY_SPOTS[trayUsed++ % TRAY_SPOTS.length];
-    await flyTo(p, new THREE.Vector3(tray.position.x + sx, 0.32, tray.position.z + sz), 2.2);
+    await flyTo(p, new THREE.Vector3(tray.position.x + sx, 0.32, tray.position.z + sz), 0.95, 2.2);
+    addTag(p);
   }
   const lidTo = (open) => tween(520, (t) => { const q = open ? t : 1 - t; lid.position.set(LID0.x + q * 1.0, LID0.y + q * 1.2, LID0.z); lid.rotation.z = -q * 0.7; }, ease.out);
 
@@ -644,10 +697,11 @@ async function init() {
     else tip.classList.remove('show');
   });
   canvas.addEventListener('pointerleave', () => { hovered = null; $('tip').classList.remove('show'); });
-  canvas.addEventListener('wheel', (e) => { e.preventDefault(); zoomTarget = THREE.MathUtils.clamp(zoomTarget * Math.exp(e.deltaY * 0.0012), 0.6, 2.2); }, { passive: false });
+  const maxZoom = () => { const d = BASE.clone().sub(TARGET).multiplyScalar(distScale); return Math.min((ROOM.y - TARGET.y) / d.y, (ROOM.z - TARGET.z) / d.z, 1.9); };
+  canvas.addEventListener('wheel', (e) => { e.preventDefault(); zoomTarget = THREE.MathUtils.clamp(zoomTarget * Math.exp(e.deltaY * 0.0012), 0.6, maxZoom()); }, { passive: false });
   addEventListener('keydown', (e) => {
     if (e.key === '+' || e.key === '=') zoomTarget = Math.max(0.6, zoomTarget / 1.15);
-    if (e.key === '-') zoomTarget = Math.min(2.2, zoomTarget * 1.15);
+    if (e.key === '-') zoomTarget = Math.min(maxZoom(), zoomTarget * 1.15);
   });
   canvas.addEventListener('click', async (e) => {
     const o = pick(e); if (!o) { closeSheet(); return; }
@@ -657,7 +711,6 @@ async function init() {
       if (state === 'idle' || state === 'running') { say(state === 'idle' ? '아직 검사 전이에요. 진료 시작부터 누르시죠.' : '검사 중엔 잠깐만요. 금방 끝납니다.'); return; }
       if (popped && popped !== p) await closeSheet();
       popped = p;
-      if (p.slot) tween(260, (t) => (p.slot.dome.scale.y = 1 - Math.sin(t * Math.PI) * 0.35), ease.lin);
       tween(480, (t) => { p.inner.position.y = 1.1 * t; p.inner.rotation.x = t * Math.PI * 2; }, ease.back).then(() => (p.inner.rotation.x = 0));
       openSheet(itemSheet(p.it), SEV[p.it.sev][0]);
     } else if (d.kind === 'blister') {
@@ -671,7 +724,8 @@ async function init() {
   });
 
   // ── 후처리(접촉 그림자) · 화면 크기 ─────────────────
-  let composer = null;
+  let composer = null, useAO = new URLSearchParams(location.search).get('hq') === '1';
+  const forceLow = new URLSearchParams(location.search).get('lq') === '1';
   try {
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
@@ -686,12 +740,14 @@ async function init() {
     const w = innerWidth, h = innerHeight;
     renderer.setSize(w, h, false); composer?.setSize(w, h); camera.aspect = w / h;
     distScale = Math.min(2.2, Math.max(1, 1.55 / camera.aspect)); // 세로 화면은 멀리서
+    zoomTarget = Math.min(zoomTarget, maxZoom());
     camera.updateProjectionMatrix();
   }
   addEventListener('resize', resize); resize();
 
   // ── 매 프레임 ───────────────────────────────────────
   const headPos = new THREE.Vector3(); const dir = new THREE.Vector3(); let blinkAt = 2, blinkUntil = 0;
+  const perf = { n: 0, sum: 0, last: performance.now() };
   say('어서 오세요. 오늘은 어디가 불편한 서버인가요?');
   function frame(now) {
     const t = now / 1000;
@@ -719,10 +775,21 @@ async function init() {
     headPos.set(-0.75, 2.25, 0); doctor.localToWorld(headPos); headPos.project(camera);
     const b = $('bubble'); b.style.right = `${innerWidth - ((headPos.x + 1) / 2 * innerWidth) + 10}px`; b.style.top = `${(1 - headPos.y) / 2 * innerHeight}px`;
 
-    if (composer) composer.render(); else renderer.render(scene, camera);
+    const showTags = zoom < 1.3;
+    for (const p of pills) {
+      if (!p.tag) continue;
+      tmpV.set(0, 0.45, 0); p.root.localToWorld(tmpV); const [x, y, front] = toScreen(tmpV);
+      p.tag.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`; p.tag.style.opacity = showTags && front && popped !== p ? 1 : 0;
+    }
+
+    // 접촉 그림자(AO)는 기기가 버틸 때만: 처음 2초 동안 평균 프레임이 16ms 안이면 켠다
+    if (!forceLow && composer && perf.n < 120) { perf.sum += now - perf.last; perf.n++; if (perf.n === 120 && perf.sum / 120 < 16.5) useAO = true; }
+    perf.last = now;
+    if (useAO && composer) composer.render(); else renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+  window.__dbg = { renderer, scene, ao: () => useAO }; // 성능 확인용 (콘솔)
 }
 </script>
 </body>

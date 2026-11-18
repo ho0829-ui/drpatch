@@ -25,26 +25,33 @@ metal = C.metal_mat()
 objs = []
 
 # 바닥 + 타일 이음새
-objs.append(C.rbox("Floor", (0, 2, FLOOR - 0.1), (60, 44, 0.2), floor_m, 0.02))
-lines = [C.rbox(f"FX{i}", (-30 + i * 3, 2, FLOOR + 0.002), (0.05, 44, 0.004), seam, 0.001) for i in range(21)]
-lines += [C.rbox(f"FY{i}", (0, -20 + i * 3, FLOOR + 0.002), (60, 0.05, 0.004), seam, 0.001) for i in range(15)]
+objs.append(C.rbox("Floor", (0, -14.5, FLOOR - 0.1), (50.4, 55, 0.2), floor_m, 0.02))
+lines = [C.rbox(f"FX{i}", (-24 + i * 3, -14.6, FLOOR + 0.012), (0.05, 54.6, 0.006), seam, 0.001) for i in range(17)]
+lines += [C.rbox(f"FY{i}", (0, -41 + i * 3, FLOOR + 0.012), (49.6, 0.05, 0.006), seam, 0.001) for i in range(18)]
 objs.append(C.join(lines, "FloorSeams"))
 
 # 벽: 뒤·양옆. 아래는 연한 징두리판 + 세로 홈, 가운데 청록 벽 띠, 맨 아래 걸레받이
 H = 26
 for name, loc, size in (("BackWall", (0, 13.2, FLOOR + H / 2), (50, 0.4, H)),
-                        ("LeftWall", (-25, 2, FLOOR + H / 2), (0.4, 44, H)),
-                        ("RightWall", (25, 2, FLOOR + H / 2), (0.4, 44, H))):
+                        ("LeftWall", (-25, -14.5, FLOOR + H / 2), (0.4, 55, H)),
+                        ("RightWall", (25, -14.5, FLOOR + H / 2), (0.4, 55, H))):
     objs.append(C.rbox(name, loc, size, wall, 0.02))
-objs.append(C.rbox("Wainscot", (0, 12.97, FLOOR + 2.8), (50, 0.08, 5.6), lower, 0.01))
+objs.append(C.rbox("Wainscot", (0, 12.97, FLOOR + 2.8), (49.46, 0.08, 5.6), lower, 0.01))
 grooves = [C.rbox(f"G{i}", (-24.5 + i * 1.4, 12.92, FLOOR + 2.8), (0.05, 0.03, 5.4), groove, 0.005) for i in range(36)]
 objs.append(C.join(grooves, "WainscotGrooves"))
 for side, x in (("L", -24.78), ("R", 24.78)):
-    objs.append(C.rbox(f"Wainscot{side}", (x, 2, FLOOR + 2.8), (0.08, 44, 5.6), lower, 0.01))
-    objs.append(C.rbox(f"Rail{side}", (x, 2, FLOOR + 5.7), (0.3, 44, 0.4), teal, 0.05))
-    objs.append(C.rbox(f"Base{side}", (x, 2, FLOOR + 0.25), (0.25, 44, 0.5), deep, 0.04))
-objs.append(C.rbox("Rail", (0, 12.85, FLOOR + 5.7), (50, 0.3, 0.4), teal, 0.05))
-objs.append(C.rbox("Baseboard", (0, 12.88, FLOOR + 0.25), (50, 0.25, 0.5), deep, 0.04))
+    # 옆벽 띠는 방 앞쪽 끝(y=-42)부터 뒷벽 띠 바로 앞(y=12.9)까지 — 모서리에서 뒷벽 띠와 겹치지 않게
+    span, mid = 12.9 + 42, (12.9 - 42) / 2
+    objs.append(C.rbox(f"Wainscot{side}", (x, mid, FLOOR + 2.8), (0.08, span, 5.6), lower, 0.01))
+    objs.append(C.rbox(f"Rail{side}", (x, mid, FLOOR + 5.7), (0.3, span, 0.4), teal, 0.05))
+    objs.append(C.rbox(f"Base{side}", (x, mid, FLOOR + 0.25), (0.25, span, 0.5), deep, 0.04))
+objs.append(C.rbox("Rail", (0, 12.85, FLOOR + 5.7), (49.4, 0.3, 0.4), teal, 0.05))
+objs.append(C.rbox("Baseboard", (0, 12.88, FLOOR + 0.25), (49.5, 0.25, 0.5), deep, 0.04))
+# 천장 + 조명 판
+objs.append(C.rbox("Ceiling", (0, -14.5, FLOOR + H), (50.4, 55, 0.3), C.material("ceiling", "#F4FAF8", rough=0.9, coat=0.0), 0.02))
+for k, yy in enumerate((6, -6, -18)):
+    objs.append(C.rbox(f"CeilLight{k}", (0, yy, FLOOR + H - 0.2), (8, 3, 0.1), C.emissive("ceil_light", "#FFFFFF", 2.0), 0.03))
+objs.append(C.rbox("Crown", (0, 12.9, FLOOR + H - 0.3), (49.5, 0.3, 0.3), white, 0.06))
 
 # 창문 (뒷벽 오른쪽) + 블라인드
 wx, wz, ww, wh = 12.5, 5.2, 7.6, 6.0
@@ -127,7 +134,7 @@ objs.append(C.text("RackTitle", "SERVER", (gx, 12.79, gz - 1.15), 0.2, ink, rot=
 kx, kz = 3.4, 8.2
 objs.append(C.cylinder("WallClock", (kx, 12.9, kz), 1.2, 0.3, teal, rot=(PI / 2, 0, 0), bevel=0.08))
 objs.append(C.cylinder("WallClockFace", (kx, 12.72, kz), 1.0, 0.06, C.material("clockface", "#FFFFFF", rough=0.5, coat=0.3), rot=(PI / 2, 0, 0)))
-ticks = [C.rbox(f"Tk{i}", (kx + 0.85 * math.sin(i * PI / 6), 12.68, kz + 0.85 * math.cos(i * PI / 6)), (0.05, 0.02, 0.16 if i % 3 == 0 else 0.09), ink, 0.01, rot=(0, -i * PI / 6, 0)) for i in range(12)]
+ticks = [C.rbox(f"Tk{i}", (kx + 0.85 * math.sin(i * PI / 6), 12.672, kz + 0.85 * math.cos(i * PI / 6)), (0.05, 0.02, 0.16 if i % 3 == 0 else 0.09), ink, 0.01, rot=(0, -i * PI / 6, 0)) for i in range(12)]
 objs.append(C.join(ticks, "ClockTicks"))
 objs.append(C.rbox("HourHand", (kx + 0.15, 12.65, kz + 0.25), (0.08, 0.02, 0.6), ink, 0.02, rot=(0, -0.5, 0)))
 objs.append(C.rbox("MinHand", (kx - 0.3, 12.64, kz + 0.1), (0.06, 0.02, 0.85), coral, 0.02, rot=(0, 1.3, 0)))
