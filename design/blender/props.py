@@ -1,9 +1,11 @@
-"""DR.PATCH 책상 소품 7종 → prototype/drpatch-desk/models/*.glb
+"""DR.PATCH 책상 소품 → prototype/drpatch-desk/models/*.glb
 
 좌표: Blender Z가 위, 정면(카메라 쪽)이 -Y. glTF로 나가면 Three.js에서 Y가 위, 정면이 +Z.
 코드가 찾아 쓰는 이름 (바꾸면 index.html도 같이 고칠 것):
   capsule  : CapCur(현재 버전 반쪽, 재질 cap_cur), CapTgt(목표 버전 반쪽, 재질 cap_tgt)
-  blister  : Label(회차 라벨 자리, 글자는 코드가 그림), Dome0~5(투명 덮개, 0~2 뒷줄 · 3~5 앞줄)
+  blister_cell : Well(알약 홈, 재질 foil_well — 코드가 위험도 색으로 칠함), Dome(투명 덮개)
+  blister_end  : Label(회차 라벨 자리, 글자는 코드가 그림)
+  tray     : 곡반 (안전한 패키지)
   iv       : Liquid(바닥 기준 원점, 높이 비율로 줄임), Drop(떨어지는 방울)
   bottle   : Lid(뚜껑, 바닥 가운데 원점)
   chart    : Paper(기록 글자는 코드가 그림)
@@ -56,40 +58,42 @@ def capsule():
     return finish("Capsule", objs)
 
 
-# ── 블리스터 팩 (한 판 = 한 회차) ────────────────────────
-SLOTS = [(x, y) for y in (0.62, -0.62) for x in (-0.75, 0.65, 2.05)]
+# ── 블리스터 부품 (코드가 회차의 칸 수 N에 맞춰 이어 붙인다) ──────────
+CELL_W, CELL_D, END_W = 1.4, 1.24, 1.2
 
 
-def blister():
+def blister_cell():
+    """칸 하나: 은박 타일 + 알약 홈(Well, 위험도 색은 코드가 칠함) + 투명 덮개(Dome)."""
     m = mats()
-    foil = C.material("foil", "#E3EAEA", rough=0.26, metal=0.8, coat=0.6)
-    well_m = C.material("foil_well", "#C3CFD0", rough=0.3, metal=0.7, coat=0.3)
-    objs = [C.rbox("Foil", (0, 0, 0.07), (5.4, 2.9, 0.14), foil, 0.06)]
-    objs.append(C.rbox("FoilRim", (0, 0, 0.068), (5.48, 2.98, 0.1), C.material("foil_rim", "#CBD6D6", rough=0.3, metal=0.7), 0.06))
-    C.bpy.ops.mesh.primitive_plane_add(size=1, location=(-2.05, 0, 0.142))
+    foil = C.material("foil", "#E9EEEE", rough=0.24, metal=0.8, coat=0.6)
+    objs = [C.rbox("CellFoil", (0, 0, 0.07), (CELL_W, CELL_D, 0.14), foil, 0.035)]
+    objs.append(C.sphere("Well", (0, 0, 0.141), (0.62, 0.4, 0.012), C.material("foil_well", "#C9D3D4", rough=0.3, metal=0.6, coat=0.3), segs=48, rings=12))
+    d = C.lathe("Dome", C.capsule_profile(0.4, 0.25), C.glass_mat("#FFFFFF", "dome"), segs=40)
+    C.apply_rot([d], (0, PI / 2, 0))
+    d.scale = (1, 1, 0.78)
+    C.select_only([d])
+    C.bpy.ops.object.transform_apply(scale=True)
+    d.location = (0, 0, 0.14)
+    objs.append(d)
+    return finish("Cell", objs)
+
+
+def blister_end():
+    """판 왼쪽 끝: 회차 라벨(Label, 글자는 코드가 그림) + 절취선."""
+    m = mats()
+    foil = C.material("foil", "#E9EEEE", rough=0.24, metal=0.8, coat=0.6)
+    objs = [C.rbox("EndFoil", (0, 0, 0.07), (END_W, 2 * CELL_D, 0.14), foil, 0.035)]
+    C.bpy.ops.mesh.primitive_plane_add(size=1, location=(-0.04, 0, 0.142))
     label = C.bpy.context.active_object
     label.name = "Label"
-    label.scale = (1.1, 2.6, 1)
+    label.scale = (1.0, 2.3, 1)
     C.select_only([label])
     C.bpy.ops.object.transform_apply(scale=True)
-    label.data.materials.append(C.material("label", "#16313A", rough=0.6, coat=0.2))
+    label.data.materials.append(C.material("label", P["ink"], rough=0.6, coat=0.2))
     objs.append(label)
-    wells = [C.sphere(f"Well{i}", (x, y, 0.141), (0.66, 0.42, 0.012), well_m, segs=48, rings=12) for i, (x, y) in enumerate(SLOTS)]
-    objs.append(C.join(wells, "Wells"))
-    dome_m = C.glass_mat("#FFFFFF", "dome")
-    for i, (x, y) in enumerate(SLOTS):
-        d = C.lathe(f"Dome{i}", C.capsule_profile(0.4, 0.25), dome_m, segs=40)
-        C.apply_rot([d], (0, PI / 2, 0))
-        d.scale = (1, 1, 0.78)
-        C.select_only([d])
-        C.bpy.ops.object.transform_apply(scale=True)
-        d.location = (x, y, 0.14)
-        objs.append(d)
-    dots = [C.sphere(f"Perf{i}", (-1.45, -1.3 + i * 0.13, 0.142), (0.02, 0.02, 0.006), well_m, segs=8, rings=4) for i in range(21)]
-    dots += [C.sphere(f"PerfH{i}", (-1.3 + i * 0.13, 0.0, 0.142), (0.02, 0.02, 0.006), well_m, segs=8, rings=4) for i in range(30)]
+    dots = [C.sphere(f"Perf{i}", (END_W / 2 - 0.05, -1.15 + i * 0.115, 0.142), (0.018, 0.018, 0.006), m["faint"], segs=8, rings=4) for i in range(21)]
     objs.append(C.join(dots, "Perforation"))
-    objs.append(C.text("FoilPrint", "DR.PATCH  ·  PATCH TABLETS", (0.65, -1.33, 0.142), 0.1, m["faint"], extrude=0.002))
-    return finish("Blister", objs)
+    return finish("BlisterEnd", objs)
 
 
 # ── 수액 거치대 + 수액 팩 ───────────────────────────────
@@ -181,65 +185,109 @@ def stamp():
     return finish("Stamp", objs)
 
 
-# ── 진료 책상 + 고정 소품 ────────────────────────────────
+# ── 진짜 책상: 나무 상판 + 흰 프레임 + 데스크 패드 + 고정 소품 ─────────
+# 상판 윗면 z=0, 크기 18×9 (x: -9~9, y: -4.5~4.5). 사용자(환자)는 -Y 쪽, 박사님은 +Y 쪽에 앉는다.
+DESK_W, DESK_D, LEG = 18.0, 9.0, 7.6
+
+
 def desk():
     m = mats()
-    objs = [C.rbox("DeskTop", (0, 0, -0.3), (18, 11.5, 0.6), C.material("desk", "#FBFDFC", rough=0.5, coat=0.3), 0.25)]
-    objs.append(C.rbox("DeskRail", (0, -5.76, -0.33), (17.4, 0.06, 0.2), m["teal"], 0.03))
-    objs.append(C.rbox("MatRim", (-0.6, 0, 0.02), (7.6, 8.0, 0.04), m["deep"], 0.02))
-    objs.append(C.rbox("Mat", (-0.6, 0, 0.035), (7.4, 7.8, 0.04), C.material("mat", "#DDF1EB", rough=0.85, coat=0.0, sheen=0.4), 0.02))
+    wood = C.wood_material("wood")
+    objs = [C.rbox("DeskTop", (0, 0, -0.225), (DESK_W, DESK_D, 0.45), wood, 0.08)]
+    frame = C.material("frame", "#F7FAF9", rough=0.45, coat=0.4)
+    objs.append(C.rbox("Apron", (0, 0, -0.62), (DESK_W - 0.6, DESK_D - 0.6, 0.35), frame, 0.04))
+    objs.append(C.rbox("FrontPanel", (0, -DESK_D / 2 + 0.45, -0.45 - 3.6), (DESK_W - 1.6, 0.25, 6.6), frame, 0.06))
+    objs.append(C.rbox("PanelRail", (0, -DESK_D / 2 + 0.3, -2.4), (DESK_W - 1.8, 0.08, 0.28), m["teal"], 0.03))
+    objs.append(C.rbox("PanelBase", (0, -DESK_D / 2 + 0.3, -7.6), (DESK_W - 1.8, 0.08, 0.4), m["deep"], 0.03))
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            objs.append(C.rbox(f"Leg{sx}{sy}", (sx * (DESK_W / 2 - 0.55), sy * (DESK_D / 2 - 0.55), -0.45 - LEG / 2), (0.6, 0.6, LEG), frame, 0.08))
+            objs.append(C.cylinder(f"Foot{sx}{sy}", (sx * (DESK_W / 2 - 0.55), sy * (DESK_D / 2 - 0.55), -0.45 - LEG - 0.06), 0.32, 0.12, m["deep"], bevel=0.03))
+    # 데스크 패드 (블리스터를 놓는 자리)
+    objs.append(C.rbox("Pad", (0.6, -0.9, 0.025), (10.4, 5.0, 0.05), C.material("pad", "#2E7A75", rough=0.7, coat=0.15, sheen=0.4), 0.04))
+    stitch = [C.rbox(f"St{i}", (0.6 - 5.0 + i * 0.25, -0.9 + s * 2.3, 0.052), (0.12, 0.025, 0.006), C.material("stitch", "#9FD6CB", rough=0.8, coat=0.0), 0.004)
+              for s in (-1, 1) for i in range(41)]
+    objs.append(C.join(stitch, "PadStitch"))
+    # 명패 (환자 쪽을 봄)
+    plate = C.mesh_obj("NamePlate", [(-1.4, -0.3, 0), (1.4, -0.3, 0), (1.4, 0.3, 0), (-1.4, 0.3, 0), (-1.4, 0.05, 0.6), (1.4, 0.05, 0.6)],
+                       [(0, 1, 5, 4), (3, 4, 5, 2), (0, 4, 3), (1, 2, 5), (0, 3, 2, 1)], m["white"], smooth=False)
+    C.add_bevel(plate, 0.03, 3)
+    plate.location = (4.4, -3.7, 0)
+    objs.append(plate)
+    face_rot = (math.atan2(0.6, 0.35), 0, 0)
+    objs.append(C.text("PlateText", "DR. PATCH", (4.4, -3.84, 0.36), 0.32, m["deep"], rot=face_rot, extrude=0.01))
+    objs.append(C.text("PlateSub", "SERVER MEDICINE", (4.4, -3.92, 0.17), 0.13, m["teal"], rot=face_rot, extrude=0.006))
     # 펜꽂이
     cup = C.lathe("PenCup", [(0.0, 0.0), (0.42, 0.0), (0.45, 0.85), (0.4, 0.85), (0.37, 0.08), (0.0, 0.08)], m["teal"])
-    cup.location = (-4.7, 4.6, 0)
+    cup.location = (-4.2, 3.9, 0)
     objs.append(cup)
     for i, (col, dx, tilt) in enumerate((("coral", -0.12, 0.25), ("ink", 0.08, -0.15), ("white", 0.15, 0.3))):
-        objs.append(C.cylinder(f"CupPen{i}", (-4.7 + dx, 4.6 + dx * 0.5, 0.95), 0.04, 1.1, m[col], rot=(tilt, -tilt * 0.6, 0), bevel=0.01))
-    # 탁상시계
-    clock = C.cylinder("Clock", (2.8, 4.7, 0.62), 0.55, 0.3, m["teal"], rot=(math.radians(70), 0, 0), bevel=0.06)
-    face = C.cylinder("ClockFace", (2.8, 4.56, 0.67), 0.45, 0.04, m["paper"], rot=(math.radians(70), 0, 0))
-    hand1 = C.rbox("ClockHandH", (2.8, 4.535, 0.74), (0.04, 0.02, 0.22), m["ink"], 0.01, rot=(math.radians(-20), 0, 0))
-    hand2 = C.rbox("ClockHandM", (2.9, 4.535, 0.66), (0.3, 0.02, 0.03), m["coral"], 0.008, rot=(math.radians(-20), 0, 0.3))
-    objs += [clock, face, hand1, hand2]
-    objs += [C.sphere(f"ClockFoot{s}", (2.8 + s * 0.32, 4.8, 0.08), (0.09, 0.09, 0.09), m["deep"], segs=16, rings=8) for s in (-1, 1)]
-    # 메모지
-    objs.append(C.rbox("Memo", (-2.6, 4.8, 0.12), (1.3, 1.3, 0.24), m["paper"], 0.03, rot=(0, 0, 0.18)))
-    objs.append(C.rbox("Sticky1", (-2.55, 4.75, 0.25), (1.0, 1.0, 0.02), m["mint"], 0.01, rot=(0, 0, 0.05)))
-    objs.append(C.rbox("Sticky2", (-2.2, 4.4, 0.27), (0.7, 0.7, 0.02), C.material("sticky_coral", "#FFC7B5", rough=0.8, coat=0.0), 0.01, rot=(0, 0, -0.2)))
-    # 체온계
+        objs.append(C.cylinder(f"CupPen{i}", (-4.2 + dx, 3.9 + dx * 0.5, 0.95), 0.04, 1.1, m[col], rot=(tilt, -tilt * 0.6, 0), bevel=0.01))
+    # 메모지 · 체온계
+    objs.append(C.rbox("Memo", (4.6, 3.5, 0.12), (1.3, 1.3, 0.24), m["paper"], 0.03, rot=(0, 0, -0.15)))
+    objs.append(C.rbox("Sticky1", (4.65, 3.45, 0.25), (1.0, 1.0, 0.02), m["mint"], 0.01, rot=(0, 0, -0.05)))
+    objs.append(C.rbox("Sticky2", (5.0, 3.1, 0.27), (0.7, 0.7, 0.02), C.material("sticky_coral", "#FFC7B5", rough=0.8, coat=0.0), 0.01, rot=(0, 0, 0.25)))
     th = C.lathe("Thermo", C.capsule_profile(0.08, 0.55), m["white"], segs=24)
     tip = C.lathe("ThermoTip", C.capsule_profile(0.07, 0.08), m["teal"], segs=24)
     tip.location = (0, 0, -0.62)
     disp = C.rbox("ThermoDisp", (0, -0.075, 0.15), (0.09, 0.02, 0.3), m["ink"], 0.01)
     C.apply_rot([th, tip, disp], (0, PI / 2, 0))
     for o in (th, tip, disp):
-        o.location = (1.4, -4.7, 0.09)
-        o.rotation_euler = (0, 0, 0.5)
+        o.location = (6.4, 3.7, 0.09)
+        o.rotation_euler = (0, 0, 0.4)
     objs += [th, tip, disp]
-    # 화분
-    pot = C.lathe("Pot", [(0.0, 0.0), (0.4, 0.0), (0.52, 0.7), (0.0, 0.7)], m["white"])
-    pot.location = (7.9, 4.6, 0)
-    band = C.lathe("PotBand", [(0.5, 0.55), (0.53, 0.55), (0.535, 0.68), (0.5, 0.68)], m["teal"])
-    band.location = (7.9, 4.6, 0)
-    soil = C.cylinder("Soil", (7.9, 4.6, 0.68), 0.48, 0.04, C.material("soil", "#4E5B55", rough=0.9, coat=0.0))
-    leaf_m = C.material("leaf", "#5DAE8B", rough=0.45, coat=0.4)
-    leaves = []
-    for k in range(6):
-        a = k * PI / 3
-        lf = C.sphere(f"Leaf{k}", (7.9 + 0.28 * math.cos(a), 4.6 + 0.28 * math.sin(a), 1.05), (0.16, 0.42, 0.07), leaf_m, segs=24, rings=12)
-        lf.rotation_euler = (0.9, 0, a + PI / 2)
-        leaves.append(lf)
-    leaves.append(C.sphere("LeafTop", (7.9, 4.6, 1.2), (0.14, 0.3, 0.08), leaf_m, segs=24, rings=12))
-    objs += [pot, band, soil] + leaves
     # 머그컵
     mug = C.lathe("Mug", [(0.0, 0.0), (0.42, 0.0), (0.45, 0.8), (0.4, 0.8), (0.38, 0.08), (0.0, 0.08)], m["coral"])
-    mug.location = (8.0, 0.2, 0)
-    handle = C.torus("MugHandle", (8.47, 0.2, 0.42), 0.2, 0.05, m["coral"], rot=(PI / 2, 0, 0))
-    tea = C.cylinder("Tea", (8.0, 0.2, 0.66), 0.39, 0.02, C.material("tea", "#7A5A44", rough=0.15, coat=1.0))
+    mug.location = (8.0, 2.4, 0)
+    handle = C.torus("MugHandle", (8.47, 2.4, 0.42), 0.2, 0.05, m["coral"], rot=(PI / 2, 0, 0))
+    tea = C.cylinder("Tea", (8.0, 2.4, 0.66), 0.39, 0.02, C.material("tea", "#7A5A44", rough=0.15, coat=1.0))
     objs += [mug, handle, tea]
+    # 스탠드 (박사님 쪽 왼쪽 뒤)
+    lx, ly = -7.4, 3.6
+    objs.append(C.cylinder("LampBase", (lx, ly, 0.08), 0.6, 0.16, m["deep"], bevel=0.05))
+    objs.append(C.sphere("LampJoint0", (lx, ly, 0.22), (0.12, 0.12, 0.12), m["metal"]))
+    objs.append(C.tube("LampArm", C.catmull([(lx, ly, 0.22), (lx + 0.3, ly - 0.2, 1.8), (lx + 0.6, ly - 0.5, 3.0)], 6), 0.07, m["teal"]))
+    objs.append(C.tube("LampArm2", C.catmull([(lx + 0.6, ly - 0.5, 3.0), (lx + 1.4, ly - 1.2, 3.2), (lx + 2.0, ly - 1.7, 2.9)], 6), 0.06, m["teal"]))
+    objs.append(C.sphere("LampJoint1", (lx + 0.6, ly - 0.5, 3.0), (0.11, 0.11, 0.11), m["metal"]))
+    head = C.lathe("LampHead", [(0.0, 0.5), (0.18, 0.5), (0.3, 0.3), (0.62, -0.25), (0.6, -0.3), (0.0, -0.05)], m["teal"], segs=40)
+    head.location = (lx + 2.15, ly - 1.85, 2.75)
+    head.rotation_euler = (0.5, -0.35, 0)
+    bulb = C.sphere("LampBulb", (lx + 2.2, ly - 1.95, 2.55), (0.22, 0.22, 0.22), C.emissive("bulb", "#FFF4D6", 4.0))
+    objs += [head, bulb]
+    # 화분 (앞쪽 왼쪽 모서리): 다육이 잎을 겹겹이
+    px, py = -8.0, -3.6
+    pot = C.lathe("Pot", [(0.0, 0.0), (0.45, 0.0), (0.58, 0.8), (0.62, 0.86), (0.62, 0.95), (0.0, 0.95)], m["white"])
+    pot.location = (px, py, 0)
+    band = C.lathe("PotBand", [(0.6, 0.6), (0.625, 0.6), (0.625, 0.75), (0.6, 0.75)], m["teal"])
+    band.location = (px, py, 0)
+    soil = C.cylinder("Soil", (px, py, 0.93), 0.56, 0.04, C.material("soil", "#4E5B55", rough=0.9, coat=0.0))
+    objs += [pot, band, soil]
+    leaves = []
+    for ring, (count, length, width, tilt, col) in enumerate(((8, 0.75, 0.26, 0.55, "#4F9E7E"), (6, 0.6, 0.24, 0.85, "#69B592"), (4, 0.42, 0.2, 1.15, "#8ACBA8"))):
+        lm = C.material(f"leaf{ring}", col, rough=0.45, coat=0.45, sheen=0.3)
+        for k in range(count):
+            a = k * 2 * PI / count + ring * 0.4
+            lf = C.leaf(f"Leaf{ring}_{k}", length, width, 0.12, lm)
+            lf.location = (px, py, 0.95 + ring * 0.05)
+            lf.rotation_euler = (tilt * 0.6, 0, a)
+            leaves.append(lf)
+    objs += leaves
     return finish("Desk", objs)
 
 
-BUILDERS = {"capsule": capsule, "blister": blister, "iv": iv, "bottle": bottle, "chart": chart, "stamp": stamp, "desk": desk}
+def tray():
+    """곡반(트레이): 패치가 필요 없는 안전한 패키지를 담는다."""
+    m = mats()
+    dish = C.lathe("Dish", [(0.0, 0.03), (0.78, 0.03), (0.96, 0.12), (1.04, 0.24), (1.12, 0.27)], C.material("steel", "#D7DFE0", rough=0.22, metal=0.9, coat=0.4), segs=64)
+    dish.scale = (1.75, 1.0, 1.0)
+    C.solidify(dish, 0.03)
+    objs = [dish]
+    objs.append(C.rbox("TrayTag", (0, -1.08, 0.2), (0.9, 0.04, 0.22), m["paper"], 0.02))
+    objs.append(C.text("TrayText", "OK", (0, -1.11, 0.2), 0.14, m["deep"], rot=(PI / 2, 0, 0)))
+    return finish("Tray", objs)
+
+
+BUILDERS = {"capsule": capsule, "blister_cell": blister_cell, "blister_end": blister_end, "tray": tray, "iv": iv, "bottle": bottle, "chart": chart, "stamp": stamp, "desk": desk}
 
 if __name__ == "__main__":
     only = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else list(BUILDERS)

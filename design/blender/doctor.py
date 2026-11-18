@@ -63,7 +63,7 @@ smile = [on_surface(x, 0.0 + 3.2 * x * x, 0.004) for x in (-0.075, -0.04, 0, 0.0
 parts.append(C.tube("Mouth", C.catmull(smile, 6), 0.017, ink))
 
 # ── 나이 든 박사님: 처진 눈꺼풀·흰 눈썹·콧수염·옆머리 ─────────
-hair = C.material("hair", "#D3DAD9", rough=0.8, coat=0.0, sheen=0.9)
+hair = C.material("hair", "#C6CFCE", rough=0.8, coat=0.0, sheen=0.9)
 for x in (-0.23, 0.23):
     s = 1 if x > 0 else -1
     lid = C.sphere(f"Lid{'R' if s > 0 else 'L'}", on_surface(x, eye_z + 0.06, 0.005), (0.095, 0.035, 0.05), white, segs=32, rings=16)

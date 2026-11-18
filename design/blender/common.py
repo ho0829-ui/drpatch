@@ -382,3 +382,69 @@ def capsule_profile(r, half):
 
 def roots():
     return [o for o in bpy.context.scene.objects if o.parent is None]
+
+
+# ── 이미지 재질 (나무결 등) ──────────────────────────────
+def wood_material(name="wood", w=1024, h=512, seed=4):
+    """밝은 나무결 이미지를 만들어 재질에 붙인다 (glb 안에 같이 들어감)."""
+    import numpy as np
+    rng = np.random.default_rng(seed)
+    x = np.linspace(0, 1, w)[None, :]
+    y = np.linspace(0, 1, h)[:, None]
+    p = rng.uniform(0, 6.28, 6)
+    rings = np.sin(2 * np.pi * (y * 26 + 0.55 * np.sin(2 * np.pi * x * 1.3 + p[0]) + 0.22 * np.sin(2 * np.pi * x * 4.7 + p[1])
+                                + 0.12 * np.sin(2 * np.pi * y * 3.1 + p[2])))
+    grain = 0.5 + 0.5 * rings
+    streak = rng.normal(0, 1, (h, w))
+    k = np.ones(40) / 40
+    streak = np.apply_along_axis(lambda r: np.convolve(r, k, mode="same"), 1, streak)
+    light = np.array([0.86, 0.74, 0.56])
+    dark = np.array([0.74, 0.58, 0.40])
+    t = (grain ** 0.8)[..., None]
+    col = dark * (1 - t) + light * t + streak[..., None] * 0.05
+    col = np.clip(col, 0, 1)
+    rgba = np.concatenate([col, np.ones((h, w, 1))], axis=2)[::-1].astype(np.float32)
+    img = bpy.data.images.new(name, w, h)
+    img.pixels.foreach_set(rgba.ravel())
+    path = os.path.join(PREVIEWS, f"_{name}.png")
+    os.makedirs(PREVIEWS, exist_ok=True)
+    img.filepath_raw = path
+    img.file_format = "PNG"
+    img.save()
+    img.pack()
+    m = bpy.data.materials.new(name)
+    if m.node_tree is None:
+        m.use_nodes = True
+    b = _bsdf(m)
+    tex = m.node_tree.nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    m.node_tree.links.new(tex.outputs["Color"], b.inputs["Base Color"])
+    _set(b, ["Roughness"], 0.45)
+    _set(b, ["Coat Weight", "Clearcoat"], 0.35)
+    _set(b, ["Coat Roughness", "Clearcoat Roughness"], 0.3)
+    return m
+
+
+def emissive(name, color, strength=1.0):
+    m = material(name, color, rough=0.4, coat=0.0, sheen=0.0)
+    b = _bsdf(m)
+    _set(b, ["Emission Color", "Emission"], srgb(color))
+    _set(b, ["Emission Strength"], strength)
+    return m
+
+
+def leaf(name, length, width, bend, mat, segs=24):
+    """끝이 뾰족하고 위로 휘는 잎 하나 (+Y 방향으로 뻗음)."""
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=segs, ring_count=12, radius=1)
+    ob = bpy.context.active_object
+    ob.name = name
+    for v in ob.data.vertices:
+        t = (v.co.y + 1) / 2  # 0: 밑동, 1: 끝
+        v.co.x *= width * (1 - 0.85 * t ** 1.6) * (0.6 + 0.4 * min(1, t * 4))
+        v.co.z *= width * 0.35 * (1 - 0.7 * t)
+        v.co.y = t * length
+        v.co.z += bend * t * t
+    ob.data.update()
+    bpy.ops.object.shade_smooth()
+    ob.data.materials.append(mat)
+    return ob
