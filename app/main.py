@@ -23,7 +23,9 @@ from app.db import repo
 from app.events.bus import EventBus
 from app.events.logger import LoggingAgent
 
-WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+ROOT_DIR = Path(__file__).resolve().parent.parent
+DIST_DIR = ROOT_DIR / "frontend" / "dist"
+WEB_DIR = DIST_DIR if DIST_DIR.is_dir() else ROOT_DIR / "web"
 
 
 def make_calendar_backend(db_path: str):
