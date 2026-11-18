@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import * as api from './api.js';
+import ChatBar from './components/ChatBar.vue';
 import ClinicScene from './components/ClinicScene.vue';
 import Controls from './components/Controls.vue';
 import FallbackList from './components/FallbackList.vue';
@@ -30,7 +31,10 @@ const activeSheet = ref(null);
 const eggCount = ref({ found: 0, total: 16 });
 const currentPlan = ref(null);
 const currentPackages = ref([]);
+const chatMessages = ref([]);
+const dragging = ref(false);
 
+const isBusy = computed(() => state.value === 'running' || state.value === 'confirming');
 const tickerLines = computed(() => logs.value.slice(-4).reverse());
 
 function onFallback(msg) {
@@ -47,16 +51,47 @@ function triggerUpload() {
   fileInputRef.value?.click();
 }
 
-async function onFileSelected(e) {
-  const file = e.target.files?.[0];
-  e.target.value = '';
+async function handleUploadFile(file) {
   if (!file) return;
   try {
     const res = await api.upload(file);
     currentPackages.value = res.packages || [];
     sceneRef.value?.loadPackages(currentPackages.value);
+    chatMessages.value.push({
+      role: 'assistant',
+      text: `${file.name} (${currentPackages.value.length}개 패키지) 접수됐습니다.`,
+    });
   } catch (err) {
     bubbleText.value = err.message || '파일을 올리지 못했어요.';
+  }
+}
+
+async function onFileSelected(e) {
+  const file = e.target.files?.[0];
+  e.target.value = '';
+  await handleUploadFile(file);
+}
+
+async function onDropFile(e) {
+  dragging.value = false;
+  const file = e.dataTransfer?.files?.[0];
+  await handleUploadFile(file);
+}
+
+async function onSendChat(message) {
+  chatMessages.value.push({ role: 'user', text: message });
+  const finalEvent = await sceneRef.value?.sendChatMessage(message);
+  if (finalEvent?.answer) {
+    chatMessages.value.push({ role: 'assistant', text: finalEvent.answer });
+  }
+}
+
+function onChatTurn({ msg, finalEvent }) {
+  if (!chatMessages.value.some((m) => m.role === 'user' && m.text === msg)) {
+    chatMessages.value.push({ role: 'user', text: msg });
+  }
+  if (finalEvent?.answer && chatMessages.value[chatMessages.value.length - 1]?.text !== finalEvent.answer) {
+    chatMessages.value.push({ role: 'assistant', text: finalEvent.answer });
   }
 }
 
@@ -77,21 +112,33 @@ function reloadPage() {
   >
 
   <template v-if="!fallback">
-    <ClinicScene
-      ref="sceneRef"
-      :reduced="reduced"
-      @fallback="onFallback"
-      @state-change="state = $event"
-      @status="status = $event"
-      @say="bubbleText = $event"
-      @log="logs = $event.logs"
-      @open-sheet="activeSheet = $event"
-      @close-sheet="activeSheet = null"
-      @bubble-pos="bubblePos = $event"
-      @egg-count="eggCount = $event"
-      @upload-request="triggerUpload"
-      @plan-update="currentPlan = $event.plan; currentPackages = $event.packages"
-    />
+    <div
+      class="drop-zone"
+      @dragover.prevent="dragging = true"
+      @dragleave.self="dragging = false"
+      @drop.prevent="onDropFile"
+    >
+      <ClinicScene
+        ref="sceneRef"
+        :reduced="reduced"
+        @fallback="onFallback"
+        @state-change="state = $event"
+        @status="status = $event"
+        @say="bubbleText = $event"
+        @log="logs = $event.logs"
+        @open-sheet="activeSheet = $event"
+        @close-sheet="activeSheet = null"
+        @bubble-pos="bubblePos = $event"
+        @egg-count="eggCount = $event"
+        @upload-request="triggerUpload"
+        @plan-update="currentPlan = $event.plan; currentPackages = $event.packages"
+        @chat-turn="onChatTurn"
+      />
+
+      <div v-if="dragging" class="drop-overlay">
+        <p>여기에 requirements.txt를 놓아 주세요</p>
+      </div>
+    </div>
 
     <header class="brand">
       <img src="/brand/logo-mark.svg" width="46" height="46" alt="">
@@ -121,6 +168,13 @@ function reloadPage() {
       @start="sceneRef?.runVisit()"
       @confirm="sceneRef?.confirmPlan()"
       @reset="reloadPage"
+    />
+
+    <ChatBar
+      :messages="chatMessages"
+      :busy="isBusy"
+      @send="onSendChat"
+      @upload="triggerUpload"
     />
   </template>
 
