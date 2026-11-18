@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="DR.PATCH">
+  <!-- 작은 아이콘·파비콘 (C): 박사님을 반사경·안경·콧수염 세 가지로. 16px까지 또렷하게 굵게 -->
+  <rect x="4" y="4" width="112" height="112" rx="30" fill="#3E9E98"/>
+  <rect x="4" y="4" width="112" height="112" rx="30" fill="none" stroke="#1F6F6B" stroke-width="4"/>
+  <circle cx="60" cy="32" r="14" fill="#DDE5E6" stroke="#F8FBFA" stroke-width="6"/>
+  <circle cx="60" cy="32" r="4.5" fill="#16313A"/>
+  <circle cx="39.5" cy="66" r="15" fill="none" stroke="#F8FBFA" stroke-width="7"/>
+  <circle cx="80.5" cy="66" r="15" fill="none" stroke="#F8FBFA" stroke-width="7"/>
+  <path d="M54 66 Q60 61 66 66" stroke="#F8FBFA" stroke-width="6" fill="none" stroke-linecap="round"/>
+  <path d="M29 93 Q44 80 60 88 Q76 80 91 93 Q76 102 60 96 Q44 102 29 93 Z" fill="#F8FBFA"/>
+</svg>

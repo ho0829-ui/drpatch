@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DR.PATCH 브랜드 시트</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<!-- 원본은 design/logo/*.svg. 이 폴더는 시제품이 쓰는 사본 (cp design/logo/*.svg prototype/drpatch-desk/brand/) -->
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #16313A; --deep: #1F6F6B; --teal: #3E9E98; --bg: #EAF6F3; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "IBM Plex Sans KR", sans-serif; color: var(--ink); background: var(--bg); }
+  main { max-width: 980px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font: 700 28px/1.2 "JetBrains Mono", monospace; margin: 0 0 6px; }
+  .lead { margin: 0 0 32px; color: var(--deep); }
+  section { background: #fff; border-radius: 20px; padding: 24px; margin-bottom: 20px; }
+  h2 { font-size: 18px; margin: 0 0 4px; }
+  .role { margin: 0 0 18px; color: #4A5759; font-size: 14px; }
+  .row { display: flex; gap: 28px; align-items: flex-end; flex-wrap: wrap; }
+  .cell { display: grid; justify-items: center; gap: 8px; font: 400 12px "JetBrains Mono", monospace; color: #5B7375; }
+  .dark { background: var(--ink); border-radius: 14px; padding: 14px; }
+  .tab { display: flex; align-items: center; gap: 8px; background: #F1F5F4; border-radius: 10px 10px 0 0; padding: 8px 14px; font-size: 13px; width: 220px; }
+  .bubble { display: flex; gap: 12px; align-items: flex-start; background: var(--bg); border-radius: 22px; padding: 14px 16px; max-width: 420px; }
+  .bubble b { display: block; font: 700 11px "JetBrains Mono", monospace; color: var(--deep); margin-bottom: 4px; }
+</style>
+</head>
+<body><main>
+  <h1>DR.PATCH 브랜드</h1>
+  <p class="lead">같은 박사님을 세 가지 역할로 나눠 쓴다.</p>
+
+  <section>
+    <h2>메인 로고 · 안경 쓴 캡슐</h2>
+    <p class="role">사이드바 · 화면 상단 · README 첫 줄 · 발표 표지</p>
+    <div class="row">
+      <div class="cell"><img src="logo-lockup.svg" width="420" alt="DR.PATCH 가로형 로고">가로형</div>
+      <div class="cell"><img src="logo-mark.svg" width="120" alt="">120</div>
+      <div class="cell"><img src="logo-mark.svg" width="64" alt="">64</div>
+      <div class="cell"><img src="logo-mark.svg" width="44" alt="">44</div>
+      <div class="cell dark"><img src="logo-mark.svg" width="64" alt=""></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>작은 아이콘 · 반사경·안경·콧수염</h2>
+    <p class="role">브라우저 탭(파비콘) · 앱 아이콘 · 16~32px</p>
+    <div class="row">
+      <div class="cell"><img src="icon.svg" width="120" alt="">120</div>
+      <div class="cell"><img src="icon.svg" width="48" alt="">48</div>
+      <div class="cell"><img src="icon.svg" width="32" alt="">32</div>
+      <div class="cell"><img src="icon.svg" width="16" alt="">16</div>
+      <div class="cell"><div class="tab"><img src="icon.svg" width="16" alt="">DR.PATCH 진료 책상</div>탭에서</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>마스코트 · 얼굴 배지</h2>
+    <p class="role">말풍선 얼굴 · 로딩 · 오류 · 이스터에그 알림 · README 일러스트 (로고로는 쓰지 않는다)</p>
+    <div class="row">
+      <div class="cell"><img src="mascot.svg" width="160" alt="">160</div>
+      <div class="cell"><img src="mascot.svg" width="64" alt="">64</div>
+      <div class="cell"><div class="bubble"><img src="mascot.svg" width="44" alt=""><div><b>DR.PATCH</b>허허, urllib3 1.24.1이라니… 꽤 오래 방치하셨군요.</div></div>말풍선에서</div>
+    </div>
+  </section>
+</main></body>
+</html>

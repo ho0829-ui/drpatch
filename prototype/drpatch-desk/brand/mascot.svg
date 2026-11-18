@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="닥터 패치">
+  <!-- 마스코트 (A): 말풍선 얼굴·로딩·오류·이스터에그 알림용. 로고로는 쓰지 않는다 -->
+  <defs><clipPath id="badge"><circle cx="60" cy="60" r="56"/></clipPath></defs>
+  <circle cx="60" cy="60" r="56" fill="#1F6F6B"/>
+  <g clip-path="url(#badge)">
+    <path d="M20 122 Q20 92 60 90 Q100 92 100 122 Z" fill="#F8FBFA"/>
+    <path d="M51 90 L60 109 L69 90 Z" fill="#3E9E98"/>
+    <path d="M60 90 Q48 100 50 112" stroke="#16313A" stroke-width="2.4" fill="none"/>
+    <circle cx="50" cy="113" r="4" fill="#DDE5E6" stroke="#16313A" stroke-width="1.6"/>
+    <rect x="31" y="22" width="58" height="72" rx="29" fill="#F8FBFA"/>
+    <circle cx="31" cy="60" r="8" fill="#C6CFCE"/><circle cx="29" cy="50" r="6.5" fill="#C6CFCE"/><circle cx="32" cy="69" r="6" fill="#C6CFCE"/>
+    <circle cx="89" cy="60" r="8" fill="#C6CFCE"/><circle cx="91" cy="50" r="6.5" fill="#C6CFCE"/><circle cx="88" cy="69" r="6" fill="#C6CFCE"/>
+    <rect x="31" y="38" width="58" height="5" fill="#3E9E98"/>
+    <circle cx="72" cy="34" r="9" fill="#DDE5E6" stroke="#3E9E98" stroke-width="3"/><circle cx="72" cy="34" r="2.6" fill="#16313A"/>
+    <path d="M40.5 53.5 Q49 49.5 56 53.5" stroke="#C6CFCE" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+    <path d="M64 53.5 Q71 49.5 79.5 53.5" stroke="#C6CFCE" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+    <circle cx="49.5" cy="63" r="8.2" fill="#FFFFFF" stroke="#16313A" stroke-width="2.6"/><circle cx="70.5" cy="63" r="8.2" fill="#FFFFFF" stroke="#16313A" stroke-width="2.6"/>
+    <path d="M57.7 63 Q60 61 62.3 63" stroke="#16313A" stroke-width="2" fill="none"/>
+    <ellipse cx="49.5" cy="64.6" rx="2.5" ry="2.1" fill="#16313A"/><ellipse cx="70.5" cy="64.6" rx="2.5" ry="2.1" fill="#16313A"/>
+    <path d="M45.5 62.4 Q49.5 60.6 53.5 62.4" stroke="#FFFFFF" stroke-width="2.4" fill="none"/><path d="M66.5 62.4 Q70.5 60.6 74.5 62.4" stroke="#FFFFFF" stroke-width="2.4" fill="none"/>
+    <circle cx="40" cy="73" r="3.6" fill="#F6A8A0" opacity=".85"/><circle cx="80" cy="73" r="3.6" fill="#F6A8A0" opacity=".85"/>
+    <path d="M43 77 Q51 70.5 60 75 Q69 70.5 77 77 Q69 82.5 60 79 Q51 82.5 43 77 Z" fill="#C6CFCE" stroke="#16313A" stroke-width="1.2"/>
+    <path d="M56 84 Q60 86.5 64 84" stroke="#16313A" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  </g>
+  <circle cx="60" cy="60" r="56" fill="none" stroke="#16313A" stroke-width="3"/>
+</svg>

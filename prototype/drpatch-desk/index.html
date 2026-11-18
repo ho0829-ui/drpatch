@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DR.PATCH 진료 책상</title>
+<link rel="icon" href="brand/icon.svg" type="image/svg+xml">
 <!--
   DR.PATCH 진료 책상 시제품 (docs/design.md 기준). 한 장면, 예시 데이터 — 실제 API를 부르지 않는다.
   3D 소품은 design/blender/*.py로 만든 models/*.glb.
@@ -27,8 +28,10 @@
   #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  .brand { position: fixed; top: 20px; left: 24px; display: flex; align-items: center; gap: 12px; color: var(--color-ink); z-index: 3; }
+  .brand { position: fixed; top: 16px; left: 20px; display: flex; align-items: center; gap: 10px; color: var(--color-ink); z-index: 3;
+           padding: 6px 18px 6px 6px; border-radius: 999px; background: rgba(255,255,255,.9); box-shadow: 0 4px 0 var(--color-mint), 0 10px 24px rgba(22,49,58,.12); }
   .brand b { font: 700 22px/1 var(--mono); letter-spacing: .02em; }
+  .brand .dot { color: var(--color-teal); }
   .brand small { display: block; font: 500 12px/1.4 var(--sans); color: var(--color-deep); margin-top: 4px; }
 
   .status { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 3;
@@ -56,13 +59,17 @@
   .ticker div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ticker div:first-child { font-weight: 700; color: var(--color-deep); }
   .note { position: fixed; right: 24px; bottom: 28px; z-index: 2; color: var(--color-ink); font: 500 12px var(--sans); opacity: .75; }
-  .loading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 8; font: 600 16px var(--sans); color: var(--color-deep); }
+  .loading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 8; font: 600 16px var(--sans); color: var(--color-deep); text-align: center; }
+  .loading img { animation: bob 1.4s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-8px) rotate(-4deg); } }
+  @media (prefers-reduced-motion: reduce) { .loading img { animation: none; } }
 
   .bubble { position: fixed; z-index: 4; max-width: 290px; padding: 14px 16px; border-radius: 22px 22px 6px 22px;
             background: #fff; font: 500 15px/1.55 var(--sans); box-shadow: 0 6px 0 var(--color-mint), 0 16px 30px rgba(22,49,58,.18);
             transform: translateY(-100%); width: max-content; opacity: 0; transition: opacity .25s; pointer-events: none; }
   .bubble.show { opacity: 1; }
-  .bubble b { display: block; font: 700 11px/1 var(--mono); letter-spacing: .06em; color: var(--color-deep); margin-bottom: 6px; }
+  .bubble .avatar { position: absolute; left: -20px; top: -20px; width: 46px; height: 46px; border-radius: 50%; box-shadow: 0 3px 8px rgba(22,49,58,.22); }
+  .bubble b { display: block; padding-left: 22px; font: 700 11px/1 var(--mono); letter-spacing: .06em; color: var(--color-deep); margin-bottom: 6px; }
 
   .tip { position: fixed; z-index: 6; pointer-events: none; padding: 6px 10px; border-radius: 10px; background: var(--color-ink);
          color: #fff; font: 500 12px var(--mono); transform: translate(14px, 14px); opacity: 0; transition: opacity .12s; }
@@ -135,17 +142,11 @@
 </head>
 <body>
 <canvas id="scene" aria-hidden="true"></canvas>
-<div class="loading" id="loading">진료실 준비 중…</div>
+<div class="loading" id="loading"><div><img src="brand/mascot.svg" width="96" height="96" alt=""><p>진료실 준비 중…</p></div></div>
 
 <header class="brand">
-  <svg width="38" height="38" viewBox="0 0 38 38" aria-hidden="true">
-    <g transform="rotate(-35 19 19)">
-      <rect x="4" y="12" width="30" height="14" rx="7" fill="#3E9E98"/>
-      <path d="M11 12h8v14h-8a7 7 0 0 1 0-14z" fill="#FFFFFF" stroke="#B9E2D9"/>
-      <rect x="8" y="14.5" width="9" height="2.5" rx="1.25" fill="#B9E2D9"/>
-    </g>
-  </svg>
-  <div><b>DR.PATCH</b><small>진료 책상 · 시제품</small></div>
+  <img src="brand/logo-mark.svg" width="46" height="46" alt="">
+  <div><b>DR<span class="dot">.</span>PATCH</b><small>진료 책상 · 시제품</small></div>
 </header>
 
 <div class="status" role="status"><span id="status-text">대기 중</span>
@@ -154,7 +155,7 @@
 <div class="ticker" id="ticker" aria-hidden="true"></div>
 <div class="note">예시 데이터 · 실제 조회 아님 · 드래그 회전 · 오른쪽 드래그 이동 · 휠 줌 · 더블클릭 처음으로 · <span id="egg-count">숨은 것 0/14</span></div>
 
-<div class="bubble" id="bubble" aria-hidden="true"><b>DR.PATCH</b><span id="bubble-text"></span></div>
+<div class="bubble" id="bubble" aria-hidden="true"><img class="avatar" src="brand/mascot.svg" alt=""><b>DR.PATCH</b><span id="bubble-text"></span></div>
 <div class="sr-only" aria-live="polite" id="live"></div>
 <div class="tip" id="tip"></div>
 <div id="tags" aria-hidden="true"></div>
@@ -173,7 +174,7 @@
 </nav>
 
 <section class="fallback" id="fallback" hidden><div>
-  <h1>DR.PATCH</h1>
+  <h1><img src="brand/logo-lockup.svg" height="64" alt="DR.PATCH"></h1>
   <p id="fallback-msg">이 브라우저에서는 3D 책상을 그릴 수 없어 목록으로 보여드려요.</p>
   <ul class="list" id="fallback-list"></ul>
 </div></section>
