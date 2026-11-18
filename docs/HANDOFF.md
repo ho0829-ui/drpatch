@@ -1,15 +1,18 @@
-# 마지막 갱신: 2026-11-18 17:03 / 작성: Claude Code
+# 마지막 갱신: 2026-11-18 17:12 / 작성: Claude Code
 
 ## 지금 하던 것
-- 2일차 끝. 마지막: agy 교차 리뷰 13건 반영 (전체 테스트 217개 통과, 실제 GMS로 계획·사실 조회 재확인) — docs/review-day2.md 아래 "반영 결과"
-  - planner: 패키지별 최소 Python, 탐색 상한(조건 줄기+1), 조회 실패는 확인 못 함 / UpgradePlan.unresolved
-  - graph: 설치 불가·다운그레이드도 위반, 모두 실패 시 바로 안내(tools_down), judgment·plan_built 이벤트, 판단 재조회 병렬, 안전 패키지 버전 조회 생략
-  - brain: answer_fact는 fact_tools.run_fact_tool로 코드가 계산한 값만 LLM에 전달 (tool_choice=required, 최대 3회)
-  - tools: safe_parse(형식 오류 → UPSTREAM_ERROR) / repo.insert_event는 DB 기준 순번
+- 3일차 [C] 백엔드 API 끝 (전체 테스트 232개 통과, 실제 서버+GMS로 업로드→스트리밍→확정→계획·로그 조회 curl 확인)
+  - app/api/: upload.py(본문 그대로), chat.py(ndjson: session → 이벤트 → final, 확정 저장), plans.py(CRUD+overlaps), logs.py(목록·상세·삭제)
+  - app/api/overlap.py(같은 날·구간 겹침, 시각 없으면 하루 전체, 24:00 허용), deps.py(DB 연결, save_confirmed_plan)
+  - main.py: app.state.db_path·bus·logger·brain(키 없으면 None), 입력 오류 422 짧은 안내
+  - 요청·응답 형식은 spec v1.12 "백엔드 API"
 
 ## 다음에 할 것
-- 3일차 [C] 계획 CRUD + 겹침 경고, 로그 조회·삭제 API (F3014~F3017) — /chat(ndjson)·/upload도 chat_turn·save_upload로 연결
-- 3일차 [C] 화면 탭 3개 + 실행 단계 표시 + 오류 안내 (F3018~F3019)
+- 3일차 [C] 화면 탭 3개 + 실행 단계 표시 + 오류 안내 (F3018~F3019) — web/를 FastAPI가 같은 주소로 내보냄
+  - 대화: fetch('/upload', {body: file}), /chat 응답 본문을 줄 단위로 읽어 실행 단계 패널에 쌓기, replan 색 구분
+  - 계획 관리: GET/PUT/DELETE /plans, overlaps 경고 / 실행 로그: /logs
+  - 하단 "참고용 정보" + 세 API 출처 표기 (NF3007)
+- [나] 대표 시나리오 5개 화면에서 돌려보기, 패키지 20개 응답 시간 재기
 
 ## 주의
 - spec v1.11 (리뷰 반영 규칙). 이벤트 종류에 plan_built 추가

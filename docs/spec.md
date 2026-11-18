@@ -1,4 +1,6 @@
-# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.11 · 2026-11-18)
+# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.12 · 2026-11-18)
+
+> v1.11 → v1.12 (2026-11-18): 백엔드 API 요청·응답 형식 확정 (업로드는 본문 그대로, /chat ndjson, 확정 저장, 오류 안내).
 
 > v1.10 → v1.11 (2026-11-18): 2일차 교차 리뷰 반영 — 패키지별 최소 Python, 탐색 상한, 다운그레이드·설치 불가도 위반, 보류 기준, 캐시 범위, 사실 조회도 코드가 계산.
 
@@ -227,10 +229,12 @@ items_json 항목: name, current_version, target_version, severity, eol_date, re
 ## 백엔드 API (FastAPI)
 | 메서드·경로 | 하는 일 |
 |---|---|
-| POST /upload | 파일 파싱 → 조회 대상·조회 제외 목록 반환 |
-| POST /chat | 메시지 처리, 응답 + 실행 단계 반환 |
-| GET·POST /plans, GET·PUT·DELETE /plans/{id} | 계획 CRUD. 저장·수정 응답에 겹침 경고 필드 |
-| GET /logs, GET·DELETE /logs/{session_id} | 실행 로그 목록·상세·삭제 |
+| POST /upload?session_id= | 요청 본문 = 파일 내용 그대로(1MB까지, python-multipart 없이) → 파싱 → 세션에 저장 → `{session_id, packages, excluded, saved}` |
+| POST /chat | `{session_id?, message}` → ndjson 스트리밍: 첫 줄 `session`, 실행 이벤트들(이 세션 것만, 발생 순서), 마지막 줄 `final{intent, answer, plan, missing, conditions, confirmed, saved}`. "확정해줘"면 직전 제안 계획을 회차마다 저장해 `confirmed`에 (같은 계획 재확정은 중복 저장 안 함) |
+| GET·POST /plans, GET·PUT·DELETE /plans/{id} | 계획 CRUD. 목록은 날짜순. 저장·수정·조회 응답에 `overlaps`(같은 날 시간이 겹치는 다른 계획). 수정은 날짜·시각·항목만 |
+| GET /logs, GET·DELETE /logs/{session_id} | 실행 로그 목록·상세(순서대로)·삭제. 수정 주소 없음(405) |
+
+- 오류 안내: 입력 오류는 422 `{"detail": "입력 형식을 확인해 주세요.", "fields": [...]}`, 없는 계획 404 "그런 계획이 없어요.", API 키 누락은 /chat final에 "서버 설정(API 키)을 확인해 주세요". 오류 상세는 로그 표에만.
 
 ## 화면 (탭 3개)
 - 대화: freeze 안내 문구, 파일 올리기, 조회 제외 목록, 채팅, 옆에 실행 단계·Tool 호출 진행 표시, 오류 안내

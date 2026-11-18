@@ -138,3 +138,65 @@ def delete_events(conn: sqlite3.Connection, session_id: str) -> int:
     cur = conn.execute("DELETE FROM events WHERE session_id = ?", (session_id,))
     conn.commit()
     return cur.rowcount
+
+
+# ── plans (회차 1개 = 계획 1개) ──────────────────────────
+def _plan_row(row: sqlite3.Row) -> dict:
+    return {
+        "id": row["id"], "session_id": row["session_id"], "round_no": row["round_no"], "date": row["date"],
+        "window_start": row["window_start"], "window_end": row["window_end"],
+        "items": json.loads(row["items_json"]), "created_at": row["created_at"], "updated_at": row["updated_at"],
+    }
+
+
+def insert_plan(conn: sqlite3.Connection, plan: dict) -> dict:
+    now = _now()
+    cur = conn.execute(
+        "INSERT INTO plans (session_id, round_no, date, window_start, window_end, items_json, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (plan.get("session_id") or "", plan.get("round_no") or 0, plan["date"], plan.get("window_start"),
+         plan.get("window_end"), json.dumps(plan.get("items", []), ensure_ascii=False), now, now),
+    )
+    conn.commit()
+    return get_plan(conn, cur.lastrowid)
+
+
+def get_plan(conn: sqlite3.Connection, plan_id: int) -> dict | None:
+    row = conn.execute("SELECT * FROM plans WHERE id = ?", (plan_id,)).fetchone()
+    return _plan_row(row) if row else None
+
+
+def list_plans(conn: sqlite3.Connection, session_id: str | None = None) -> list[dict]:
+    """날짜순 (같은 날이면 시작 시각, 없으면 앞으로)."""
+    sql = "SELECT * FROM plans"
+    args: tuple = ()
+    if session_id:
+        sql += " WHERE session_id = ?"
+        args = (session_id,)
+    sql += " ORDER BY date, COALESCE(window_start, '00:00'), id"
+    return [_plan_row(r) for r in conn.execute(sql, args).fetchall()]
+
+
+def plans_on_date(conn: sqlite3.Connection, day: str) -> list[dict]:
+    return [_plan_row(r) for r in conn.execute("SELECT * FROM plans WHERE date = ? ORDER BY id", (day,)).fetchall()]
+
+
+def update_plan(conn: sqlite3.Connection, plan_id: int, changes: dict) -> dict | None:
+    """날짜·시각·항목만 바꾼다 (넘긴 것만)."""
+    allowed = {"date": "date", "window_start": "window_start", "window_end": "window_end", "items": "items_json"}
+    sets, args = [], []
+    for key, column in allowed.items():
+        if key in changes:
+            value = changes[key]
+            sets.append(f"{column} = ?")
+            args.append(json.dumps(value, ensure_ascii=False) if key == "items" else value)
+    if sets:
+        conn.execute(f"UPDATE plans SET {', '.join(sets)}, updated_at = ? WHERE id = ?", (*args, _now(), plan_id))
+        conn.commit()
+    return get_plan(conn, plan_id)
+
+
+def delete_plan(conn: sqlite3.Connection, plan_id: int) -> bool:
+    cur = conn.execute("DELETE FROM plans WHERE id = ?", (plan_id,))
+    conn.commit()
+    return cur.rowcount > 0
