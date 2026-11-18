@@ -1,0 +1,5 @@
+{
+  "status": 404,
+  "body": null,
+  "text": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Page not Found | endoflife.date</title>\n  <style>\n    body {\n      background: #222;\n      color: #fff;\n      font-family: 'Segoe UI', Arial, sans-serif;\n      text-align: center;\n      padding: 5em 1em;\n    }\n    h1 {\n      f"
+}

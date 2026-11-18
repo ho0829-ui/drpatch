@@ -61,3 +61,21 @@
 
 - 대량 수집이 아니라 사용자가 올린 패키지(20개 안팎)만 조회하므로 세 API 모두 이용 조건 안에 든다.
 - spec의 "패키지 20개 병렬 호출"과 PyPI의 "직렬 호출 권장"이 부딪힌다 → 동시 호출 수를 작게(예: 4) 제한하고 캐시를 쓴다. 정확한 값은 3일차 응답 시간 측정 때 정한다.
+
+## Tool 설계 확인: 결과 없음·빈 값의 실제 응답 (2026-11-18)
+
+수집: `scripts/capture_failure_fixtures.py` → `tests/fixtures/` · 확인: `scripts/check_tools.py`(실제 API), `tests/test_tools.py`(저장본)
+
+| 경우 | 실제 응답 | 실패 코드 반영 |
+|---|---|---|
+| endoflife.date 없는 제품 / 없는 줄기 | 둘 다 HTTP 404 HTML 페이지 (구분 안 됨) | PRODUCT_NOT_FOUND 하나로, 메시지에 "제품 이름이나 버전 확인" |
+| endoflife.date ESM 없음 (python 3.8, 3.14) | `eoesFrom` 키가 null이거나 아예 없음 | 실패 아님. `esm_date: null` |
+| OSV 취약점 0건 (requests 2.34.2) | HTTP 200 `{}` | 실패 아님. `count: 0` |
+| OSV 없는 패키지 | HTTP 200 `{}` (0건과 같음) | 실패 아님. 패키지 존재는 get_package_versions가 판단 |
+| OSV 같은 취약점 GHSA·PYSEC 2건, 한쪽만 등급 | requests 2.32.5: MODERATE + 등급 없음 | aliases로 묶어 1건, 있는 등급 사용 |
+| OSV 수정 버전에 커밋 해시 | GIT 범위의 `fixed`가 커밋 해시 | ECOSYSTEM 범위만 사용 (테스트로 발견) |
+| PyPI 없는 패키지 | HTTP 404 `{"message": "Not Found"}` | PACKAGE_NOT_FOUND |
+| PyPI 파일 없는 버전 (django 1.0.1 등) | `releases`에 빈 목록 | 설치 불가라 목록에서 뺌 |
+| PyPI requires_python 비어 있음 (옛 requests) | `requires_python: null` | null 그대로 = "호환 미확인", 채우지 않음 |
+
+실제 호출 시간(2026-11-18): 0.2~1.2초 (django OSV 43건이 가장 느림).

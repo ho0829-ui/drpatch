@@ -19,6 +19,10 @@ EOL_DATA = {
     "is_eol": True,
     "lts": True,
     "latest_patch": "20.04.6",
+    "label": "20.04 'Focal Fossa' (LTS)",
+    "link": None,
+    "queried_cycle": "20.04",
+    "note": None,
 }
 
 
@@ -122,10 +126,10 @@ def test_null_allowed_where_spec_says_unknown():
 
 def test_zero_vulns_is_success():
     reg = ToolRegistry()
-    reg.register(GET_VULNS, lambda p: ok({"count": 0, "vulns": []}))
-    assert reg.call("get_vulns", {"name": "requests", "version": "2.32.5"}) == {
+    reg.register(GET_VULNS, lambda p: ok({"count": 0, "vulns": [], "truncated": False}))
+    assert reg.call("get_vulns", {"name": "requests", "version": "2.34.2"}) == {
         "ok": True,
-        "data": {"count": 0, "vulns": []},
+        "data": {"count": 0, "vulns": [], "truncated": False},
     }
 
 

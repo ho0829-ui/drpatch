@@ -86,7 +86,7 @@
 처리 규칙:
 - HTTP 상태 → 실패 코드: 404 → 그 Tool의 NOT_FOUND 코드(get_vulns는 404 없음), 429·5xx·그 밖의 비정상·JSON 아님·연결 실패 → UPSTREAM_ERROR, 시간 초과 → TIMEOUT.
 - OSV는 모르는 패키지도 200 `{}`로 답한다 → 0건(성공). 패키지가 실제로 있는지는 get_package_versions가 판단.
-- OSV 중복 묶기: id·aliases가 겹치면 1건, 등급은 있는 쪽. 수정 버전은 그 패키지(PyPI) 범위의 `fixed` 값만 모아 중복 없이.
+- OSV 중복 묶기: id·aliases가 겹치면 1건, 등급은 있는 쪽. 수정 버전은 그 패키지(PyPI)의 ECOSYSTEM 범위 `fixed` 값만 모아 중복 없이 (GIT 범위의 fixed는 커밋 해시라 뺌).
 - PyPI: 파일이 하나도 없는 버전은 설치할 수 없으므로 목록에서 뺀다. 파일이 모두 yanked인 버전만 `yanked: true`. requires_python은 파일들 중 처음 나오는 값.
 
 - 종류: `external` = 외부 API를 감싼 Tool, `local` = 이 서버 안의 기능을 부르는 Tool(지금은 없음).

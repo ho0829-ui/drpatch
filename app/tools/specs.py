@@ -37,6 +37,10 @@ class EolData(BaseModel):
     is_eol: bool
     lts: bool
     latest_patch: str | None = Field(description="그 줄기의 최신 패치 버전. 모르면 null")
+    label: str = Field(description="사용자에게 보여줄 이름. 예: 20.04 'Focal Fossa' (LTS)")
+    link: str | None = Field(description="릴리스 노트 링크. 없으면 null")
+    queried_cycle: str = Field(description="실제로 조회한 줄기")
+    note: str | None = Field(description="요청한 기준과 조회한 기준이 다르면 그 사실. 같으면 null")
 
 
 GET_EOL = ToolSpec(
@@ -65,6 +69,7 @@ class Vuln(BaseModel):
 class VulnsData(BaseModel):
     count: int = Field(ge=0, description="중복(aliases)을 묶은 뒤 건수. 0건도 성공")
     vulns: list[Vuln]
+    truncated: bool = Field(description="페이지 상한을 넘어 일부만 받았으면 true")
 
 
 GET_VULNS = ToolSpec(
@@ -91,6 +96,7 @@ class PackageVersion(BaseModel):
 
 class PackageVersionsData(BaseModel):
     latest: str
+    project_url: str | None = Field(description="PyPI 프로젝트 페이지")
     versions: list[PackageVersion]
 
 
