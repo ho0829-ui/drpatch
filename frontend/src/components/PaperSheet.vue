@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { SEV, sevKey } from '../demo.js';
+import CalendarSheet from './CalendarSheet.vue';
 
 const props = defineProps({
   sheet: { type: Object, default: null },
@@ -166,6 +167,10 @@ onBeforeUnmount(() => removeEventListener('keydown', onKeyDown));
         <p v-if="!unassignedItems.length && !uncheckedItems.length && !heldItems.length">
           남은 패키지가 없어요.
         </p>
+      </template>
+
+      <template v-else-if="sheet?.kind === 'calendar'">
+        <CalendarSheet />
       </template>
 
       <template v-else-if="sheet?.kind === 'log'">

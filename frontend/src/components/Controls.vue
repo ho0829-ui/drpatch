@@ -4,7 +4,7 @@ defineProps({
   reduced: Boolean,
 });
 
-const emit = defineEmits(['upload', 'start', 'confirm', 'reset', 'update:reduced']);
+const emit = defineEmits(['upload', 'start', 'confirm', 'calendar', 'reset', 'update:reduced']);
 </script>
 
 <template>
@@ -18,6 +18,7 @@ const emit = defineEmits(['upload', 'start', 'confirm', 'reset', 'update:reduced
     </button>
     <button class="btn primary" :disabled="state !== 'ready'" @click="emit('start')">진료 시작</button>
     <button class="btn hot" :disabled="state !== 'planned'" @click="emit('confirm')">처방 확정</button>
+    <button class="btn" @click="emit('calendar')">진료 예약</button>
     <button class="btn" @click="emit('reset')">처음부터</button>
     <label class="motion">
       <input

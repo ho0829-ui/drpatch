@@ -148,7 +148,8 @@ body.reduced .chip-float { animation-duration: .4s; }
 /* 누르면 펼쳐지는 종이 */
 .sheet { position: fixed; top: 84px; right: 24px; width: min(380px, calc(100vw - 32px)); perspective: 1400px; z-index: 5; pointer-events: none; }
 .paper {
-  position: relative; overflow: hidden; background: var(--color-paper); border-radius: 22px; padding: 24px 22px 20px;
+  position: relative; overflow-x: hidden; overflow-y: auto; max-height: calc(100vh - 200px);
+  background: var(--color-paper); border-radius: 22px; padding: 24px 22px 20px;
   box-shadow: 0 6px 0 var(--color-mint), 0 22px 44px rgba(22,49,58,.22);
   transform-origin: 100% 50%; transform: rotateY(-100deg); opacity: 0;
   transition: transform .6s cubic-bezier(.2,1.35,.35,1), opacity .2s;
@@ -187,6 +188,32 @@ dd { margin: 0; }
 .list .v { grid-column: 1; font: 400 13px var(--mono); color: #4A5759; }
 .list .badge { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
 .log { margin: 0; padding: 0; list-style: none; font: 400 12.5px/1.8 var(--mono); max-height: 52vh; overflow: auto; }
+
+/* 캘린더 종이 */
+.cal-sheet h3 { margin: 14px 0 6px; font: 700 14px var(--sans); color: var(--color-deep); }
+.cal-err { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: #FFE0E2; color: #9B1C2E; font-size: 13px; }
+.cal-warn { margin: 4px 0 0; font-size: 12px; color: #8A4600; background: #FFE9CC; padding: 4px 8px; border-radius: 8px; }
+.cal-muted { font-size: 13px; color: #5B7375; margin: 4px 0; }
+.cal-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.cal-dow { font: 700 11px var(--mono); color: #5B7375; padding: 4px 0; }
+.cal-day {
+  border: 1px solid #E3EFEC; background: #fff; border-radius: 8px; padding: 4px 2px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; font: 600 12px var(--mono); color: var(--color-ink);
+}
+.cal-day.selected { border-color: var(--color-deep); background: var(--color-bg); }
+.cal-dots { display: flex; gap: 3px; height: 6px; }
+.cal-dots i { width: 5px; height: 5px; border-radius: 50%; display: block; }
+.dot-plan { background: var(--color-teal); }
+.dot-event { background: var(--color-coral); }
+.cal-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cal-item-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12.5px; padding: 6px 0; border-bottom: 1px solid #E3EFEC; }
+.cal-edit-row, .cal-form { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.cal-edit-row input, .cal-form input { font: 400 12px var(--mono); padding: 4px 6px; border: 1px solid #B9E2D9; border-radius: 8px; min-width: 0; }
+.cal-actions { display: flex; gap: 4px; }
+.cal-btn { border: 1px solid #B9E2D9; background: #fff; color: var(--color-ink); border-radius: 8px; padding: 4px 8px; font: 600 12px var(--sans); cursor: pointer; }
+.cal-btn.primary { background: var(--color-deep); color: #fff; border-color: var(--color-deep); }
+.cal-btn.danger { color: #9B1C2E; border-color: #FFD0D4; }
 
 .fallback { position: fixed; inset: 0; overflow: auto; padding: 32px 16px; background: var(--color-bg); z-index: 10; }
 .fallback > div { max-width: 640px; margin: 0 auto; }

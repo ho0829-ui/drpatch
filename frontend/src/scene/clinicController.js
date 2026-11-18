@@ -71,7 +71,7 @@ export async function createClinicController(canvas, callbacks) {
     if (idx >= 0) pickRoots.splice(idx, 1);
   };
 
-  setupRoom(world, scene, M);
+  setupRoom(world, scene, M, addPick);
   addGroundShadows(world);
   const { eggNodes, tick: tickEggs } = setupEggs(world, M, addPick);
   const blisterApi = setupBlisters(world, M, addPick, removePick);
@@ -411,10 +411,11 @@ export async function createClinicController(canvas, callbacks) {
     }
 
     if (finalEvent.confirmed?.length) {
-      const packs = blisterApi.getPacks();
-      await stampPacks(packs, (roundNo) => {
+      const confirmedNos = new Set(finalEvent.confirmed.map((c) => c.round_no));
+      const confirmedPacks = blisterApi.getPacks().filter((pk) => confirmedNos.has(pk.round.round_no));
+      await stampPacks(confirmedPacks, (roundNo) => {
         const conf = finalEvent.confirmed.find((c) => c.round_no === roundNo);
-        const pack = packs.find((pk) => pk.round.round_no === roundNo);
+        const pack = confirmedPacks.find((pk) => pk.round.round_no === roundNo);
         if (pack && conf?.calendar_event) {
           pack.redrawLabel({ stamped: true, reserved: true });
         }
@@ -485,6 +486,7 @@ export async function createClinicController(canvas, callbacks) {
       jar: currentPackages.length ? '접수된 패키지' : 'requirements.txt 올리기',
       stamp: '확정 도장',
       tray: '곡반 · 패치 필요 없음',
+      calendar: '진료 예약 · 달력',
     }[d.kind];
   }
 
@@ -558,6 +560,8 @@ export async function createClinicController(canvas, callbacks) {
     } else if (d.kind === 'stamp') {
       if (state === 'planned') confirmPlan();
       else onSay('도장은 처방이 나온 뒤에 찍습니다.');
+    } else if (d.kind === 'calendar') {
+      onOpenSheet({ kind: 'calendar', color: COLOR.teal });
     }
   };
 

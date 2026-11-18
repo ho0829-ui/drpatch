@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-18 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/fe-05-confirm] T5 완료: 처방 확정 도장/`예약됨` 라벨, 월간 예약 달력(`CalendarSheet.vue`)·일정 추가/삭제·계획 수정(`PUT /plans/{id}`)·겹침 경고
 - [agy/fe-04-chat] T4 완료: 하단 대화 입력창(`ChatBar.vue`, Enter 전송/Shift+Enter 줄바꿈), 접고 펴는 대화 기록, 드래그 앤 드롭 업로드
 - [agy/fe-03-live] T3 완료: 실데이터(`/upload`, `/chat` ndjson 이벤트)와 3D 장면·블리스터·처방전 종이 연동
 - [agy/fe-02-api] T2 완료: `frontend/src/api.js` 구현 (`upload`, `chat` ndjson 스트림, `plans`, `logs`, `calendar`), 실제 서버(127.0.0.1:8000)로 동작 확인

@@ -167,6 +167,7 @@ function reloadPage() {
       @upload="triggerUpload"
       @start="sceneRef?.runVisit()"
       @confirm="sceneRef?.confirmPlan()"
+      @calendar="activeSheet = { kind: 'calendar', color: '#3E9E98' }"
       @reset="reloadPage"
     />
 

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { FONT, mergeStatic, prep, textTexture } from '../utils.js';
 
-export function setupRoom(world, scene, M) {
+export function setupRoom(world, scene, M, addPick) {
   world.add(prep(M.room, false));
   world.add(prep(M.desk));
 
@@ -50,6 +50,7 @@ export function setupRoom(world, scene, M) {
   }
 
   mergeStatic(M.room, [], false);
-  mergeStatic(M.ward);
+  mergeStatic(M.ward, tvFace ? [tvFace] : []);
   mergeStatic(M.desk);
+  if (tvFace && addPick) addPick(tvFace, 'calendar');
 }
