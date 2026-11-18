@@ -24,7 +24,8 @@
   - 병실 소품(ward.py)·X-ray 이스터에그(14개)·볼펜 실제 비율·블라인드 끈·자유 카메라(OrbitControls, 범위 제한) → design.md 4-4
   - 병실 소품을 실제 크기로(1단위≈9.4cm) 다시 + 빈 곳 채움(문·대기 의자·처치 카트·가스 패널·진료등·대기 모니터 등), 이스터에그 16개
   - 로고 확정 (design/logo, design.md 4-5): 메인=안경 쓴 캡슐, 아이콘=반사경·안경·콧수염, 마스코트=얼굴 배지. 시제품 적용(사이드바·파비콘·말풍선·로딩)
-  - 다음: 명세에 이름(DR.PATCH)·말투 반영 → 하이드로젠용 작업 쪼개기 (Vue + Three.js 본 구현)
+  - agy(하이드로젠) 작업 프롬프트: docs/agy-prompt-drpatch.md (T1 시험 작업 → T7, 작업마다 Claude Code 확인 후 main 합치기)
+  - 다음: T1 넘기기 / 명세에 이름(DR.PATCH)·말투 반영은 Claude Code가 (brain.py 프롬프트는 agy에 안 맡김)
   - (이전 메모) 사용자 피드백 → 로고(캐릭터 기반) → 명세에 이름·말투 반영 → 하이드로젠용 작업 쪼개기
 - 화면은 Vite + Vue (frontend/, 빌드 결과를 FastAPI가 제공) + Three.js 책상 장면
 - (선택) GoogleCalendar 구현체: app/calendar/google.py — 같은 인터페이스, OAuth 키는 사용자가 준비
