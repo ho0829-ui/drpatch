@@ -1,4 +1,6 @@
-# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.3 · 2026-11-18)
+# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.4 · 2026-11-18)
+
+> v1.3 → v1.4 (2026-11-18): 요구사항(F3002~F3004) ↔ Tool 짝짓기, 출력 필드 추가(label·link·queried_cycle·note·truncated·project_url), HTTP 상태·OSV·PyPI 처리 규칙.
 
 > v1.2 → v1.3 (2026-11-18): Tool 종류(external/local), 공통 실패 코드(INVALID_INPUT·UNKNOWN_TOOL·INTERNAL_ERROR), pydantic 입력 모델 등록 방식 추가.
 
@@ -69,9 +71,23 @@
 ## Tool 명세 (모두 `{ok, data}` 또는 `{ok:false, error:{code, message}}`)
 | Tool | 종류 | 언제 쓰나 (Agent에게 주는 설명) | 입력 | data | 실패 코드 |
 |---|---|---|---|---|---|
-| get_eol | external | OS나 Python이 언제까지 지원되는지 알아야 할 때 | product, cycle | eol_date, esm_date(없으면 null), is_eol, lts, latest_patch | PRODUCT_NOT_FOUND, NO_EOL_DATE, UPSTREAM_ERROR, TIMEOUT |
-| get_vulns | external | 특정 패키지 버전이 위험한지, 몇 버전에서 고쳐졌는지 알아야 할 때 | name, version | count, vulns[{id, severity, fixed_versions}] | UPSTREAM_ERROR, TIMEOUT |
-| get_package_versions | external | 업그레이드할 버전이 지금 Python에서 설치되는지 알아야 할 때 | name | latest, versions[{version, requires_python, yanked}] | PACKAGE_NOT_FOUND, UPSTREAM_ERROR, TIMEOUT |
+| get_eol | external | OS나 Python이 언제까지 지원되는지 알아야 할 때 | product, cycle | eol_date, esm_date(없으면 null), is_eol, lts, latest_patch, label, link, queried_cycle, note | PRODUCT_NOT_FOUND, NO_EOL_DATE, UPSTREAM_ERROR, TIMEOUT |
+| get_vulns | external | 특정 패키지 버전이 위험한지, 몇 버전에서 고쳐졌는지 알아야 할 때 | name, version | count, vulns[{id, severity, fixed_versions}], truncated | UPSTREAM_ERROR, TIMEOUT |
+| get_package_versions | external | 업그레이드할 버전이 지금 Python에서 설치되는지 알아야 할 때 | name | latest, project_url, versions[{version, requires_python, yanked}] | PACKAGE_NOT_FOUND, UPSTREAM_ERROR, TIMEOUT |
+
+요구사항 ↔ Tool:
+| 요구사항 | Tool | 지키는 방법 |
+|---|---|---|
+| F3002 후보 확보 | get_vulns | 취약한 패키지 = 계획 후보. 다음 단계용 식별자로 취약점 id·수정 버전 반환. 페이지 상한(10쪽)을 넘겨 일부만 받으면 `truncated: true` |
+| F3003 상세 속성 | get_package_versions | 판단 속성 requires_python. 비어 있으면 채우지 않고 null("호환 미확인"). 사용자용 링크 project_url |
+| F3004 다른 출처 보조 정보 | get_eol | 사용자용 이름(label)·링크(link). 결과 없음 = PRODUCT_NOT_FOUND, 종료일 없음 = NO_EOL_DATE |
+| F3002 기준 차이 밝히기 | get_eol | cycle에 패치 번호가 붙어 오면(3.8.10, 20.04.6) 줄기(3.8, 20.04)로 바꿔 조회하고 `queried_cycle`·`note`로 밝힘 |
+
+처리 규칙:
+- HTTP 상태 → 실패 코드: 404 → 그 Tool의 NOT_FOUND 코드(get_vulns는 404 없음), 429·5xx·그 밖의 비정상·JSON 아님·연결 실패 → UPSTREAM_ERROR, 시간 초과 → TIMEOUT.
+- OSV는 모르는 패키지도 200 `{}`로 답한다 → 0건(성공). 패키지가 실제로 있는지는 get_package_versions가 판단.
+- OSV 중복 묶기: id·aliases가 겹치면 1건, 등급은 있는 쪽. 수정 버전은 그 패키지(PyPI) 범위의 `fixed` 값만 모아 중복 없이.
+- PyPI: 파일이 하나도 없는 버전은 설치할 수 없으므로 목록에서 뺀다. 파일이 모두 yanked인 버전만 `yanked: true`. requires_python은 파일들 중 처음 나오는 값.
 
 - 종류: `external` = 외부 API를 감싼 Tool, `local` = 이 서버 안의 기능을 부르는 Tool(지금은 없음).
 - 공통 실패 코드 (모든 Tool, 레지스트리가 붙임):
