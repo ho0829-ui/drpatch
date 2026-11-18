@@ -1,4 +1,6 @@
-# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.2 · 2026-11-18)
+# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.3 · 2026-11-18)
+
+> v1.2 → v1.3 (2026-11-18): Tool 종류(external/local), 공통 실패 코드(INVALID_INPUT·UNKNOWN_TOOL·INTERNAL_ERROR), pydantic 입력 모델 등록 방식 추가.
 
 > v1.1 → v1.2 (2026-11-18): 세 API 이용 조건 확정(docs/research/api-terms.md), 동시 호출 수 제한·출처 표기 추가.
 
@@ -65,12 +67,20 @@
 → 패키지 20개를 순서대로 부르면 30초 안팎이라 **병렬 호출이 필수**. 단, PyPI 직렬 권장을 고려해 **동시 호출 수를 작게 제한**하고(값은 3일차 측정 때 결정) 세션 캐시로 같은 호출을 반복하지 않는다.
 
 ## Tool 명세 (모두 `{ok, data}` 또는 `{ok:false, error:{code, message}}`)
-| Tool | 언제 쓰나 (Agent에게 주는 설명) | 입력 | data | 실패 코드 |
-|---|---|---|---|---|
-| get_eol | OS나 Python이 언제까지 지원되는지 알아야 할 때 | product, cycle | eol_date, esm_date(없으면 null), is_eol, lts, latest_patch | PRODUCT_NOT_FOUND, NO_EOL_DATE, UPSTREAM_ERROR, TIMEOUT |
-| get_vulns | 특정 패키지 버전이 위험한지, 몇 버전에서 고쳐졌는지 알아야 할 때 | name, version | count, vulns[{id, severity, fixed_versions}] | UPSTREAM_ERROR, TIMEOUT |
-| get_package_versions | 업그레이드할 버전이 지금 Python에서 설치되는지 알아야 할 때 | name | latest, versions[{version, requires_python, yanked}] | PACKAGE_NOT_FOUND, UPSTREAM_ERROR, TIMEOUT |
+| Tool | 종류 | 언제 쓰나 (Agent에게 주는 설명) | 입력 | data | 실패 코드 |
+|---|---|---|---|---|---|
+| get_eol | external | OS나 Python이 언제까지 지원되는지 알아야 할 때 | product, cycle | eol_date, esm_date(없으면 null), is_eol, lts, latest_patch | PRODUCT_NOT_FOUND, NO_EOL_DATE, UPSTREAM_ERROR, TIMEOUT |
+| get_vulns | external | 특정 패키지 버전이 위험한지, 몇 버전에서 고쳐졌는지 알아야 할 때 | name, version | count, vulns[{id, severity, fixed_versions}] | UPSTREAM_ERROR, TIMEOUT |
+| get_package_versions | external | 업그레이드할 버전이 지금 Python에서 설치되는지 알아야 할 때 | name | latest, versions[{version, requires_python, yanked}] | PACKAGE_NOT_FOUND, UPSTREAM_ERROR, TIMEOUT |
 
+- 종류: `external` = 외부 API를 감싼 Tool, `local` = 이 서버 안의 기능을 부르는 Tool(지금은 없음).
+- 공통 실패 코드 (모든 Tool, 레지스트리가 붙임):
+  | 코드 | 언제 |
+  |---|---|
+  | INVALID_INPUT | 입력이 빠졌거나 비었거나 형식이 틀림 |
+  | UNKNOWN_TOOL | 등록되지 않은 Tool 이름 |
+  | INTERNAL_ERROR | Tool 안에서 예상 못 한 예외 (밖으로 던지지 않고 이 코드로 바꿈) |
+- 등록: Tool마다 입력은 pydantic 모델 하나로 정의한다. LLM에 넘기는 입력 형식과 입력 검사가 모두 이 모델에서 나온다.
 - 취약점 0건은 실패가 아니라 `ok:true, count:0`.
 - Tool 하나가 실패해도 그 항목만 "확인 못 함"으로 두고 나머지는 진행.
 - 파일 파싱, 버전 비교 계산, 회차 나누기, 계획 저장은 Tool이 아니라 실행 흐름(코드)이 직접 한다.
