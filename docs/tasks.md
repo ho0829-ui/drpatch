@@ -39,7 +39,7 @@
 ## 4일차~ — 확장 (사용자 결정 2026-11-18)
 - [x] ~~ [C] Figma "보안 관제(SOC) 대시보드" 디자인 → docs/design.md (화면 4개·컴포넌트 7개·토큰)~~ (폐기)
 - [x] [C] 디자인 인터뷰 → DR.PATCH 진료 책상 방향 (docs/design.md) + 시제품 prototype/drpatch-desk/
-- [ ] [C] Vite + Vue로 화면 다시 만들기 (캘린더 화면 포함)
+- [x] [C·G] Vite + Vue로 화면 다시 만들기 (캘린더 화면 포함) — agy T1~T7, Claude Code 검증·수정 (2026-11-19)
 - [ ] [C] (선택) Google Calendar 구현체 — OAuth 준비 후
 - [ ] [C] (선택) 심화 F3020 이상 징후 / F3021 Planner·Worker / F3022 RAG
 - [ ] [나] 명세 밖 나만의 기능 정하기
