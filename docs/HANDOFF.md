@@ -14,6 +14,10 @@
   - 시제품 prototype/drpatch-desk/index.html (Three.js, 예시 데이터). 보기: launch.json "drpatch-proto" → http://localhost:8010/drpatch-desk/
   - 사용자 피드백 받은 뒤: 명세에 보이는 이름(DR.PATCH)·말투 규칙 반영 → tasks.md를 작은 작업으로 쪼개기
   - 역할: 계획·검증·디자인은 Claude Code(Opus), 구현은 agy 하이드로젠 (agy/ 브랜치, 합치기 전 diff·pytest 확인). 첫 작업은 작게 시험
+- 디자인 2차 (인터뷰): 팔레트 '병원 청록'(흰 가구·민트 벽·청록·코랄 강조, 코랄은 소품에만), 3D는 Blender 스크립트로 .glb
+  - design/blender/common.py(팔레트·재질·도형) + 소품별 스크립트 → prototype/drpatch-desk/models/*.glb, 미리보기 design/blender/previews/
+  - 실행: blender -b --factory-startup -P design/blender/doctor.py (Blender 5.3)
+  - 닥터 패치 1차 완료 → 사용자 확인 후 수액·약병·블리스터·책상 소품, 그다음 로고. docs/design.md 팔레트 갱신은 확정 후
 - 화면은 Vite + Vue (frontend/, 빌드 결과를 FastAPI가 제공) + Three.js 책상 장면
 - (선택) GoogleCalendar 구현체: app/calendar/google.py — 같은 인터페이스, OAuth 키는 사용자가 준비
 
