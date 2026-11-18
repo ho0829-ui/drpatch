@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/review-final] R1 완료: `docs/review-final.md` 작성 (명세 v1.16 완료 기준·화면·말투 ↔ 코드·테스트 대조 및 제출 전 필수 수정 5건 정리)
 - [Claude Code 2026-11-19] agy T1~T7 검증 → main 합침(ff, 1e8a378). 범위 OK(app/main.py만), 빌드 OK, 실제 GMS로 업로드→대화→회차 3판→처방전→확정→캘린더→기록→목록 보기 확인
   - 고침: 출처 표기 누락(명세), 확정 회차 round_no(undefined), 말풍선 넘침·마크다운, 하단 두 줄 겹침→한 도크, 이름표 겹침, 종이 여백, 모바일 상단·입력창, 화면 테스트(dist/web 공통 기준) → 255 통과
   - spec v1.16: 보이는 이름 DR.PATCH, 화면 = 진료실(예전 탭 기능 대응표), 말투 절. brain.py 말투 반영, run_agent.py 실제 확인
