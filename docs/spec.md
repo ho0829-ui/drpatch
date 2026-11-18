@@ -1,4 +1,6 @@
-# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.14 · 2026-11-18)
+# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.15 · 2026-11-18)
+
+> v1.14 → v1.15 (2026-11-18): 심화 캘린더 연동(F3023) — Tool 2개, 로컬 구현체, 충돌 회차 이동, 확정 시 등록.
 
 > v1.13 → v1.14 (2026-11-18): 일정만 빠지면 우선순위를 먼저 보여 주고 일정만 되묻기 (대표 요청 3).
 
@@ -141,6 +143,22 @@ Tool이 아니라 실행 흐름이 직접 한다 (`app/parsing/requirements.py`)
 
 - 결과: `packages[{name, version, line_no, marker}]`, `excluded[{line_no, text, reason}]`. 줄 번호는 이어진 줄의 첫 줄 기준.
 - 인코딩: 앞머리 표시(BOM)를 보고 UTF-8 / UTF-16(Windows PowerShell의 `pip freeze >` 기본) 모두 읽는다. BOM이 없으면 UTF-8, 실패하면 latin-1.
+
+## 심화: 캘린더 연동 (F3023)
+결정(2026-11-18): 로컬 저장소 구현을 먼저, Google Calendar로 바꿀 수 있게. 기존 일정과 겹치는 회차는 다음 빈 날로 옮긴다.
+
+| Tool | 종류 | 언제 쓰나 | 입력 | data | 실패 코드 |
+|---|---|---|---|---|---|
+| list_calendar_events | local | 점검 회차 날짜에 다른 일정이 있는지 알아야 할 때 | date_from, date_to | events[{id, title, date, start, end, source}] | INVALID_INPUT, CALENDAR_ERROR |
+| add_calendar_event | local | 확정한 계획을 일정으로 등록할 때 | plan_id (제목·시각은 서버가 저장된 계획에서 읽음) | event_id, title, date, start, end, created | PLAN_NOT_FOUND, CALENDAR_ERROR |
+
+- 구현체: `CalendarBackend` 인터페이스 → `LocalCalendar`(SQLite calendar_events 표). `.env`의 `CALENDAR_BACKEND=local`(기본) / `google`(교체용, OAuth 준비 후).
+- 판단 반영: 회차를 나눈 뒤 회차마다 그 날부터 7일 안의 일정을 조회 → 회차 시간대(없으면 하루 전체)와 겹치는 일정이 있으면 겹치지 않는 가장 가까운 다음 날로 옮기고 `moved_from`·"일정 충돌로 이동" 표시. 7일 안에 빈 날이 없으면 날짜는 그대로 두고 "일정 충돌" 경고.
+  - 이 서비스가 등록한 일정(source=sudo-patch)은 충돌로 보지 않는다 (계획끼리 겹침은 /plans의 overlaps가 담당).
+  - 조회 실패 → 날짜 그대로, `calendar_check: "확인 못 함"`. 캘린더가 꺼져 있으면 `"사용 안 함"`.
+  - 이 조회는 LLM이 아니라 코드가 회차 날짜를 정한 뒤 부른다 (회차 날짜가 있어야 입력이 채워짐). 로그에 `tool_result`와 `calendar_check` 이벤트로 남는다.
+- 확정: 저장한 회차마다 add_calendar_event로 등록. 이미 등록된 계획이면 새로 만들지 않고 그 일정을 돌려준다.
+- API: `GET /calendar/events?date_from=&date_to=`, `POST /calendar/events {title, date, start, end}`(내 기존 일정 넣기), `DELETE /calendar/events/{id}`.
 
 ## 판단 규칙
 ### 목표 버전 고르기 (패키지마다)
