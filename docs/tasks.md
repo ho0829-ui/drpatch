@@ -16,7 +16,7 @@
 - [ ] **16:00 게이트: 세 API 호출 + LLM 호출 확인 완료**
 - [x] [C] Tool 공통 응답 형식 + 레지스트리 (F3001)
 - [x] [C] get_eol / get_vulns / get_package_versions 구현 + fixture 테스트 (F3002~F3004)
-- [ ] [C] requirements.txt 파싱 (조회 제외 줄 포함) + 테스트
+- [x] [C] requirements.txt 파싱 (조회 제외 줄 포함) + 테스트
 - [ ] [C] 예시 한 건(spec 맨 아래)을 Tool로 직접 따라가 보고 spec 수정
 
 ## 2일차 — Agent
