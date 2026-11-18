@@ -1,18 +1,16 @@
-# 마지막 갱신: 2026-11-18 17:12 / 작성: Claude Code
+# 마지막 갱신: 2026-11-18 17:19 / 작성: Claude Code
 
 ## 지금 하던 것
-- 3일차 [C] 백엔드 API 끝 (전체 테스트 232개 통과, 실제 서버+GMS로 업로드→스트리밍→확정→계획·로그 조회 curl 확인)
-  - app/api/: upload.py(본문 그대로), chat.py(ndjson: session → 이벤트 → final, 확정 저장), plans.py(CRUD+overlaps), logs.py(목록·상세·삭제)
-  - app/api/overlap.py(같은 날·구간 겹침, 시각 없으면 하루 전체, 24:00 허용), deps.py(DB 연결, save_confirmed_plan)
-  - main.py: app.state.db_path·bus·logger·brain(키 없으면 None), 입력 오류 422 짧은 안내
-  - 요청·응답 형식은 spec v1.12 "백엔드 API"
+- 3일차 [C] 화면 끝 (테스트 233개 통과, 실제 서버+GMS로 브라우저에서 업로드→계획→확정→수정·삭제→로그까지 확인, 콘솔 오류 0)
+  - web/index.html·style.css, web/js/: api.js(fetch·ndjson 읽기·세션 localStorage), render.js(escape 후 그리기, 간단 서식), chat.js, plans.js, logs.js, main.js
+  - main.py가 web/을 "/"에 붙임 (API 라우터 뒤). 실행: preview "sudo-patch" (.claude/launch.json) 또는 uvicorn app.main:app
+  - 실행 단계 패널: 단계·Tool(✓/✗·ms)·LLM 판단·재계획(주황)·회차 배정. 계획 수정은 바꾼 칸만 PUT (time 입력칸이 24:00을 못 보여 줌)
 
 ## 다음에 할 것
-- 3일차 [C] 화면 탭 3개 + 실행 단계 표시 + 오류 안내 (F3018~F3019) — web/를 FastAPI가 같은 주소로 내보냄
-  - 대화: fetch('/upload', {body: file}), /chat 응답 본문을 줄 단위로 읽어 실행 단계 패널에 쌓기, replan 색 구분
-  - 계획 관리: GET/PUT/DELETE /plans, overlaps 경고 / 실행 로그: /logs
-  - 하단 "참고용 정보" + 세 API 출처 표기 (NF3007)
-- [나] 대표 시나리오 5개 화면에서 돌려보기, 패키지 20개 응답 시간 재기
+- [나] 대표 시나리오 5개를 화면에서 직접 돌려보기 (spec 완료 기준 체크)
+- [나] 패키지 20개 파일로 응답 시간 재기 → 느리면 [C] 병렬·LLM 호출 줄이기 (지금 예시 2개 패키지로 약 24초, 대부분 LLM 4번)
+- [G·Carbon] 제출 전: 전체 코드 vs spec 완료 기준 대조 (agy-guide ③)
+- [나] 셀프 체크리스트 → 제출 (README 정리 필요)
 
 ## 주의
 - spec v1.11 (리뷰 반영 규칙). 이벤트 종류에 plan_built 추가

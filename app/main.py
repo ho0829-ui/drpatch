@@ -11,15 +11,19 @@
 """
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api import chat, logs, plans, upload
 from app.db import repo
 from app.events.bus import EventBus
 from app.events.logger import LoggingAgent
+
+WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
 
 def make_brain():
@@ -67,3 +71,7 @@ app.include_router(logs.router)
 def health() -> dict:
     """서버가 켜져 있는지만 확인한다."""
     return {"ok": True}
+
+
+# 화면(web/)은 API 라우터 뒤에 붙인다 → /plans 등 API 경로가 먼저 잡힌다
+app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")

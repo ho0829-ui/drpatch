@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sudo-patch · 서버 패치 플래너</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo">$ sudo-patch</span>
+      <span class="sub">서버 패치·EOL 점검 플래너</span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" role="tab" data-tab="chat">대화</button>
+      <button class="tab" role="tab" data-tab="plans">계획 관리</button>
+      <button class="tab" role="tab" data-tab="logs">실행 로그</button>
+    </nav>
+  </header>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <main>
+    <!-- ① 대화 -->
+    <section id="tab-chat" class="tab-panel active">
+      <div class="chat-layout">
+        <div class="chat-col">
+          <div class="card upload">
+            <div class="upload-row">
+              <div>
+                <strong>requirements.txt 올리기</strong>
+                <p class="hint">서버에서 <code>pip freeze &gt; requirements.txt</code>로 만든 파일을 올려 주세요.</p>
+              </div>
+              <label class="btn">
+                파일 선택
+                <input id="file" type="file" accept=".txt,text/plain" hidden>
+              </label>
+            </div>
+            <div id="upload-result" class="upload-result" hidden></div>
+          </div>
+
+          <div id="messages" class="messages" aria-live="polite">
+            <div class="msg bot">
+              <div class="bubble">파일을 올리고 OS·Python 버전과 일정을 알려 주세요.<br>
+                예: <em>"우분투 20.04, 파이썬 3.8이야. 이번에 5개까지, 첫 점검은 11/21 22~24시, 격주로"</em></div>
+            </div>
+          </div>
+
+          <form id="chat-form" class="chat-form">
+            <input id="chat-input" type="text" autocomplete="off" maxlength="2000"
+                   placeholder="메시지를 입력하세요" aria-label="메시지">
+            <button id="send" class="btn primary" type="submit">보내기</button>
+            <button id="new-session" class="btn ghost" type="button" title="새 대화 시작">새 대화</button>
+          </form>
+        </div>
+
+        <aside class="steps-col card">
+          <div class="steps-head">
+            <strong>실행 단계</strong>
+            <span id="steps-status" class="status idle">대기</span>
+          </div>
+          <ol id="steps" class="steps"></ol>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ② 계획 관리 -->
+    <section id="tab-plans" class="tab-panel">
+      <div class="panel-head">
+        <h2>저장한 계획</h2>
+        <button id="plans-refresh" class="btn ghost" type="button">새로고침</button>
+      </div>
+      <div id="plans" class="plans"></div>
+    </section>
+
+    <!-- ③ 실행 로그 -->
+    <section id="tab-logs" class="tab-panel">
+      <div class="logs-layout">
+        <div class="card log-sessions">
+          <div class="panel-head">
+            <h2>세션</h2>
+            <button id="logs-refresh" class="btn ghost" type="button">새로고침</button>
+          </div>
+          <ul id="log-sessions"></ul>
+        </div>
+        <div class="card log-detail">
+          <div class="panel-head">
+            <h2 id="log-title">세션을 고르세요</h2>
+            <button id="log-delete" class="btn danger" type="button" hidden>로그 삭제</button>
+          </div>
+          <ol id="log-events" class="steps"></ol>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    참고용 정보예요. 실제 패치 전에는 직접 확인하세요. 출처:
+    <a href="https://endoflife.date" target="_blank" rel="noopener">endoflife.date</a> ·
+    <a href="https://osv.dev" target="_blank" rel="noopener">OSV.dev</a> (PyPI·GitHub Advisory 데이터, CC-BY 4.0) ·
+    <a href="https://pypi.org" target="_blank" rel="noopener">PyPI</a>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/render.js"></script>
+  <script src="/js/chat.js"></script>
+  <script src="/js/plans.js"></script>
+  <script src="/js/logs.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

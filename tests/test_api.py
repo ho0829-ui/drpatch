@@ -173,3 +173,16 @@ def test_logs_list_detail_delete_and_no_update(client):
     assert client.patch(f"/logs/{sid}", json={}).status_code == 405
     assert client.delete(f"/logs/{sid}").json()["deleted"] == len(detail)
     assert client.get(f"/logs/{sid}").status_code == 404
+
+
+# ── 화면 파일 (F3018) ────────────────────────────────────
+def test_screen_is_served_from_same_server(client):
+    page = client.get("/")
+    assert page.status_code == 200 and "text/html" in page.headers["content-type"]
+    for tab in ("대화", "계획 관리", "실행 로그"):
+        assert tab in page.text
+    assert "참고용 정보" in page.text and "OSV.dev" in page.text  # 출처 표기 (NF3007)
+    for path in ("/style.css", "/js/api.js", "/js/render.js", "/js/chat.js", "/js/plans.js", "/js/logs.js", "/js/main.js"):
+        assert client.get(path).status_code == 200, path
+    assert client.get("/plans").headers["content-type"].startswith("application/json")  # API가 먼저
+    assert client.get("/health").json() == {"ok": True}
