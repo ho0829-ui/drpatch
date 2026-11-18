@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-18 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/fe-07-polish] T7 완료: 키보드 접근성(`목록으로 보기` 토글, `진료 기록` 버튼, Tab/Esc), 모바일(390px) 말풍선·종이·컨트롤 배치 개선 (`web/` 유지)
 - [agy/fe-06-logs] T6 완료: 차트 클릭 시 `/logs` 세션 목록·`#seq` 순 실행 로그·판단 근거 문장·확인 후 삭제(`LogSheet.vue`)
 - [agy/fe-05-confirm] T5 완료: 처방 확정 도장/`예약됨` 라벨, 월간 예약 달력(`CalendarSheet.vue`)·일정 추가/삭제·계획 수정(`PUT /plans/{id}`)·겹침 경고
 - [agy/fe-04-chat] T4 완료: 하단 대화 입력창(`ChatBar.vue`, Enter 전송/Shift+Enter 줄바꿈), 접고 펴는 대화 기록, 드래그 앤 드롭 업로드

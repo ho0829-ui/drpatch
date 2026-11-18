@@ -21,6 +21,7 @@ watch(
 );
 
 const fallback = ref(false);
+const listView = ref(false);
 const fallbackMsg = ref(undefined);
 const state = ref('idle');
 const status = ref({ text: '대기 중', stage: -1 });
@@ -111,33 +112,33 @@ function reloadPage() {
     @change="onFileSelected"
   >
 
-  <template v-if="!fallback">
-    <div
-      class="drop-zone"
-      @dragover.prevent="dragging = true"
-      @dragleave.self="dragging = false"
-      @drop.prevent="onDropFile"
-    >
-      <ClinicScene
-        ref="sceneRef"
-        :reduced="reduced"
-        @fallback="onFallback"
-        @state-change="state = $event"
-        @status="status = $event"
-        @say="bubbleText = $event"
-        @log="logs = $event.logs"
-        @open-sheet="activeSheet = $event"
-        @close-sheet="activeSheet = null"
-        @bubble-pos="bubblePos = $event"
-        @egg-count="eggCount = $event"
-        @upload-request="triggerUpload"
-        @plan-update="currentPlan = $event.plan; currentPackages = $event.packages"
-        @chat-turn="onChatTurn"
-      />
+  <div
+    v-show="!fallback && !listView"
+    class="drop-zone"
+    @dragover.prevent="dragging = true"
+    @dragleave.self="dragging = false"
+    @drop.prevent="onDropFile"
+  >
+    <ClinicScene
+      v-if="!fallback"
+      ref="sceneRef"
+      :reduced="reduced"
+      @fallback="onFallback"
+      @state-change="state = $event"
+      @status="status = $event"
+      @say="bubbleText = $event"
+      @log="logs = $event.logs"
+      @open-sheet="activeSheet = $event"
+      @close-sheet="activeSheet = null"
+      @bubble-pos="bubblePos = $event"
+      @egg-count="eggCount = $event"
+      @upload-request="triggerUpload"
+      @plan-update="currentPlan = $event.plan; currentPackages = $event.packages"
+      @chat-turn="onChatTurn"
+    />
 
-      <div v-if="dragging" class="drop-overlay">
-        <p>여기에 requirements.txt를 놓아 주세요</p>
-      </div>
+    <div v-if="dragging" class="drop-overlay">
+      <p>여기에 requirements.txt를 놓아 주세요</p>
     </div>
 
     <header class="brand">
@@ -158,8 +159,6 @@ function reloadPage() {
 
     <SpeechBubble :text="bubbleText" :reduced="reduced" :pos="bubblePos" />
 
-    <PaperSheet :sheet="activeSheet" @close="closeSheet" />
-
     <Controls
       :state="state"
       :reduced="reduced"
@@ -168,6 +167,8 @@ function reloadPage() {
       @start="sceneRef?.runVisit()"
       @confirm="sceneRef?.confirmPlan()"
       @calendar="activeSheet = { kind: 'calendar', color: '#3E9E98' }"
+      @logs="activeSheet = { kind: 'log', color: '#3E9E98' }"
+      @toggle-list="listView = true"
       @reset="reloadPage"
     />
 
@@ -177,7 +178,22 @@ function reloadPage() {
       @send="onSendChat"
       @upload="triggerUpload"
     />
-  </template>
+  </div>
 
-  <FallbackList v-else :message="fallbackMsg" :plan="currentPlan" :packages="currentPackages" />
+  <FallbackList
+    v-if="fallback || listView"
+    :message="fallback ? fallbackMsg : '키보드·목록 보기로 전체 처방 내용을 확인합니다.'"
+    :can-return-3d="!fallback"
+    :plan="currentPlan"
+    :packages="currentPackages"
+    :state="state"
+    @return-3d="listView = false"
+    @upload="triggerUpload"
+    @start="sceneRef?.runVisit()"
+    @confirm="sceneRef?.confirmPlan()"
+    @calendar="activeSheet = { kind: 'calendar', color: '#3E9E98' }"
+    @logs="activeSheet = { kind: 'log', color: '#3E9E98' }"
+  />
+
+  <PaperSheet :sheet="activeSheet" @close="closeSheet" />
 </template>

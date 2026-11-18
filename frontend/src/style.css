@@ -221,18 +221,28 @@ dd { margin: 0; }
 .log-sess-btn { flex: 1; text-align: left; border: 0; background: transparent; cursor: pointer; display: flex; flex-direction: column; font: 500 12px var(--mono); color: var(--color-ink); }
 .log-sess-btn small { color: #5B7375; font-size: 11px; }
 
-.fallback { position: fixed; inset: 0; overflow: auto; padding: 32px 16px; background: var(--color-bg); z-index: 10; }
+.fallback { position: fixed; inset: 0; overflow: auto; padding: 32px 16px; background: var(--color-bg); z-index: 6; }
 .fallback > div { max-width: 640px; margin: 0 auto; }
+.fallback-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.fallback-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 18px; }
 
 @media (max-width: 720px) {
-  .brand { top: 14px; left: 16px; }
+  .brand { top: 10px; left: 12px; padding: 4px 12px 4px 4px; }
+  .brand b { font-size: 17px; }
   .brand small { display: none; }
-  .status { top: 64px; }
+  .status { top: 58px; font-size: 12.5px; padding: 7px 12px; }
   .ticker, .note { display: none; }
-  .controls { bottom: 16px; }
-  .sheet { top: auto; bottom: 120px; left: 16px; right: 16px; width: auto; }
-  .paper { transform-origin: 50% 100%; transform: rotateX(95deg); }
-  .bubble { max-width: 220px; font-size: 14px; }
+  .controls { bottom: 68px; gap: 6px; }
+  .controls .btn { font-size: 12.5px; padding: 9px 12px; }
+  .chat-dock { bottom: 10px; width: calc(100vw - 16px); }
+  .chat-input-row { gap: 4px; padding: 4px 6px; }
+  .btn-sm { font-size: 12px; padding: 8px 10px; }
+  .sheet { top: auto; bottom: 132px; left: 12px; right: 12px; width: auto; }
+  .paper { transform-origin: 50% 100%; transform: rotateX(95deg); max-height: calc(100vh - 210px); }
+  .bubble {
+    left: 28px; right: 16px !important; top: 106px !important;
+    transform: none; width: auto; max-width: none; font-size: 13.5px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

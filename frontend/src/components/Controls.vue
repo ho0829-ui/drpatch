@@ -4,11 +4,11 @@ defineProps({
   reduced: Boolean,
 });
 
-const emit = defineEmits(['upload', 'start', 'confirm', 'calendar', 'reset', 'update:reduced']);
+const emit = defineEmits(['upload', 'start', 'confirm', 'calendar', 'logs', 'toggle-list', 'reset', 'update:reduced']);
 </script>
 
 <template>
-  <nav class="controls">
+  <nav class="controls" aria-label="진료 제어">
     <button
       class="btn"
       :disabled="state === 'running' || state === 'confirming'"
@@ -19,6 +19,8 @@ const emit = defineEmits(['upload', 'start', 'confirm', 'calendar', 'reset', 'up
     <button class="btn primary" :disabled="state !== 'ready'" @click="emit('start')">진료 시작</button>
     <button class="btn hot" :disabled="state !== 'planned'" @click="emit('confirm')">처방 확정</button>
     <button class="btn" @click="emit('calendar')">진료 예약</button>
+    <button class="btn" @click="emit('logs')">진료 기록</button>
+    <button class="btn" @click="emit('toggle-list')">목록으로 보기</button>
     <button class="btn" @click="emit('reset')">처음부터</button>
     <label class="motion">
       <input
