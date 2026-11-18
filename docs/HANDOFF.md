@@ -6,12 +6,12 @@
   - 기록: docs/planning-check.md "설계 시험", 스크립트 scripts/walk_example.py
 
 ## 다음에 할 것
-- [나] 오전 FastAPI 실습 결과(app 폴더) 넣기 — 폴더 위치 확인 필요
 - 2일차 [C] 목표 버전 고르기 + 우선순위 정렬 + 회차 나누기 (순수 함수 + 테스트)
   - spec v1.6 규칙: 정식 버전만, 필요한 가장 낮은 Python 구하기, 재계획 1회 = Python 줄기 하나 get_eol 확인, Python 항목 합치기, 순서 제약이 우선순위보다 먼저
   - 버전 비교·정식 버전 판별·requires_python 판정은 packaging 사용 (packaging==26.3 추가함)
 
 ## 주의
+- FastAPI: app/main.py 뼈대(/health만). 실습 원본은 docs/course/1일차_FastAPI/(참고용, 영화 예제·/api/plans). 라우터는 app/api/에 추가 예정
 - scripts/walk_example.py의 버전 계산은 임시(>=3.N 위주). 실제 판정 코드로 쓰지 말 것
 - OSV는 없는 패키지도 200 {} → 0건. endoflife.date는 없는 제품·줄기 모두 같은 404
 - 세션 캐시·동시 호출 수 제한은 아직 없음 (2~3일차 실행 흐름에서)

@@ -10,7 +10,7 @@
 - [x] [C] Claude Code 권한 설정: `rm -rf`, `git push --force` 차단
 
 ## 1일차 — 16시 게이트 통과가 최우선
-- [ ] [나] 오전 FastAPI 실습 결과(app 폴더)를 저장소에 넣기
+- [x] [나] 오전 FastAPI 실습 결과(app 폴더)를 저장소에 넣기 → docs/course/1일차_FastAPI/(참고용, 커밋 안 함) + 구조를 따라 app/main.py 뼈대
 - [x] [C] LLM 한 번 호출 + Tool 명세를 넘겼을 때 Tool 호출을 고르는지 확인 (명세서 2.7 도구 연결 확인)
 - [x] [C] 기획 검증 기록 작성: 대표 요청별 "LLM만 답하면 틀리는 점", API 출처·이용 조건 (docs/planning-check.md)
 - [x] **16:00 게이트: 세 API 호출 + LLM 호출 확인 완료**
