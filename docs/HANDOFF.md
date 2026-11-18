@@ -6,7 +6,7 @@
   - 기록: docs/planning-check.md "설계 시험", 스크립트 scripts/walk_example.py
 
 ## 다음에 할 것
-- [나] 16:00 게이트 줄 체크 (세 API 호출·LLM 호출 모두 확인됨)
+- [나] 오전 FastAPI 실습 결과(app 폴더) 넣기 — 폴더 위치 확인 필요
 - [나] packaging 허용 여부 확인 — 근거는 spec "남은 확인"
 - 2일차 [C] 목표 버전 고르기 + 우선순위 정렬 + 회차 나누기 (순수 함수 + 테스트)
   - spec v1.6 규칙: 정식 버전만, 필요한 가장 낮은 Python 구하기, 재계획 1회 = Python 줄기 하나 get_eol 확인, Python 항목 합치기, 순서 제약이 우선순위보다 먼저

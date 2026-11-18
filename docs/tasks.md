@@ -13,7 +13,7 @@
 - [ ] [나] 오전 FastAPI 실습 결과(app 폴더)를 저장소에 넣기
 - [x] [C] LLM 한 번 호출 + Tool 명세를 넘겼을 때 Tool 호출을 고르는지 확인 (명세서 2.7 도구 연결 확인)
 - [x] [C] 기획 검증 기록 작성: 대표 요청별 "LLM만 답하면 틀리는 점", API 출처·이용 조건 (docs/planning-check.md)
-- [ ] **16:00 게이트: 세 API 호출 + LLM 호출 확인 완료**
+- [x] **16:00 게이트: 세 API 호출 + LLM 호출 확인 완료**
 - [x] [C] Tool 공통 응답 형식 + 레지스트리 (F3001)
 - [x] [C] get_eol / get_vulns / get_package_versions 구현 + fixture 테스트 (F3002~F3004)
 - [x] [C] requirements.txt 파싱 (조회 제외 줄 포함) + 테스트
