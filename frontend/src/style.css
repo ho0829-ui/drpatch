@@ -192,9 +192,9 @@ body { font-family: var(--sans); color: var(--color-ink); background: var(--colo
 body.reduced .chip-float { animation-duration: .4s; }
 
 /* 누르면 펼쳐지는 종이 */
-.sheet { position: fixed; top: 84px; right: 24px; width: min(380px, calc(100vw - 32px)); perspective: 1400px; z-index: 5; pointer-events: none; }
+.sheet { position: fixed; top: 100px; right: 20px; width: min(400px, calc(100vw - 32px)); /* 위: 보조 묶음 아래, 아래: 도크 위 */ perspective: 1400px; z-index: 5; pointer-events: none; }
 .paper {
-  position: relative; overflow-x: hidden; overflow-y: auto; max-height: calc(100vh - 200px);
+  position: relative; overflow-x: hidden; overflow-y: auto; max-height: calc(100vh - 260px); scrollbar-width: thin;
   background: var(--color-paper); border-radius: 22px; padding: 24px 22px 20px;
   box-shadow: 0 6px 0 var(--color-mint), 0 22px 44px rgba(22,49,58,.22);
   transform-origin: 100% 50%; transform: rotateY(-100deg); opacity: 0;
@@ -276,23 +276,26 @@ dd { margin: 0; }
   .brand { top: 10px; left: 12px; padding: 4px 12px 4px 4px; }
   .brand b { font-size: 17px; }
   .brand small { display: none; }
-  .status { top: 58px; font-size: 12.5px; padding: 7px 12px; }
+  .status { top: 14px; left: auto; right: 10px; transform: none; font-size: 12px; padding: 7px 11px; } /* 위 줄 오른쪽 */
   .ticker { display: none; }
-  .top-tools { top: 10px; right: 10px; }
+  .top-tools { top: 62px; right: 10px; } /* 로고·상태 칩 아래 줄 */
   .tool-row .chip-btn.reset { display: none; } /* 좁은 화면: 처음부터는 숨김 (목록 보기·움직임 줄이기·도움말은 유지) */
   .chip-btn { height: 30px; padding: 0 10px; font-size: 11.5px; }
   .chip-btn.icon { width: 30px; }
   .egg-chip { display: none; }
-  .chat-dock { bottom: 26px; width: calc(100vw - 16px); gap: 8px; }
+  .chat-dock { bottom: 36px; width: calc(100vw - 16px); gap: 8px; }
   .dock-actions { gap: 6px; }
   .dock-sep { display: none; }
   .chat-input-row { gap: 6px; padding: 6px; }
+  .hist-label { display: none; }
+  .chat-textarea { font-size: 12.5px; padding: 8px 2px; }
+  .chat-textarea::placeholder { font-size: 12px; }
   .btn-sm { font-size: 12px; padding: 8px 11px; }
   .source-note { font-size: 9.5px; bottom: 4px; padding: 0 8px; }
   .sheet { top: auto; bottom: 150px; left: 12px; right: 12px; width: auto; }
   .paper { transform-origin: 50% 100%; transform: rotateX(95deg); max-height: calc(100vh - 210px); }
   .bubble {
-    left: 28px; right: 16px !important; top: 106px !important;
+    left: 28px; right: 16px !important; top: 112px !important;
     transform: none; width: auto; max-width: none; font-size: 13.5px;
   }
 }

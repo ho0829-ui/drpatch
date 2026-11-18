@@ -61,7 +61,8 @@ watch(
         :aria-expanded="historyOpen"
         @click="historyOpen = !historyOpen"
       >
-        {{ historyOpen ? '대화 닫기' : `대화 (${messages.length})` }}
+        <template v-if="historyOpen">닫기</template>
+        <template v-else><span class="hist-label">대화 </span>{{ messages.length }}</template>
       </button>
       <button
         type="button"
@@ -77,7 +78,7 @@ watch(
         v-model="text"
         class="chat-textarea"
         rows="1"
-        placeholder="예: Ubuntu 20.04, Python 3.8, 11/21부터 2주 간격 밤 10시"
+        placeholder="OS·Python 버전, 점검 일정"
         title="Enter 보내기 · Shift+Enter 줄바꿈"
         aria-label="박사님에게 보낼 메시지"
         :disabled="busy"
