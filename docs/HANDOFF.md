@@ -10,6 +10,7 @@
   - 기준선 태그 v1-submit은 캘린더 전 상태
 
 ## 다음에 할 것
+- Figma 디자인 끝: docs/design.md (토큰·컴포넌트·화면 4개, Figma 링크). Figma MCP는 Starter 요금제 호출 한도에 걸림 → Vue는 docs/design.md 기준으로
 - Figma "보안 관제(SOC) 대시보드" 디자인 → Vite + Vue (frontend/, 빌드 결과를 FastAPI가 제공). 캘린더 화면은 Vue에서
 - (선택) GoogleCalendar 구현체: app/calendar/google.py — 같은 인터페이스, OAuth 키는 사용자가 준비
 
