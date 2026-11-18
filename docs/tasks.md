@@ -17,7 +17,7 @@
 - [x] [C] Tool 공통 응답 형식 + 레지스트리 (F3001)
 - [x] [C] get_eol / get_vulns / get_package_versions 구현 + fixture 테스트 (F3002~F3004)
 - [x] [C] requirements.txt 파싱 (조회 제외 줄 포함) + 테스트
-- [ ] [C] 예시 한 건(spec 맨 아래)을 Tool로 직접 따라가 보고 spec 수정
+- [x] [C] 예시 한 건(spec 맨 아래)을 Tool로 직접 따라가 보고 spec 수정
 
 ## 2일차 — Agent
 - [ ] [C] 목표 버전 고르기 + 우선순위 정렬 + 회차 나누기 (순수 함수 + 테스트)

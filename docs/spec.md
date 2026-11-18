@@ -1,4 +1,6 @@
-# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.5 · 2026-11-18)
+# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.6 · 2026-11-18)
+
+> v1.5 → v1.6 (2026-11-18): 예시를 실측으로 다시 씀(둘 다 위반, Python 3.11). 필요한 가장 낮은 Python 구하기·재계획 횟수 세는 법·정식 버전만·Python 항목 합치기·회차 나누기(순서 제약 먼저) 추가.
 
 > v1.4 → v1.5 (2026-11-18): requirements.txt 파싱 규칙(환경 표시는 떼고 조회, 중복·인코딩 처리) 추가.
 
@@ -126,7 +128,8 @@ Tool이 아니라 실행 흐름이 직접 한다 (`app/parsing/requirements.py`)
 
 ## 판단 규칙
 ### 목표 버전 고르기 (패키지마다)
-1. get_package_versions로 **현재 Python에서 설치 가능하고 yanked가 아닌 버전 중 가장 최신**을 고른다.
+1. get_package_versions로 **현재 Python에서 설치 가능하고 yanked가 아닌 정식 버전 중 가장 최신**을 고른다.
+   정식 버전이 아닌 것(rc·a·b·dev 시험판)은 후보에서 뺀다 (실측: django 56개).
    requires_python이 비어 있는 버전은 후보로 두되 "호환 미확인"으로 표시한다.
 2. 그 버전을 get_vulns로 다시 조회해 취약점 0건인지 확인한다.
 3. 0건이면 목표 버전 확정. 주 버전이 바뀌면(예: 2.x → 4.x) "큰 변경" 표시.
@@ -139,14 +142,30 @@ Tool이 아니라 실행 흐름이 직접 한다 (`app/parsing/requirements.py`)
 ### 재계획
 | 상황 | 하는 일 | 다시 부르는 Tool |
 |---|---|---|
-| 호환 제약 위반 패키지가 있음 | 그 패키지들이 요구하는 가장 낮은 Python 버전을 구하고, 그 Python이 지원 중인지 확인한 뒤 "Python 업그레이드"를 앞 회차에 넣고 해당 패키지를 그 뒤 회차로 | get_eol(python, 새 버전), get_package_versions |
-| 새 Python도 지원 종료됐거나 없음 | 그 다음 버전으로 한 번 더 시도. 그래도 안 되면 "보류(사유)"로 표시 | get_eol |
+| 호환 제약 위반 패키지가 있음 | 아래 "필요한 가장 낮은 Python 구하기"로 Python 목표를 정하고, 지원 중이면 "Python 업그레이드"를 앞 회차에 넣고 해당 패키지를 그 뒤 회차로 | get_vulns(줄기별 후보 버전), get_eol(python, 새 줄기) |
+| 새 Python이 지원 종료됨 | 그 다음 줄기로 한 번 더 시도 (위반 패키지의 목표 버전도 그 줄기 기준으로 다시 확인). 상한까지 안 되면 "보류(사유)"로 표시 | get_eol, get_vulns |
 | 우선 항목 수 > N | 넘친 항목을 다음 회차로 | 없음 |
 | 회차 날짜가 그 항목의 지원 종료일 뒤 | "종료 이후 처리" 경고 | 없음 |
 
+**필요한 가장 낮은 Python 구하기**
+1. 현재 Python의 다음 줄기(3.8이면 3.9)부터 하나씩 올린다.
+2. 줄기마다 위반 패키지 각각에 대해 "그 줄기에서 설치 가능한 최신 정식 버전"을 고른다 (get_package_versions 결과 재사용, 추가 호출 없음).
+   그 버전이 앞 줄기와 다를 때만 get_vulns로 확인한다.
+3. 위반 패키지가 **모두** 0건이 되는 첫 줄기가 Python 후보다.
+4. get_eol(python, 후보)로 지원 중인지 확인한다. 종료됐으면 다음 줄기로 (위 표 2행).
+
 - 상한: 재계획 3회, 회차 최대 3개. 넘친 것은 "미배정" 목록.
+- 재계획 1회 = **Python 후보 줄기 하나를 정해 get_eol로 확인하는 것.** 1번의 줄기 훑기(get_vulns)는 세지 않는다.
+  (예시: 3.10 시도 → 종료 → 3.11 시도 → 지원 중 = 2회)
 - 재계획 안 함: 입력 부족, 모든 Tool이 같은 이유로 실패(네트워크 등) → 바로 안내.
 - 순서 제약: Python 업그레이드 항목은 그걸 필요로 하는 패키지보다 항상 앞 회차.
+- 같은 일은 한 항목: 현재 Python이 지원 종료라 생긴 항목과 재계획으로 생긴 Python 업그레이드 항목은 **"Python 3.8 → 3.11" 한 항목**으로 합친다. 등급은 둘 중 높은 쪽.
+
+### 회차 나누기
+1. 항목을 우선순위대로 줄 세운다.
+2. **순서 제약이 우선순위보다 먼저다**: 앞 회차에 있어야 할 항목(Python 업그레이드)이 들어가기 전에는, 그걸 필요로 하는 항목을 같은 회차나 앞 회차에 넣지 않는다.
+3. 회차마다 N개까지 채운다. Python 업그레이드·OS 항목도 N개 중 하나로 센다.
+   (예시: django가 CRITICAL이어도 Python 업그레이드에 묶여 2회차)
 
 ### 우선순위
 CRITICAL > HIGH(지원 종료된 OS·Python 포함) > MODERATE > LOW > 심각도 미상 (패키지의 등급 = 가진 취약점 중 가장 높은 등급) → 같으면 지원 종료까지 남은 일수가 적은 순. 취약점 0건 항목은 계획에 넣지 않고 "안전" 목록으로.
@@ -173,7 +192,7 @@ CRITICAL > HIGH(지원 종료된 OS·Python 포함) > MODERATE > LOW > 심각도
 
 ## 구현 방식
 - 백엔드: FastAPI + SQLite. Agent: LangGraph 상태 그래프, LLM은 OpenAI(langchain-openai). 화면: HTML/CSS/JS.
-- 버전 비교·requires_python 판정은 `packaging` 라이브러리 사용 `[필수 목록에 없음, 추가 가능한지 확인]`
+- 버전 비교·requires_python 판정은 `packaging` 라이브러리 사용 `[필수 목록에 없음, 추가 가능한지 확인 — 근거는 "남은 확인"]`
 - 로깅 Agent 분리: 메인 Agent는 이벤트를 큐에 넣기만 하고, 로깅 Agent가 따로 꺼내 저장. 로깅이 죽어도 메인은 기다리지 않음.
 - 같은 세션 안에서 같은 API 호출 결과는 캐시해서 재사용.
 
@@ -220,19 +239,34 @@ items_json 항목: name, current_version, target_version, severity, eol_date, re
 - [x] PyPI 버전별 requires_python 있음 (django 4.2 `>=3.8`, 5.0 `>=3.10`)
 - [x] OSV 중복 제거 후 등급 없음 0건 (django 75→43건, requests 2.19.0 10→5건, 2.32.3 4→2건). "심각도 미상" 칸은 대비용으로만 유지
 - [x] PyPI 이용 정책 (ToS API 조항·AUP 확인, 2026-11-18 → 외부 API 표)
-- [ ] `packaging` 라이브러리 추가 가능 여부
+- [ ] `packaging` 라이브러리 추가 가능 여부. 필요한 근거(설계 시험, 2026-11-18):
+  - 버전 정렬: `4.2.30` > `4.2.3`, `1!2.0`(epoch), `.post1`·`.dev0` 같은 형식
+  - 정식 버전 판별: 시험판(rc·a·b·dev) 빼기 (django 56개)
+  - requires_python 조건 판정: `>=3.8`뿐 아니라 `!=3.0.*`, `~=3.7`, `>=2.7,!=3.0.*,<4` 등
+  - 없으면 위 셋을 PEP 440 일부만 직접 구현해야 함 (틀릴 위험이 큼)
 
 ## 예시 한 건 따라가기
 입력: requests==2.19.0, django==2.2.0, `-e git+...` / "Ubuntu 20.04, Python 3.8" / N=2 / 11/21 22~24시 / 격주
 1. 파싱: 조회 2개, 제외 1개(`-e`)
 2. get_eol(ubuntu 20.04) → 일반 지원 2025-05-31 종료(is_eol), ESM 2030-04-23 / get_eol(python 3.8) → 2024-10-07 종료 → 둘 다 HIGH 취급
 3. get_vulns: django 2.2.0 → 43건(묶은 뒤), 최고 CRITICAL / requests 2.19.0 → 5건, 최고 HIGH
-4. get_package_versions: Python 3.8에서 설치 가능한 최신 → django 4.2.x, requests `[값 확인]`
-5. get_vulns(목표 버전) 재조회 → 0건이면 확정 / 아니면 호환 제약 위반
-6. (위반 시) 필요한 Python 버전 → get_eol(python 3.12) → 2028-10-31까지 지원 → "Python 3.12 업그레이드"를 1회차에 넣고 그 패키지를 2회차로
-7. 우선순위: django(CRITICAL) > HIGH 셋(Python 3.8, Ubuntu 20.04, requests) 중 지원 종료일이 빠른 순 → Python 3.8(2024-10-07) > Ubuntu 20.04(2025-05-31) > requests(종료일 없음 → 뒤로)
-8. N=2 → 4개 항목이 11/21, 12/5 두 회차로 → Ubuntu·Python은 이미 지원 종료라 "종료 이후 처리" 경고
-9. 응답
+실제 값은 2026-11-18 실측 (`scripts/walk_example.py`, docs/planning-check.md "설계 시험").
+
+4. get_package_versions: Python 3.8에서 설치 가능한 최신 정식 버전 → django **4.2.30**, requests **2.32.4** (둘 다 requires_python `>=3.8`)
+5. get_vulns(목표 버전) 재조회 → django 4.2.30 **8건(최고 HIGH)**, requests 2.32.4 **1건(MODERATE)** → **둘 다 호환 제약 위반**
+6. 필요한 가장 낮은 Python 구하기:
+   - 3.9: django 최신 4.2.30(8건), requests 최신 2.32.5(1건) → 안 됨
+   - 3.10: django 5.2.19 0건, requests 2.34.2 0건 → 후보 3.10
+   - 재계획 1회: get_eol(python 3.10) → **2026-10-01 이미 종료** → 다음 줄기
+   - 재계획 2회: get_eol(python 3.11) → 2027-10-31까지 지원. 3.11 기준 최신도 django 5.2.19, requests 2.34.2 → 0건 확인 → **Python 3.11 확정**
+7. 항목 4개 (Python은 한 항목으로 합침):
+   - django 2.2.0 → 5.2.19 (CRITICAL, **큰 변경** 2 → 5, Python 3.11 필요)
+   - Python 3.8 → 3.11 (HIGH, 지원 종료 2024-10-07)
+   - Ubuntu 20.04 → 지원 중인 다음 LTS로 올림 필요 (HIGH, 지원 종료 2025-05-31)
+   - requests 2.19.0 → 2.34.2 (HIGH, Python 3.11 필요)
+8. N=2, 순서 제약 먼저 → 1회차(11/21): Python 3.8 → 3.11, Ubuntu 20.04 / 2회차(12/5): django, requests
+   → Python·Ubuntu는 이미 지원 종료라 "종료 이후 처리" 경고
+9. 응답: "django와 requests를 안전한 버전으로 올리려면 Python 3.10 이상이 필요한데, 3.10은 이미 지원이 끝나서 3.11로 정했어요. 그래서 1회차에 Python 업그레이드를 먼저 넣었어요."
 
 > 따라가며 발견한 구멍: **Ubuntu·Python 자체 업그레이드도 계획 항목**인데, 이 둘은 "목표 버전"을 어떻게 정할지 규칙이 없었어요.
 > → 규칙: OS는 "지원 중인 다음 LTS로 올림 필요"만 표시하고 목표 버전은 정하지 않음(범위 밖). Python은 재계획에서 정한 버전, 아니면 "지원 중인 버전으로 올림 필요"만 표시.
