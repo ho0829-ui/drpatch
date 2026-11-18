@@ -5,6 +5,7 @@
   - 고침: 출처 표기 누락(명세), 확정 회차 round_no(undefined), 말풍선 넘침·마크다운, 하단 두 줄 겹침→한 도크, 이름표 겹침, 종이 여백, 모바일 상단·입력창, 화면 테스트(dist/web 공통 기준) → 255 통과
   - spec v1.16: 보이는 이름 DR.PATCH, 화면 = 진료실(예전 탭 기능 대응표), 말투 절. brain.py 말투 반영, run_agent.py 실제 확인
   - 남은 것: push 안 함, agy/fe-* 브랜치(합쳐짐) 정리, web/ 옛 화면 삭제 여부, 번들 766KB(three 분리 후보)
+  - 다음 agy 작업: docs/agy-prompt-next.md — 리뷰 Neon(R1 제출 전 대조, R2 프론트 리뷰) → 구현 Hydrogen(I3 로딩·청크, I4 오류 화면, I5 옮긴 회차 표시, I6 터치) · 조사 Flash(S7 Google Calendar)
 - [agy/fe-07-polish] T7 완료: 키보드 접근성(`목록으로 보기` 토글, `진료 기록` 버튼, Tab/Esc), 모바일(390px) 말풍선·종이·컨트롤 배치 개선 (`web/` 유지)
 - [agy/fe-06-logs] T6 완료: 차트 클릭 시 `/logs` 세션 목록·`#seq` 순 실행 로그·판단 근거 문장·확인 후 삭제(`LogSheet.vue`)
 - [agy/fe-05-confirm] T5 완료: 처방 확정 도장/`예약됨` 라벨, 월간 예약 달력(`CalendarSheet.vue`)·일정 추가/삭제·계획 수정(`PUT /plans/{id}`)·겹침 경고
