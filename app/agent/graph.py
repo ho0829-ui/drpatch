@@ -17,7 +17,7 @@ from app.agent.brain import AgentBrain
 from app.agent.planner.items import PackageResult, build_items, top_severity
 from app.agent.planner.priority import sort_items
 from app.agent.planner.python_upgrade import UpgradePlan, candidate_versions, plan_python_upgrade
-from app.agent.planner.rounds import split_rounds
+from app.agent.planner.rounds import RoundsResult, split_rounds
 from app.agent.planner.versions import is_newer, pick_latest
 from app.agent.render import fallback_text, plan_dict
 from app.agent.runner import Emit, ToolRunner, no_emit
@@ -25,8 +25,11 @@ from app.agent.state import (
     AgentState,
     Conditions,
     ask_message,
+    SCHEDULE_KEYS,
     missing_inputs,
     normalize_os_version,
+    schedule_ask_message,
+    tool_inputs_missing,
     normalize_python,
 )
 from app.tools.base import TIMEOUT, UPSTREAM_ERROR
@@ -240,7 +243,8 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
             os_r["data"] if os_r and os_r["ok"] else None,
         )
         ordered = sort_items(items.items, state["today"])
-        rounds = split_rounds(ordered, c.capacity, c.first_date, c.interval_days)
+        schedule_missing = [k for k in state.get("missing", []) if k in SCHEDULE_KEYS]
+        rounds = RoundsResult() if schedule_missing else split_rounds(ordered, c.capacity, c.first_date, c.interval_days)
         emit("plan_built", {
             "rule": "등급(CRITICAL>HIGH>MODERATE>LOW>미상) → 지원 종료가 빠른 순, Python 업그레이드가 필요한 항목은 업그레이드 다음 회차",
             "order": [{"name": i.name, "severity": i.severity,
@@ -251,7 +255,11 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
             "unassigned": [i.name for i in rounds.unassigned],
             "capacity": c.capacity,
         })
-        plan = plan_dict(items, rounds, state.get("upgrade"))
+        # "무엇부터"의 순서: 위험한 순서이되, Python 업그레이드가 필요한 항목은 업그레이드 뒤로 (순서 제약 먼저)
+        doing_order = [i for r in split_rounds(ordered, max(len(ordered), 1), state["today"], 1).rounds
+                       for i in r.items] if ordered else []
+        plan = plan_dict(items, rounds, state.get("upgrade"), doing_order)
+        plan["schedule_missing"] = schedule_missing
         plan["window"] = {"start": c.window_start, "end": c.window_end}
         plan["excluded"] = c.excluded
         plan["eol_checks"] = {
@@ -265,6 +273,8 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
             answer = brain.write_response(state["plan"])
         except Exception:
             answer = fallback_text(state["plan"])
+        if state["plan"].get("schedule_missing"):  # 우선순위를 보여 준 뒤 일정만 되묻는다 (spec v1.14)
+            answer += "\n\n" + schedule_ask_message(state["plan"]["schedule_missing"])
         return {"answer": answer}
 
     def fact(state: AgentState) -> dict:
@@ -293,7 +303,7 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         if intent == "error":
             return END
         if intent == "plan":
-            return "ask" if state["missing"] else "plan_tools"
+            return "ask" if tool_inputs_missing(state["missing"]) else "plan_tools"  # 일정만 빠지면 우선순위 먼저
         return "fact" if intent == "fact" else "other"
 
     g.add_edge(START, "analyze")

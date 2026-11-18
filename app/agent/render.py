@@ -20,8 +20,10 @@ def item_dict(item: Item) -> dict:
     }
 
 
-def plan_dict(items: ItemsResult, rounds: RoundsResult, upgrade: UpgradePlan | None) -> dict:
+def plan_dict(items: ItemsResult, rounds: RoundsResult, upgrade: UpgradePlan | None,
+              ordered: list[Item] | None = None) -> dict:
     return {
+        "priority": [item_dict(i) for i in (ordered or [])],  # 회차와 별개로 위험한 순서 (일정이 없어도 보여 줌)
         "rounds": [
             {"round_no": r.round_no, "date": r.date.isoformat(), "items": [item_dict(i) for i in r.items]}
             for r in rounds.rounds
@@ -52,7 +54,10 @@ def fallback_text(plan: dict) -> str:
     for r in plan["rounds"]:
         lines.append(f"{r['round_no']}회차 ({r['date']})")
         lines += [_item_line(i) for i in r["items"]]
-    if not plan["rounds"]:
+    if not plan["rounds"] and plan.get("priority"):
+        lines.append("위험한 순서")
+        lines += [_item_line(i) for i in plan["priority"]]
+    elif not plan["rounds"]:
         lines.append("이번에 계획에 넣을 항목이 없어요.")
     extras = [
         ("미배정", [i["name"] for i in plan["unassigned"]]),

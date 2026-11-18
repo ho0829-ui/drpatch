@@ -148,6 +148,8 @@ class GmsBrain:
     def write_response(self, summary: dict) -> str:
         prompt = (
             "아래는 코드가 계산한 패치 계획이다. 숫자·버전·날짜를 바꾸지 말고, 사용자에게 한국어로 짧게 설명하라. "
+            "rounds가 비어 있고 priority가 있으면 회차 대신 priority 순서대로 '무엇부터' 할지 설명하라 (일정은 코드가 따로 묻는다). "
+            "rounds·priority·held 같은 필드 이름은 사용자에게 말하지 말고 우리말로 풀어 써라. "
             "회차별 항목(현재 → 목표 버전)과 이유, Python 업그레이드가 들어갔다면 그 이유, "
             "안전·확인 못 함·보류·미배정 목록이 있으면 함께 밝혀라.\n"
             f"{json.dumps(summary, ensure_ascii=False)}"

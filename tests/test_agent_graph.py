@@ -373,3 +373,23 @@ def test_review_3_fact_tool_result_is_computed_by_code(transport):
     assert "installable_latest" not in unknown and "Python 버전" in unknown["note"]
     vulns = run_fact_tool(runner, "get_vulns", {"name": "django", "version": "2.2.0"}, "3.8")
     assert vulns["count"] == 43 and vulns["top_severity"] == "CRITICAL" and len(vulns["vulns"]) == 10
+
+
+# ── spec v1.14: 일정만 빠지면 우선순위 먼저 ───────────────
+def test_priority_first_when_only_schedule_missing(transport):
+    t = transport()
+    analysis = Analysis(intent="plan", intent_reason="뭐부터", os_name="ubuntu", os_version="20.04", python_version="3.8")
+    out = run_agent("Ubuntu 20.04, Python 3.8인데 지금 뭐부터 해야 돼?", EXAMPLE_FILE, FakeBrain(analysis), today=TODAY)
+    assert out["missing"] == ["capacity", "first_date", "interval_days"]
+    assert t.calls  # Tool은 불렀다
+    plan = out["plan"]
+    assert plan["rounds"] == [] and plan["schedule_missing"] == ["capacity", "first_date", "interval_days"]
+    assert [i["name"] for i in plan["priority"]] == ["Python", "Ubuntu", "django", "requests"]  # 업그레이드가 먼저
+    assert "회차로 나눈 일정을 만들려면" in out["answer"] and "OS와 버전" not in out["answer"]
+
+
+def test_priority_fallback_text_without_llm(transport):
+    transport()
+    analysis = Analysis(intent="plan", intent_reason="뭐부터", os_name="ubuntu", os_version="20.04", python_version="3.8")
+    out = run_agent("…", EXAMPLE_FILE, FakeBrain(analysis, fail=["write_response"]), today=TODAY)
+    assert "위험한 순서" in out["answer"] and "django 2.2.0 → 5.2.19" in out["answer"]

@@ -1,16 +1,17 @@
-# 마지막 갱신: 2026-11-18 17:19 / 작성: Claude Code
+# 마지막 갱신: 2026-11-18 17:44 / 작성: Claude Code
 
 ## 지금 하던 것
-- 3일차 [C] 화면 끝 (테스트 233개 통과, 실제 서버+GMS로 브라우저에서 업로드→계획→확정→수정·삭제→로그까지 확인, 콘솔 오류 0)
-  - web/index.html·style.css, web/js/: api.js(fetch·ndjson 읽기·세션 localStorage), render.js(escape 후 그리기, 간단 서식), chat.js, plans.js, logs.js, main.js
-  - main.py가 web/을 "/"에 붙임 (API 라우터 뒤). 실행: preview "sudo-patch" (.claude/launch.json) 또는 uvicorn app.main:app
-  - 실행 단계 패널: 단계·Tool(✓/✗·ms)·LLM 판단·재계획(주황)·회차 배정. 계획 수정은 바꾼 칸만 PUT (time 입력칸이 24:00을 못 보여 줌)
+- 제출 기준선 정리 끝 → 태그 v1-submit (테스트 238개). README는 모든 기능을 끝낸 뒤 작성 (사용자 결정)
+  - 대표 시나리오 5개·완료 기준: docs/scenario-check.md (scripts/run_scenarios.py, --big은 20개)
+  - spec v1.14: 일정만 빠지면 우선순위(업그레이드 의존 반영) 먼저 + 일정만 되묻기 / "1회차 확정"은 그 회차만
+  - 공부 노트: docs/study/ (큰 그림, 요청 따라가기, 설계 결정, 과제)
 
-## 다음에 할 것
-- [나] 대표 시나리오 5개를 화면에서 직접 돌려보기 (spec 완료 기준 체크)
-- [나] 패키지 20개 파일로 응답 시간 재기 → 느리면 [C] 병렬·LLM 호출 줄이기 (지금 예시 2개 패키지로 약 24초, 대부분 LLM 4번)
-- [G·Carbon] 제출 전: 전체 코드 vs spec 완료 기준 대조 (agy-guide ③)
-- [나] 셀프 체크리스트 → 제출 (README 정리 필요)
+## 다음에 할 것 (사용자 결정, 2026-11-18)
+- 캘린더 연동 F3023: 로컬 저장소 구현 먼저 → Google Calendar로 교체 가능하게. 기존 일정과 겹치는 회차는 다음 빈 날로 이동(최대 7일) + 표시
+- Figma로 "보안 관제(SOC) 대시보드" 디자인 → Vite + Vue로 화면 다시 만들기 (frontend/ → 빌드 결과를 FastAPI가 제공)
+- 심화 F3020~F3022도 가능하면 (이상 징후, Planner·Worker, RAG)
+- 명세 밖 나만의 기능은 사용자가 더 고민 중
+- [G·Carbon] 제출 전 대조 (agy-guide ③)는 사용자가 실행
 
 ## 주의
 - spec v1.11 (리뷰 반영 규칙). 이벤트 종류에 plan_built 추가

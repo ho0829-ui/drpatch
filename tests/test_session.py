@@ -121,3 +121,15 @@ def test_old_db_file_gets_new_columns(tmp_path):
 def test_review_13_confirm_without_plan(db):
     out = chat_turn("new", "확정해줘", FakeBrain(Analysis(intent="confirm", intent_reason="확정")), db_path=db, today=TODAY)
     assert out["last_plan"] is None and "확정할 계획이 아직 없어요" in out["answer"]
+
+
+def test_priority_only_result_does_not_replace_confirm_target(db):
+    upload_example(db)
+    planned = chat_turn("s1", "계획", FakeBrain(EXAMPLE_MESSAGE), db_path=db, today=TODAY)
+    only_priority = Analysis(intent="plan", intent_reason="뭐부터", os_name="ubuntu", os_version="20.04",
+                             python_version="3.8")
+    fresh = save_upload("s2", EXAMPLE_FILE.packages, [], db)
+    assert fresh
+    out = chat_turn("s2", "뭐부터?", FakeBrain(only_priority), db_path=db, today=TODAY)
+    assert out["plan"]["rounds"] == [] and out["last_plan"] is None
+    assert load_session("s1", db)["last_plan"] == planned["plan"]

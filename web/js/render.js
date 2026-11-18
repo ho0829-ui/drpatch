@@ -72,7 +72,13 @@ const R = (() => {
       ["조회 제외", (plan.excluded || []).map((e) => `${e.line_no}번 줄 (${e.reason})`)],
     ].filter(([, names]) => names.length)
       .map(([label, names]) => `<div class="extra"><b>${label}</b>: ${names.map(esc).join(", ")}</div>`).join("");
-    return `<div class="plan-view">${rounds || '<div class="extra">이번에 계획에 넣을 항목이 없어요.</div>'}${extras}</div>`;
+    const priority = !rounds && plan.priority && plan.priority.length ? `
+      <div class="round">
+        <div class="round-head"><strong>위험한 순서</strong><span class="extra">일정을 알려 주면 회차로 나눠요</span></div>
+        <table class="items">${itemRows(plan.priority)}</table>
+      </div>` : "";
+    const body = rounds || priority || '<div class="extra">이번에 계획에 넣을 항목이 없어요.</div>';
+    return `<div class="plan-view">${body}${extras}</div>`;
   }
 
   // 실행 이벤트 한 줄 (대화 탭 실행 단계 패널, 로그 탭이 같이 씀)

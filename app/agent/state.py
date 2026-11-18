@@ -45,6 +45,20 @@ def missing_inputs(c: Conditions) -> list[str]:
     return [key for key, _ in REQUIRED if not values[key]]
 
 
+SCHEDULE_KEYS = ("capacity", "first_date", "interval_days")  # 회차로 나눌 때만 필요한 값
+
+
+def tool_inputs_missing(missing: list[str]) -> bool:
+    """Tool을 부르는 데 필요한 값(파일·OS·Python)이 빠졌는지. 일정만 빠졌으면 False."""
+    return any(key not in SCHEDULE_KEYS for key in missing)
+
+
+def schedule_ask_message(missing: list[str]) -> str:
+    labels = dict(REQUIRED)
+    lines = "\n".join(f"- {labels[key]}" for key in missing if key in SCHEDULE_KEYS)
+    return f"회차로 나눈 일정을 만들려면 아래 내용을 알려 주세요.\n{lines}"
+
+
 def ask_message(missing: list[str]) -> str:
     """빠진 것만 묻는 고정 문장 (spec v1.9: 되묻기는 코드가)."""
     labels = dict(REQUIRED)

@@ -69,7 +69,8 @@ def chat_turn(
                     runner=runner, last_turn=session["last_turn"])
 
     # 새 계획을 만들었을 때만 확정 대상을 바꾼다 (사실 질문 뒤에 "확정해줘"해도 직전 계획이 남게)
-    last_plan = out["plan"] if out["plan"] is not None else session["last_plan"]
+    # 회차가 없는 결과(우선순위만)는 확정할 대상이 아니므로 직전 계획을 그대로 둔다
+    last_plan = out["plan"] if out["plan"] and out["plan"]["rounds"] else session["last_plan"]
     if out["intent"] == "confirm" and last_plan is None:
         out = {**out, "answer": NO_PLAN_TO_CONFIRM}  # 리뷰 #13
     saved = True
