@@ -1,4 +1,6 @@
-# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.9 · 2026-11-18)
+# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.10 · 2026-11-18)
+
+> v1.9 → v1.10 (2026-11-18): Memory에 직전 메시지·답·제안 계획 추가 (F3010, 확정 대상).
 
 > v1.8 → v1.9 (2026-11-18): 되묻는 문장은 코드가 만든다(빠진 것만), 필수 입력 목록. 최종 응답은 LLM 실패 시 기본 문장.
 
@@ -57,7 +59,7 @@
 | 중복 취약점 | OSV는 같은 취약점을 GHSA·PYSEC 두 건으로 줄 수 있음 → `aliases`로 묶어 1건으로 세고, 등급은 있는 쪽 사용 |
 | 심각도 미상 취약점 | 묶은 뒤에도 등급이 없으면 LOW 다음 "심각도 미상" 칸. 임의로 등급을 매기지 않음 |
 | 회차 간격 | "매주 / 격주 / 매월" 또는 "N일" → 일 수로 바꿔 저장 |
-| Memory | 패키지 목록, OS·Python, N, 첫 점검 날짜·시각, 회차 간격 (API 결과는 매번 다시 조회) |
+| Memory | 조건(패키지 목록, OS·Python, N, 첫 점검 날짜·시각, 회차 간격) + 직전 사용자 메시지·직전 답·직전 제안 계획 (API 결과는 매번 다시 조회). 직전 대화는 analyze에 넘겨 후속 요청 해석에 쓰고, 조건은 바뀐 값만 덮어씀 (F3010). 직전 제안 계획은 "확정해줘"의 대상 |
 | 화면 | 탭 3개: 대화 / 계획 관리 / 실행 로그 |
 | 심화 | 필수 기능 끝난 뒤 정함 |
 
@@ -209,7 +211,7 @@ CRITICAL > HIGH(지원 종료된 OS·Python 포함) > MODERATE > LOW > 심각도
 ## DB (SQLite)
 | 표 | 주요 필드 |
 |---|---|
-| sessions | id, packages_json, excluded_json, os, os_version, python_version, capacity_n, first_date, window_start, window_end, interval_days |
+| sessions | id, packages_json, excluded_json, os, os_version, python_version, capacity_n, first_date, window_start, window_end, interval_days, last_message, last_answer, last_plan_json |
 | plans | id, session_id, round_no, date, window_start, window_end, items_json, created_at, updated_at |
 | events | id, session_id, seq, type, payload_json, created_at |
 
