@@ -16,6 +16,9 @@ from app.db import repo
 from app.events.bus import EventBus
 
 
+NO_PLAN_TO_CONFIRM = "확정할 계획이 아직 없어요. 먼저 requirements.txt와 OS·Python 버전으로 계획을 세워 주세요."
+
+
 def new_session_id() -> str:
     return uuid.uuid4().hex
 
@@ -67,6 +70,8 @@ def chat_turn(
 
     # 새 계획을 만들었을 때만 확정 대상을 바꾼다 (사실 질문 뒤에 "확정해줘"해도 직전 계획이 남게)
     last_plan = out["plan"] if out["plan"] is not None else session["last_plan"]
+    if out["intent"] == "confirm" and last_plan is None:
+        out = {**out, "answer": NO_PLAN_TO_CONFIRM}  # 리뷰 #13
     saved = True
     try:
         with repo.connect(db_path) as conn:

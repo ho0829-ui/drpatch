@@ -20,6 +20,7 @@ from app.agent.runner import ToolRunner
 from app.agent.state import Conditions
 
 ToolName = Literal["get_eol", "get_vulns", "get_package_versions"]
+FACT_TOOL_ROUNDS = 3  # 사실 조회에서 Tool을 이어 부를 수 있는 횟수
 
 
 class Analysis(BaseModel):
@@ -54,8 +55,8 @@ class AgentBrain(Protocol):
     def analyze(self, message: str, conditions: Conditions, today: date,
                 last_turn: dict | None = None) -> Analysis: ...
     def plan_tools(self, conditions: Conditions) -> ToolPlan: ...
-    def choose_replan(self, violations: list[dict], python_version: str) -> ReplanChoice: ...
-    def answer_fact(self, message: str, runner: ToolRunner) -> str: ...
+    def choose_replan(self, violations: list[dict], python_version: str, message: str = "") -> ReplanChoice: ...
+    def answer_fact(self, message: str, runner: ToolRunner, conditions: Conditions | None = None) -> str: ...
     def write_response(self, summary: dict) -> str: ...
     def chat(self, message: str) -> str: ...
 
@@ -106,24 +107,41 @@ class GmsBrain:
         )
         return self._structured(ToolPlan, prompt)
 
-    def choose_replan(self, violations: list[dict], python_version: str) -> ReplanChoice:
+    def choose_replan(self, violations: list[dict], python_version: str, message: str = "") -> ReplanChoice:
         prompt = (
-            f"Python {python_version}에서 설치 가능한 최신 버전에도 취약점이 남은 패키지: "
+            f"Python {python_version}에서는 아래 패키지를 취약점 없는 버전으로 올릴 수 없다: "
             f"{json.dumps(violations, ensure_ascii=False)}.\n"
-            "Python을 올려 안전한 버전으로 가는 계획을 세울지(upgrade_python), 이 패키지들을 보류할지(hold) 골라라."
+            f"사용자 메시지: {message}\n"
+            "기본은 upgrade_python(Python을 올려 안전한 버전으로 가는 계획)이다. "
+            "사용자가 'Python은 못 올린다', '버전 유지' 처럼 Python 업그레이드를 명시적으로 거부했을 때만 hold를 골라라."
         )
         return self._structured(ReplanChoice, prompt)
 
-    def answer_fact(self, message: str, runner: ToolRunner) -> str:
-        messages = [SystemMessage(SYSTEM + " 사실 질문에는 반드시 Tool 결과를 근거로 답한다."), HumanMessage(message)]
-        first = self.llm.bind_tools(self.tool_specs).invoke(messages)
-        if not first.tool_calls:
-            return first.text
-        messages.append(first)
-        for call in first.tool_calls:
-            result = runner.call(call["name"], call["args"])
-            messages.append(ToolMessage(json.dumps(result, ensure_ascii=False), tool_call_id=call["id"]))
-        return self.llm.invoke(messages).text
+    def answer_fact(self, message: str, runner: ToolRunner, conditions: Conditions | None = None) -> str:
+        """LLM이 Tool을 고르고(최소 1번), 실행·계산은 코드가 한다. 버전 목록 원본은 LLM에 주지 않는다."""
+        from app.agent.fact_tools import run_fact_tool
+
+        python = conditions.python_version if conditions else None
+        messages = [
+            SystemMessage(SYSTEM + " 사실 질문에는 반드시 Tool 결과를 근거로 답한다. 'installable_latest'처럼 "
+                          "코드가 계산한 값은 그대로 쓰고, 버전을 스스로 비교하거나 고르지 않는다. "
+                          f"사용자의 Python 버전: {python or '모름'}."),
+            HumanMessage(message),
+        ]
+        tool_llm = self.llm.bind_tools(self.tool_specs)
+        reply = self.llm.bind_tools(self.tool_specs, tool_choice="required").invoke(messages)
+        for _ in range(FACT_TOOL_ROUNDS):
+            if not reply.tool_calls:
+                break
+            messages.append(reply)
+            for call in reply.tool_calls:
+                result = run_fact_tool(runner, call["name"], call["args"], python)
+                messages.append(ToolMessage(json.dumps(result, ensure_ascii=False), tool_call_id=call["id"]))
+            reply = tool_llm.invoke(messages)
+        if reply.tool_calls:  # 횟수를 다 쓰고도 더 부르려 하면 지금까지 결과로 답하게 한다
+            messages.append(HumanMessage("지금까지의 Tool 결과만으로 답하라."))
+            reply = self.llm.invoke(messages)
+        return reply.text
 
     def write_response(self, summary: dict) -> str:
         prompt = (

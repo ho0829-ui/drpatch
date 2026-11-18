@@ -116,3 +116,8 @@ def test_old_db_file_gets_new_columns(tmp_path):
     with repo.connect(path) as conn:
         repo.save_session(conn, "x", {"packages": []}, last_message="m", last_answer="a", last_plan={"rounds": []})
         assert repo.get_session(conn, "x")["last_plan"] == {"rounds": []}
+
+
+def test_review_13_confirm_without_plan(db):
+    out = chat_turn("new", "확정해줘", FakeBrain(Analysis(intent="confirm", intent_reason="확정")), db_path=db, today=TODAY)
+    assert out["last_plan"] is None and "확정할 계획이 아직 없어요" in out["answer"]

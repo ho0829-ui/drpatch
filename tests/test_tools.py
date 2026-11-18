@@ -267,3 +267,38 @@ def test_one_tool_failure_does_not_affect_others(use, registry):
 
 def test_user_agent_is_set():
     assert http.USER_AGENT.startswith("sudo-patch/")
+
+
+# ── 2일차 리뷰 #7: 이상한 응답 형식은 예외가 아니라 UPSTREAM_ERROR ──
+@pytest.mark.parametrize(
+    "tool,args,body",
+    [
+        ("get_eol", {"product": "ubuntu", "cycle": "20.04"}, {"result": {"eolFrom": "2025-05-31", "latest": "문자열"}}),
+        ("get_vulns", {"name": "requests", "version": "1.0"}, {"vulns": ["문자열"]}),
+        ("get_vulns", {"name": "requests", "version": "1.0"}, {"vulns": [{"id": "X", "database_specific": "문자열"}]}),
+        ("get_package_versions", {"name": "django"}, {"info": {"version": "1.0"}, "releases": {"1.0": ["문자열"]}}),
+    ],
+)
+def test_malformed_upstream_is_upstream_error(use, registry, tool, args, body):
+    use(lambda m, url, b: (200, body))
+    result = registry.call(tool, args)
+    assert result["ok"] is False and result["error"]["code"] == UPSTREAM_ERROR
+
+
+def test_tool_functions_do_not_raise_when_called_directly(use):
+    from app.tools.eol import get_eol
+    from app.tools.specs import EolInput
+
+    use(lambda m, url, b: (200, {"result": {"eolFrom": "2025-05-31", "latest": "문자열"}}))
+    assert get_eol(EolInput(product="ubuntu", cycle="20.04"))["error"]["code"] == UPSTREAM_ERROR
+
+
+def test_bad_charset_json_is_upstream_error(monkeypatch):
+    class BadResponse:
+        status_code = 200
+
+        def json(self):
+            raise LookupError("unknown encoding")
+
+    monkeypatch.setattr(http.requests, "request", lambda *a, **k: BadResponse())
+    assert http.fetch_json("GET", "https://example.invalid")["error"]["code"] == UPSTREAM_ERROR

@@ -53,13 +53,22 @@ def pick_latest(versions: list[dict], python: str) -> Candidate | None:
     return best[1] if best else None
 
 
+def is_newer(target: str, current: str) -> bool:
+    """target이 current보다 높은 버전인지. current를 해석할 수 없으면 True(비교 못 함 → 막지 않음)."""
+    t, c = parse_version(target), parse_version(current)
+    if c is None:
+        return True
+    return t is not None and t > c
+
+
 def is_major_change(current: str, target: str) -> bool:
     a, b = parse_version(current), parse_version(target)
     return a is not None and b is not None and a.major != b.major
 
 
-def lower_bound_minors(versions: list[dict], major: int = 3) -> set[int]:
-    """requires_python에 나오는 `>=3.N` / `>3.N` 하한의 N 모음. 줄기를 어디까지 올려 볼지 정할 때 쓴다."""
+def mentioned_minors(versions: list[dict], major: int = 3) -> set[int]:
+    """requires_python 조건에 나오는 3.N의 N 모음 (연산자 무관: >=, >, ~=, ==3.N.*, !=3.N.* 등).
+    줄기를 어디까지 올려 볼지 정할 때 쓴다 → 가장 큰 N + 1까지 보면 모든 조건이 열리는 줄기를 지나간다."""
     minors = set()
     for entry in versions:
         try:
@@ -67,8 +76,7 @@ def lower_bound_minors(versions: list[dict], major: int = 3) -> set[int]:
         except InvalidSpecifier:
             continue
         for s in spec:
-            if s.operator in (">=", ">"):
-                v = parse_version(s.version.replace(".*", ""))
-                if v is not None and v.major == major:
-                    minors.add(v.minor)
+            v = parse_version(s.version.replace(".*", ""))
+            if v is not None and v.major == major:
+                minors.add(v.minor)
     return minors

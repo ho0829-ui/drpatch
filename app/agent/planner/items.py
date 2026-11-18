@@ -8,7 +8,7 @@
 from dataclasses import dataclass, field
 from datetime import date
 
-from app.agent.planner.python_upgrade import UpgradePlan
+from app.agent.planner.python_upgrade import UNRESOLVED_NONE, UNRESOLVED_UNCHECKED, UpgradePlan
 from app.agent.planner.versions import Candidate, is_major_change
 
 SEVERITIES = ["CRITICAL", "HIGH", "MODERATE", "LOW", "UNKNOWN"]  # UNKNOWN = 심각도 미상
@@ -95,6 +95,10 @@ def build_items(
             result.safe.append(pkg.name)
         elif pkg.violation and upgrade_ok and pkg.name in upgrade.targets:
             result.items.append(_package_item(pkg, upgrade.targets[pkg.name], True, upgrade.python))
+        elif pkg.violation and upgrade and upgrade.unresolved.get(pkg.name) == UNRESOLVED_UNCHECKED:
+            result.unchecked.append({"name": pkg.name, "reason": "목표 버전 취약점을 확인하지 못함"})
+        elif pkg.violation and upgrade and upgrade.unresolved.get(pkg.name) == UNRESOLVED_NONE:
+            result.held.append({"name": pkg.name, "reason": "어떤 Python 줄기에서도 취약점 없는 버전이 없음"})
         elif pkg.violation:
             reason = upgrade.reason if upgrade and upgrade.reason else "현재 Python에서 안전한 버전이 없음"
             result.held.append({"name": pkg.name, "reason": reason})

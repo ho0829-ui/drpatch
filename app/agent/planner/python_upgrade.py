@@ -2,12 +2,15 @@
 
 get_vulns·get_eol은 함수로 넘겨받는다 → 테스트는 가짜 함수, 실제 흐름은 레지스트리를 감싼 함수.
 같은 (패키지, 버전)은 한 번만 묻는다 (F3009: 이미 확보한 결과 재사용).
+
+패키지마다 따로 "안전한 버전이 처음 생기는 Python 줄기"를 구하고, 그중 가장 높은 줄기를 Python 후보로 한다.
+조회가 실패한 패키지는 "확인 못 함"으로 빼고 나머지는 계속 진행한다 (2일차 리뷰 반영).
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from app.agent.planner.versions import Candidate, lower_bound_minors, pick_latest
+from app.agent.planner.versions import Candidate, mentioned_minors, pick_latest
 
 # (name, version) -> 취약점 건수. None = 확인 못 함 (Tool 실패)
 VulnCheck = Callable[[str, str], int | None]
@@ -15,6 +18,8 @@ VulnCheck = Callable[[str, str], int | None]
 EolCheck = Callable[[str], dict | None]
 
 MAX_REPLANS = 3
+UNRESOLVED_UNCHECKED = "unchecked"  # 취약점 조회 실패로 판단 못 함
+UNRESOLVED_NONE = "none"  # 어떤 줄기에서도 취약점 없는 버전이 없음
 
 
 @dataclass
@@ -33,6 +38,7 @@ class UpgradePlan:
     targets: dict[str, Candidate] = field(default_factory=dict)
     attempts: list[Attempt] = field(default_factory=list)  # 재계획 기록 (로그·응답에 이유로 씀)
     reason: str | None = None
+    unresolved: dict[str, str] = field(default_factory=dict)  # 업그레이드로도 못 정한 패키지 → 이유 종류
 
     @property
     def replans(self) -> int:
@@ -51,21 +57,22 @@ def _cached(check: VulnCheck) -> VulnCheck:
     return wrapper
 
 
-def find_safe_python(
-    packages: dict[str, list[dict]], start_minor: int, end_minor: int, check_vulns: VulnCheck
-) -> tuple[int, dict[str, Candidate]] | None:
-    """start~end 줄기를 하나씩 올리며, 모든 패키지의 '그 줄기 최신 정식 버전'이 취약점 0건인 첫 줄기."""
-    for minor in range(start_minor, end_minor + 1):
-        python = f"3.{minor}"
-        targets: dict[str, Candidate] = {}
-        for name, versions in packages.items():
-            candidate = pick_latest(versions, python)
-            if candidate is None or check_vulns(name, candidate.version) != 0:
-                break  # 이 줄기에선 안전한 버전이 없음 (확인 못 한 것도 안전하다고 보지 않음)
-            targets[name] = candidate
-        else:
-            return minor, targets
-    return None
+def package_min_minor(
+    name: str, versions: list[dict], start: int, end: int, check_vulns: VulnCheck
+) -> tuple[int | None, bool]:
+    """(취약점 0건 최신 버전이 처음 생기는 줄기, 조회 실패를 만났는지). 목표 버전이 바뀔 때만 조회한다."""
+    previous, saw_unknown = None, False
+    for minor in range(start, end + 1):
+        candidate = pick_latest(versions, f"3.{minor}")
+        if candidate is None or candidate.version == previous:
+            continue
+        previous = candidate.version
+        count = check_vulns(name, candidate.version)
+        if count == 0:
+            return minor, saw_unknown
+        if count is None:
+            saw_unknown = True
+    return None, saw_unknown
 
 
 def plan_python_upgrade(
@@ -80,19 +87,44 @@ def plan_python_upgrade(
     재계획 1회 = Python 후보 줄기 하나를 정해 get_eol로 확인하는 것 (줄기 훑기의 get_vulns는 세지 않음).
     """
     check_vulns = _cached(check_vulns)
-    current_minor = int(current_python.split(".")[1])
-    # 줄기를 어디까지 올려 볼지: requires_python 하한이 가장 높은 줄기까지. 그 위에선 최신 버전이 더 바뀌지 않는다.
-    bound = max([current_minor + 1, *(m for v in packages.values() for m in lower_bound_minors(v))])
+    major, minor_text = current_python.split(".")[:2]
+    start = int(minor_text) + 1 if major == "3" else 0  # Python 2.x면 3.0부터
+    # 어디까지 올려 볼지: 조건에 나오는 가장 높은 줄기 + 1 (>3.9, ~=3.10, ==3.11.* 모두 다음 줄기에서 열림)
+    mentioned = [m for v in packages.values() for m in mentioned_minors(v)]
+    bound = max([start, *(m + 1 for m in mentioned)])
 
     plan = UpgradePlan(status="hold")
-    search_from = current_minor + 1
+    active = dict(packages)
+    search_from = start
     while plan.replans < max_replans:
-        found = find_safe_python(packages, search_from, max(bound, search_from), check_vulns)
-        if found is None:
-            plan.reason = "어떤 Python 줄기에서도 취약점 없는 버전을 찾지 못했습니다"
+        minima: dict[str, int] = {}
+        for name, versions in active.items():
+            minor, saw_unknown = package_min_minor(name, versions, search_from, max(bound, search_from), check_vulns)
+            if minor is None:
+                plan.unresolved[name] = UNRESOLVED_UNCHECKED if saw_unknown else UNRESOLVED_NONE
+            else:
+                minima[name] = minor
+        if not minima:
+            plan.reason = ("취약점 정보를 확인하지 못해 필요한 Python을 판단하지 못했습니다"
+                           if UNRESOLVED_UNCHECKED in plan.unresolved.values()
+                           else "어떤 Python 줄기에서도 취약점 없는 버전을 찾지 못했습니다")
             return plan
-        minor, targets = found
+
+        minor = max(minima.values())
         python = f"3.{minor}"
+        targets: dict[str, Candidate] = {}
+        for name in minima:  # 후보 줄기에서 다시 고른 버전도 0건인지 (대부분 이미 조회한 것)
+            candidate = pick_latest(packages[name], python)
+            count = check_vulns(name, candidate.version) if candidate else None
+            if candidate is not None and count == 0:
+                targets[name] = candidate
+            else:
+                plan.unresolved[name] = UNRESOLVED_NONE if count else UNRESOLVED_UNCHECKED
+        active = {name: packages[name] for name in targets}
+        if not targets:
+            plan.reason = "후보 Python에서 안전한 버전을 다시 확인하지 못했습니다"
+            return plan
+
         eol = check_eol(python)
         if eol is None:
             plan.attempts.append(Attempt(python, None, None, "지원 종료일을 확인하지 못함"))

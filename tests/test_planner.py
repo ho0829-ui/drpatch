@@ -286,3 +286,60 @@ def test_priority_same_severity_by_eol_then_no_eol_last():
 def test_capacity_must_be_positive():
     with pytest.raises(ValueError):
         split_rounds([], capacity=0, first_date=date(2026, 11, 21), interval_days=7)
+
+
+# ── 2일차 리뷰 반영 ──────────────────────────────────────
+OPEN_EOL = Recorder({f"3.{m}": {"eol_date": "2030-01-01", "is_eol": False} for m in range(9, 15)})
+
+
+@pytest.mark.parametrize(
+    "spec,expected",
+    [(">3.9", "3.10"), ("~=3.10", "3.10"), ("==3.11.*", "3.11"), (">=3.10.1", "3.11"),
+     (">=3.8,!=3.8.*,!=3.9.*", "3.10")],
+)
+def test_review_1_search_reaches_every_specifier_form(spec, expected):
+    """리뷰 #1: >=만 보고 탐색 상한을 정해 >3.9·~=3.10 등에서 보류되던 문제."""
+    versions = {"pkg": [v("1.0", ">=3.8"), v("2.0", spec)]}
+    vulns = Recorder({("pkg", "1.0"): 1, ("pkg", "2.0"): 0})
+    plan = plan_python_upgrade("3.8", versions, vulns, OPEN_EOL)
+    assert (plan.status, plan.python) == ("ok", expected)
+
+
+def test_review_2_one_failed_lookup_does_not_block_others():
+    """리뷰 #2: 한 패키지 조회 실패 → 그 패키지만 '확인 못 함', 나머지는 업그레이드 계획."""
+    versions = {"a": [v("1.0", ">=3.8"), v("2.0", ">=3.9")], "b": [v("1.0", ">=3.8"), v("2.0", ">=3.9")]}
+    vulns = Recorder({("a", "2.0"): 0, ("b", "2.0"): None})
+    plan = plan_python_upgrade("3.8", versions, vulns, OPEN_EOL)
+    assert (plan.status, plan.python, set(plan.targets)) == ("ok", "3.9", {"a"})
+    assert plan.unresolved == {"b": "unchecked"}
+
+    packages = [PackageResult("a", "1.0", "HIGH", Candidate("1.0", False), violation=True),
+                PackageResult("b", "1.0", "HIGH", Candidate("1.0", False), violation=True)]
+    result = build_items(packages, "3.8", None, plan)
+    assert [i.name for i in result.items] == ["Python", "a"]
+    assert result.unchecked == [{"name": "b", "reason": "목표 버전 취약점을 확인하지 못함"}]
+    assert result.held == []
+
+
+def test_review_2_all_lookups_failed_reason_is_not_invented():
+    versions = {"b": [v("1.0", ">=3.8"), v("2.0", ">=3.9")]}
+    plan = plan_python_upgrade("3.8", versions, Recorder({("b", "2.0"): None}), OPEN_EOL)
+    assert plan.status == "hold"
+    assert "확인하지 못해" in plan.reason
+
+
+def test_package_without_safe_version_anywhere_is_held_with_true_reason():
+    versions = {"a": [v("2.0", ">=3.9")], "z": [v("1.0", ">=3.9")]}
+    vulns = Recorder({("a", "2.0"): 0, ("z", "1.0"): 3})
+    plan = plan_python_upgrade("3.8", versions, vulns, OPEN_EOL)
+    assert plan.unresolved == {"z": "none"}
+    result = build_items([PackageResult("z", "0.9", "LOW", None, violation=True)], "3.8", None, plan)
+    assert result.held == [{"name": "z", "reason": "어떤 Python 줄기에서도 취약점 없는 버전이 없음"}]
+
+
+def test_python2_starts_search_at_3_0():
+    versions = {"pkg": [v("1.0", ">=2.7"), v("2.0", ">=3.6")]}
+    vulns = Recorder({("pkg", "1.0"): 1, ("pkg", "2.0"): 0})
+    plan = plan_python_upgrade("2.7", versions, vulns, Recorder({"3.6": {"eol_date": "2021-12-23", "is_eol": True},
+                                                                  "3.7": {"eol_date": "2030-01-01", "is_eol": False}}))
+    assert plan.python == "3.7" and plan.replans == 2

@@ -3,7 +3,7 @@
 from urllib.parse import quote
 
 from app.tools import http
-from app.tools.base import PACKAGE_NOT_FOUND, UPSTREAM_ERROR, fail, ok
+from app.tools.base import PACKAGE_NOT_FOUND, UPSTREAM_ERROR, safe_parse, fail, ok
 from app.tools.specs import PackageVersionsInput
 
 BASE_URL = "https://pypi.org/pypi"
@@ -46,4 +46,4 @@ def get_package_versions(params: PackageVersionsInput) -> dict:
     )
     if not fetched["ok"]:
         return fetched
-    return parse_versions(fetched["data"])
+    return safe_parse(parse_versions, fetched["data"])

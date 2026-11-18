@@ -18,7 +18,7 @@ from app.agent.planner.items import PackageResult, build_items, top_severity
 from app.agent.planner.priority import sort_items
 from app.agent.planner.python_upgrade import UpgradePlan, plan_python_upgrade
 from app.agent.planner.rounds import split_rounds
-from app.agent.planner.versions import pick_latest
+from app.agent.planner.versions import is_newer, pick_latest
 from app.agent.render import fallback_text, plan_dict
 from app.agent.runner import Emit, ToolRunner, no_emit
 from app.agent.state import (
@@ -29,10 +29,24 @@ from app.agent.state import (
     normalize_os_version,
     normalize_python,
 )
+from app.tools.base import TIMEOUT, UPSTREAM_ERROR
 from app.tools.default import build_registry
 
 PLAN_TOOLS = ["get_eol", "get_vulns", "get_package_versions"]  # 계획 수립에 셋 다 필요
 LLM_FAILED = "LLM 응답을 받지 못해 기본값을 썼어요"
+TOOLS_DOWN = "외부 정보(지원 종료일·취약점·버전)를 가져오지 못했어요. 네트워크 상태를 확인하고 잠시 후 다시 시도해 주세요."
+
+
+def _has_vulns(result: dict | None) -> bool:
+    return bool(result and result["ok"] and result["data"]["count"] > 0)
+
+
+def _status(r: PackageResult) -> str:
+    if r.unchecked_reason:
+        return "unchecked"
+    if r.severity is None:
+        return "safe"
+    return "violation" if r.violation else "fix_on_current_python"
 
 # 단계 종료 이벤트에 싣는 요약 (F3012: 의도 분석 종료에는 의도와 이유)
 STEP_SUMMARY: dict[str, Callable[[dict], dict]] = {
@@ -57,6 +71,8 @@ def merge_conditions(prev: Conditions, analysis) -> Conditions:
     os_name = updates.get("os_name", prev.os_name)
     if analysis.os_version:
         updates["os_version"] = normalize_os_version(os_name, analysis.os_version)
+    elif "os_name" in updates and updates["os_name"] != prev.os_name:
+        updates["os_version"] = None  # OS가 바뀌었는데 버전이 없으면 이전 버전을 쓰지 않고 다시 묻는다 (리뷰 #11)
     if normalize_python(analysis.python_version):
         updates["python_version"] = normalize_python(analysis.python_version)
     if analysis.capacity and analysis.capacity > 0:
@@ -125,48 +141,74 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
                 for p, r in zip(c.packages, runner.call_many(calls)):
                     results["vulns"][p["name"]] = r
             elif tool == "get_package_versions":
-                calls = [("get_package_versions", {"name": p["name"]}) for p in c.packages]
-                for p, r in zip(c.packages, runner.call_many(calls)):
+                # 취약점을 먼저 조회했으면, 취약점이 있는 패키지만 버전 목록을 받는다 (0건·실패는 필요 없음)
+                if "get_vulns" in state["tool_plan"][: state["tool_plan"].index(tool)]:
+                    targets = [p for p in c.packages if _has_vulns(results["vulns"].get(p["name"]))]
+                else:
+                    targets = c.packages
+                calls = [("get_package_versions", {"name": p["name"]}) for p in targets]
+                for p, r in zip(targets, runner.call_many(calls)):
                     results["versions"][p["name"]] = r
+
+        all_results = [r for k in ("eol_os", "eol_python") if k in results for r in [results[k]]]
+        all_results += list(results["vulns"].values()) + list(results["versions"].values())
+        codes = {r["error"]["code"] for r in all_results if not r["ok"]}
+        if all_results and all(not r["ok"] for r in all_results) and len(codes) == 1 and codes <= {TIMEOUT, UPSTREAM_ERROR}:
+            emit("error", {"step": "call_tools", "kind": "all_tools_failed", "code": codes.pop()})
+            return {"results": results, "tools_down": True, "answer": TOOLS_DOWN}
         return {"results": results}
 
     def judge(state: AgentState) -> dict:
         c, results = state["conditions"], state["results"]
-        package_results, violations = [], []
+        decided: dict[str, PackageResult] = {}
+        pending = []  # (name, current, severity, target) — 목표 버전 재조회가 필요한 것
         for p in c.packages:
             name, current = p["name"], p["version"]
             vulns = results["vulns"].get(name)
             if not vulns or not vulns["ok"]:
-                package_results.append(PackageResult(name, current, unchecked_reason="취약점 정보를 확인하지 못함"))
+                decided[name] = PackageResult(name, current, unchecked_reason="취약점 정보를 확인하지 못함")
                 continue
             severity = top_severity(vulns["data"]["vulns"])
             if severity is None:
-                package_results.append(PackageResult(name, current))
+                decided[name] = PackageResult(name, current)
                 continue
             versions = results["versions"].get(name)
             if not versions or not versions["ok"]:
-                package_results.append(PackageResult(name, current, unchecked_reason="버전 정보를 확인하지 못함"))
+                decided[name] = PackageResult(name, current, unchecked_reason="버전 정보를 확인하지 못함")
                 continue
             target = pick_latest(versions["data"]["versions"], c.python_version)
-            if target is None:
-                package_results.append(PackageResult(name, current, severity))
+            if target is None or not is_newer(target.version, current):
+                # 지금 Python에 설치 가능한 버전이 없거나, 현재보다 높은 버전이 없음 → 위반 (리뷰 #4·#12)
+                decided[name] = PackageResult(name, current, severity, None, violation=True)
                 continue
-            remaining = runner.vuln_count(name, target.version)
+            pending.append((name, current, severity, target))
+
+        counts = runner.call_many([("get_vulns", {"name": n, "version": t.version}) for n, _, _, t in pending])
+        for (name, current, severity, target), r in zip(pending, counts):
+            remaining = r["data"]["count"] if r["ok"] else None
             if remaining is None:
-                package_results.append(PackageResult(name, current, unchecked_reason="목표 버전 취약점을 확인하지 못함"))
-            elif remaining == 0:
-                package_results.append(PackageResult(name, current, severity, target))
+                decided[name] = PackageResult(name, current, unchecked_reason="목표 버전 취약점을 확인하지 못함")
             else:
-                package_results.append(PackageResult(name, current, severity, target, violation=True))
-                violations.append({"name": name, "current": current, "best_on_current_python": target.version,
-                                   "remaining_vulns": remaining})
-        emit("judgment", {"violations": violations, "checked": len(package_results)})
+                decided[name] = PackageResult(name, current, severity, target, violation=remaining > 0)
+
+        package_results = [decided[p["name"]] for p in c.packages]
+        violations = [
+            {"name": r.name, "current": r.current_version,
+             "best_on_current_python": r.target.version if r.target else None}
+            for r in package_results if r.violation
+        ]
+        emit("judgment", {
+            "packages": [{"name": r.name, "current": r.current_version, "severity": r.severity,
+                          "target_on_current_python": r.target.version if r.target else None,
+                          "status": _status(r)} for r in package_results],
+            "violations": [v["name"] for v in violations],
+        })
         return {"package_results": package_results, "violations": violations}
 
     def replan(state: AgentState) -> dict:
         c = state["conditions"]
         try:
-            choice = brain.choose_replan(state["violations"], c.python_version)
+            choice = brain.choose_replan(state["violations"], c.python_version, state["message"])
             strategy, reason = choice.strategy, choice.reason
         except Exception:
             strategy, reason = "upgrade_python", LLM_FAILED
@@ -195,6 +237,16 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         )
         ordered = sort_items(items.items, state["today"])
         rounds = split_rounds(ordered, c.capacity, c.first_date, c.interval_days)
+        emit("plan_built", {
+            "rule": "등급(CRITICAL>HIGH>MODERATE>LOW>미상) → 지원 종료가 빠른 순, Python 업그레이드가 필요한 항목은 업그레이드 다음 회차",
+            "order": [{"name": i.name, "severity": i.severity,
+                       "eol_date": i.eol_date.isoformat() if i.eol_date else None,
+                       "after_python_upgrade": i.needs_python_upgrade} for i in ordered],
+            "rounds": [{"round_no": r.round_no, "date": r.date.isoformat(), "items": [i.name for i in r.items]}
+                       for r in rounds.rounds],
+            "unassigned": [i.name for i in rounds.unassigned],
+            "capacity": c.capacity,
+        })
         plan = plan_dict(items, rounds, state.get("upgrade"))
         plan["window"] = {"start": c.window_start, "end": c.window_end}
         plan["excluded"] = c.excluded
@@ -213,7 +265,7 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
 
     def fact(state: AgentState) -> dict:
         try:
-            return {"answer": brain.answer_fact(state["message"], runner)}
+            return {"answer": brain.answer_fact(state["message"], runner, state["conditions"])}
         except Exception:
             return {"answer": "지금은 답을 만들지 못했어요. 잠시 후 다시 시도해 주세요."}
 
@@ -243,7 +295,7 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
     g.add_edge(START, "analyze")
     g.add_conditional_edges("analyze", after_analyze, ["ask", "plan_tools", "fact", "other", END])
     g.add_edge("plan_tools", "call_tools")
-    g.add_edge("call_tools", "judge")
+    g.add_conditional_edges("call_tools", lambda s: END if s.get("tools_down") else "judge", ["judge", END])
     g.add_conditional_edges("judge", lambda s: "replan" if s["violations"] else "build", ["replan", "build"])
     g.add_edge("replan", "build")
     g.add_edge("build", "respond")

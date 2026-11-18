@@ -63,10 +63,10 @@ def normalize_os_version(os_name: str | None, version: str | None) -> str | None
 
 
 def normalize_python(version: str | None) -> str | None:
-    """'3.8.10' → '3.8'. 형식이 틀리면 None (= 빠진 입력으로 되묻기)."""
+    """'3.8.10' → '3.8'. 2.x도 받는다(지원 종료 Python으로 처리). 형식이 틀리면 None (= 빠진 입력으로 되묻기)."""
     if not version:
         return None
-    m = re.fullmatch(r"\s*(3)\.(\d+)(?:\.\d+)?\s*", version)
+    m = re.fullmatch(r"\s*([23])\.(\d+)(?:\.\d+)?\s*", version)
     return f"{m[1]}.{m[2]}" if m else None
 
 
@@ -81,6 +81,7 @@ class AgentState(TypedDict, total=False):
     tool_plan: list[str]
     tool_plan_reason: str
     results: dict[str, Any]  # 조회 결과 (eol_os, eol_python, vulns{name}, versions{name})
+    tools_down: bool  # 모든 Tool이 같은 이유로 실패 → 바로 안내
     package_results: list[Any]  # planner.items.PackageResult
     violations: list[str]
     replan_strategy: str

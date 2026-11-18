@@ -3,7 +3,7 @@
 from urllib.parse import quote
 
 from app.tools import http
-from app.tools.base import NO_EOL_DATE, PRODUCT_NOT_FOUND, UPSTREAM_ERROR, fail, ok
+from app.tools.base import NO_EOL_DATE, PRODUCT_NOT_FOUND, UPSTREAM_ERROR, safe_parse, fail, ok
 from app.tools.specs import EolInput
 
 BASE_URL = "https://endoflife.date/api/v1/products"
@@ -61,6 +61,6 @@ def get_eol(params: EolInput) -> dict:
     )
     if not fetched["ok"]:
         return fetched
-    return parse_eol(
-        fetched["data"], product=product, requested_cycle=params.cycle, queried_cycle=queried_cycle
+    return safe_parse(
+        parse_eol, fetched["data"], product=product, requested_cycle=params.cycle, queried_cycle=queried_cycle
     )

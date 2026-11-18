@@ -85,11 +85,11 @@ class FakeBrain:
         self._maybe_fail("plan_tools")
         return ToolPlan(steps=self.steps, reason="지원 종료 → 취약점 → 설치 가능 버전 순")
 
-    def choose_replan(self, violations, python_version):
+    def choose_replan(self, violations, python_version, message=""):
         self._maybe_fail("choose_replan")
         return ReplanChoice(strategy=self.strategy, reason="안전한 버전이 Python을 올려야만 있음")
 
-    def answer_fact(self, message, runner):
+    def answer_fact(self, message, runner, conditions=None):
         self._maybe_fail("answer_fact")
         r = runner.call("get_eol", {"product": "ubuntu", "cycle": "20.04"})
         return f"일반 지원은 {r['data']['eol_date']}에 끝났어요."
@@ -268,3 +268,108 @@ def test_replan_stops_at_limit_and_holds_with_reason(transport):
     replans = [p for e, p in events if e == "replan"]
     assert [p.get("python") for p in replans] == ["3.10", "3.11", "3.12", None]
     assert replans[-1]["result"] == "hold"
+
+
+# ── 2일차 리뷰 반영 (그래프 단위) ─────────────────────────
+def test_review_4_no_installable_version_goes_to_replan(transport):
+    """리뷰 #4: 지금 Python에 설치 가능한 버전이 없으면 보류가 아니라 재계획."""
+    body = {"info": {"version": "2.0", "project_url": "https://pypi.org/project/pkg/"},
+            "releases": {"1.0": [{"yanked": True, "requires_python": ">=3.8"}],
+                         "2.0": [{"yanked": False, "requires_python": ">=3.11"}]}}
+    transport({"pypi_pkg_all": (200, body), "osv_pkg_1.0": (200, {"vulns": [{"id": "X", "database_specific": {"severity": "HIGH"}}]}),
+               "osv_pkg_2.0": (200, {})})
+    file = Conditions(packages=[{"name": "pkg", "version": "1.0"}])
+    out = run_agent("…", file, FakeBrain(EXAMPLE_MESSAGE), today=TODAY)
+    targets = {i["name"]: i["target_version"] for r in out["plan"]["rounds"] for i in r["items"]}
+    assert targets["pkg"] == "2.0" and targets["Python"] == "3.11"
+
+
+def test_review_12_lower_version_is_not_a_target(transport):
+    """리뷰 #12: 지금 Python의 최신이 현재보다 낮으면 다운그레이드하지 않고 재계획."""
+    body = {"info": {"version": "3.0", "project_url": None},
+            "releases": {"1.0": [{"requires_python": ">=3.8"}], "2.0": [{"requires_python": ">=3.10"}],
+                         "3.0": [{"requires_python": ">=3.11"}]}}
+    transport({"pypi_pkg_all": (200, body),
+               "osv_pkg_2.0": (200, {"vulns": [{"id": "X", "database_specific": {"severity": "LOW"}}]}),
+               "osv_pkg_3.0": (200, {})})
+    file = Conditions(packages=[{"name": "pkg", "version": "2.0"}])  # 3.8 서버에 2.0이 깔려 있음
+    out = run_agent("…", file, FakeBrain(EXAMPLE_MESSAGE), today=TODAY)
+    targets = {i["name"]: i["target_version"] for r in out["plan"]["rounds"] for i in r["items"]}
+    assert targets["pkg"] == "3.0"  # 1.0으로 내려가지 않음
+
+
+def test_review_6_all_tools_down_stops_with_notice(transport):
+    t = transport({name: requests.ConnectionError() for name in
+                   ["eol_ubuntu_20.04", "eol_python_3.8", "osv_requests_2.19.0", "osv_django_2.2.0"]})
+    events, emit = collect()
+    out = run_agent("…", EXAMPLE_FILE, FakeBrain(EXAMPLE_MESSAGE), today=TODAY, emit=emit)
+    assert "가져오지 못했어요" in out["answer"] and out["plan"] is None
+    assert not any(e == "step_start" and p["step"] == "judge" for e, p in events)
+    assert any(e == "error" and p["kind"] == "all_tools_failed" for e, p in events)
+    assert "pypi_requests_all" not in t.calls  # 취약점 조회가 다 실패 → 버전 목록은 부르지 않음
+
+
+def test_review_8_logs_explain_versions_and_order(transport):
+    transport()
+    events, emit = collect()
+    run_agent("…", EXAMPLE_FILE, FakeBrain(EXAMPLE_MESSAGE), today=TODAY, emit=emit)
+    judgment = next(p for e, p in events if e == "judgment")
+    assert {p["name"]: p["status"] for p in judgment["packages"]} == {"requests": "violation", "django": "violation"}
+    built = next(p for e, p in events if e == "plan_built")
+    assert [o["name"] for o in built["order"]] == ["django", "Python", "Ubuntu", "requests"]
+    assert [r["items"] for r in built["rounds"]] == [["Python", "Ubuntu"], ["django", "requests"]]
+    assert "업그레이드 다음 회차" in built["rule"]
+
+
+def test_review_10_safe_packages_skip_version_lookup(transport):
+    t = transport()
+    file = Conditions(packages=[*EXAMPLE_FILE.packages, {"name": "requests-safe", "version": "1.0"}])
+    t.override["osv_requests-safe_1.0"] = (200, {})
+    run_agent("…", file, FakeBrain(EXAMPLE_MESSAGE), today=TODAY)
+    assert "pypi_requests-safe_all" not in t.calls
+
+
+def test_review_9_user_message_reaches_replan_choice(transport):
+    transport()
+
+    class Brain(FakeBrain):
+        def choose_replan(self, violations, python_version, message=""):
+            self.replan_message = message
+            return super().choose_replan(violations, python_version, message)
+
+    brain = Brain(EXAMPLE_MESSAGE)
+    run_agent("파이썬은 못 올려", EXAMPLE_FILE, brain, today=TODAY)
+    assert brain.replan_message == "파이썬은 못 올려"
+
+
+def test_review_11_os_change_clears_old_version(transport):
+    transport()
+    first = run_agent("…", EXAMPLE_FILE, FakeBrain(EXAMPLE_MESSAGE), today=TODAY)
+    out = run_agent("데비안으로 바꿀게", first["conditions"],
+                    FakeBrain(Analysis(intent="plan", intent_reason="OS 변경", os_name="debian")), today=TODAY)
+    assert out["conditions"].os_name == "debian" and out["conditions"].os_version is None
+    assert out["missing"] == ["os"]
+
+
+def test_review_11_python2_is_accepted(transport):
+    transport()
+    out = run_agent("…", Conditions(), FakeBrain(Analysis(intent="plan", intent_reason="x", python_version="2.7")),
+                    today=TODAY)
+    assert out["conditions"].python_version == "2.7" and "python_version" not in out["missing"]
+
+
+def test_review_3_fact_tool_result_is_computed_by_code(transport):
+    """리뷰 #3: 사실 조회에서 LLM에게 버전 목록 원본을 주지 않고, 코드가 계산한 값을 준다."""
+    from app.agent.fact_tools import run_fact_tool
+    from app.agent.runner import ToolRunner
+    from app.tools.default import build_registry
+
+    transport()
+    runner = ToolRunner(build_registry())
+    result = run_fact_tool(runner, "get_package_versions", {"name": "django"}, "3.8")
+    assert "versions" not in result
+    assert result["installable_latest"] == "4.2.30" and result["vulns_in_installable_latest"] == 8
+    unknown = run_fact_tool(runner, "get_package_versions", {"name": "django"}, None)
+    assert "installable_latest" not in unknown and "Python 버전" in unknown["note"]
+    vulns = run_fact_tool(runner, "get_vulns", {"name": "django", "version": "2.2.0"}, "3.8")
+    assert vulns["count"] == 43 and vulns["top_severity"] == "CRITICAL" and len(vulns["vulns"]) == 10

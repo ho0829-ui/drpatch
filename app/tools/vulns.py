@@ -3,7 +3,7 @@
 import re
 
 from app.tools import http
-from app.tools.base import UPSTREAM_ERROR, fail, ok
+from app.tools.base import UPSTREAM_ERROR, safe_parse, fail, ok
 from app.tools.specs import VulnsInput
 
 QUERY_URL = "https://api.osv.dev/v1/query"
@@ -81,5 +81,7 @@ def get_vulns(params: VulnsInput) -> dict:
     else:
         truncated = True  # 페이지 상한까지 받았는데 다음 쪽이 남음
 
-    grouped = group_vulns(vulns, params.name)
-    return ok({"count": len(grouped), "vulns": grouped, "truncated": truncated})
+    grouped = safe_parse(lambda: ok(group_vulns(vulns, params.name)))
+    if not grouped["ok"]:
+        return grouped
+    return ok({"count": len(grouped["data"]), "vulns": grouped["data"], "truncated": truncated})

@@ -192,3 +192,17 @@ def test_app_starts_logger_and_stops_cleanly(tmp_path, monkeypatch):
         app.state.bus.publish("boot", "test", {"ok": True})
     with repo.connect(str(tmp_path / "app.db")) as conn:
         assert json.dumps(repo.get_events(conn, "boot")[0]["payload"]) == '{"ok": true}'
+
+
+def test_review_5_logs_survive_server_restart(db):
+    """리뷰 #5: 재시작하면 버스 순번이 1부터 다시 시작 → 저장 순번은 DB 기준으로 이어 붙인다."""
+    for run in range(2):  # 같은 세션으로 두 번 (= 서버 재시작 사이)
+        bus = EventBus()
+        logger = LoggingAgent(bus, db).start()
+        bus.publish("s", "turn", {"run": run})
+        bus.publish("s", "turn", {"run": run})
+        logger.stop()
+        assert logger.failed == 0
+    with repo.connect(db) as conn:
+        events = repo.get_events(conn, "s")
+    assert [(e["seq"], e["payload"]["run"]) for e in events] == [(1, 0), (2, 0), (3, 1), (4, 1)]

@@ -1,20 +1,19 @@
-# 마지막 갱신: 2026-11-18 16:30 / 작성: Claude Code
+# 마지막 갱신: 2026-11-18 17:03 / 작성: Claude Code
 
 ## 지금 하던 것
-- 2일차 [C] 작업 모두 끝. 마지막: Memory (F3010) — 전체 테스트 191개 통과, 실제 GMS 두 턴 확인(N 2→3만 바뀜)
-  - app/agent/session.py: chat_turn(session_id|None, message, brain, bus=, db_path=) → run_agent 결과 + session_id·last_plan·saved
-    save_upload(session_id, packages, excluded), load_session(session_id) → conditions·last_turn·last_plan
-  - sessions 표에 last_message·last_answer·last_plan_json 추가 (init_db가 예전 DB 파일에도 칸을 붙임)
-  - analyze에 직전 대화(last_turn) 전달. 새 계획을 만들 때만 last_plan 교체 (사실 질문 뒤 "확정해줘"도 직전 계획 유지)
-  - scripts/run_session.py: 실제 GMS 두 턴 확인
+- 2일차 끝. 마지막: agy 교차 리뷰 13건 반영 (전체 테스트 217개 통과, 실제 GMS로 계획·사실 조회 재확인) — docs/review-day2.md 아래 "반영 결과"
+  - planner: 패키지별 최소 Python, 탐색 상한(조건 줄기+1), 조회 실패는 확인 못 함 / UpgradePlan.unresolved
+  - graph: 설치 불가·다운그레이드도 위반, 모두 실패 시 바로 안내(tools_down), judgment·plan_built 이벤트, 판단 재조회 병렬, 안전 패키지 버전 조회 생략
+  - brain: answer_fact는 fact_tools.run_fact_tool로 코드가 계산한 값만 LLM에 전달 (tool_choice=required, 최대 3회)
+  - tools: safe_parse(형식 오류 → UPSTREAM_ERROR) / repo.insert_event는 DB 기준 순번
 
 ## 다음에 할 것
-- [G·Carbon] 2일차 교차 리뷰 (docs/agy-guide.md ②) → 결과 docs/review-day2.md → [C]가 맞는 지적만 골라 반영
-- 3일차 [C] 계획 CRUD + 겹침 경고, 로그 조회·삭제 API (F3014~F3017) — /chat(ndjson)·/upload도 여기서 chat_turn·save_upload로 연결
+- 3일차 [C] 계획 CRUD + 겹침 경고, 로그 조회·삭제 API (F3014~F3017) — /chat(ndjson)·/upload도 chat_turn·save_upload로 연결
 - 3일차 [C] 화면 탭 3개 + 실행 단계 표시 + 오류 안내 (F3018~F3019)
 
 ## 주의
-- spec v1.10: Memory = 조건 + 직전 메시지·답·제안 계획
+- spec v1.11 (리뷰 반영 규칙). 이벤트 종류에 plan_built 추가
+- 가짜 LLM 테스트는 GmsBrain 자체를 검사하지 않음 → brain.py를 고치면 scripts/run_agent.py로 실제 확인할 것
 - 응답 시간: 예시 한 건 25~28초. 대부분 LLM 4번(analyze·plan·replan·respond). judge의 목표 버전 재조회는 패키지마다 순서대로 → 3일차 측정 때 병렬화 후보
 - 재계획 방식은 LLM이 고름(upgrade_python/hold), 실패하면 upgrade_python. 되묻기 문장은 코드 (spec v1.9)
 - 사실 조회 경로도 조건(os 등)을 Memory에 남김

@@ -24,7 +24,7 @@ def requests_transport(method: str, url: str, json_body: Any, timeout: float) ->
     )
     try:
         body = r.json()
-    except ValueError:
+    except Exception:  # JSON 아님·잘못된 charset(LookupError) 등 → fetch_json이 UPSTREAM_ERROR로
         body = None
     return r.status_code, body
 

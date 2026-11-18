@@ -28,3 +28,11 @@ def ok(data: Any) -> dict:
 
 def fail(code: str, message: str) -> dict:
     return {"ok": False, "error": {"code": code, "message": message}}
+
+
+def safe_parse(parse, *args, **kwargs) -> dict:
+    """응답 형식이 예상과 달라 해석 중 오류가 나면 UPSTREAM_ERROR (리뷰 #7: 예외를 밖으로 던지지 않음)."""
+    try:
+        return parse(*args, **kwargs)
+    except (AttributeError, TypeError, KeyError, ValueError, IndexError):
+        return fail(UPSTREAM_ERROR, "외부 API 응답 형식이 예상과 다릅니다")
