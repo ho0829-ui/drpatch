@@ -38,7 +38,7 @@ def on_surface(x, z, out=0.0, r=R2):
 eye_z = 0.26
 eyes = []
 for side, x in (("L", -0.23), ("R", 0.23)):
-    e = C.sphere(f"Eye{side}", on_surface(x, eye_z, -0.01), (0.075, 0.04, 0.1), ink, segs=32, rings=16)
+    e = C.sphere(f"Eye{side}", on_surface(x, eye_z, -0.01), (0.07, 0.04, 0.082), ink, segs=32, rings=16)
     hl = C.sphere(f"EyeShine{side}", (x + 0.025, on_surface(x, eye_z)[1] - 0.035, eye_z + 0.04), (0.022, 0.012, 0.022), C.plastic("paper"), segs=16, rings=8)
     C.parent([hl], e)
     eyes.append(e)
@@ -59,8 +59,35 @@ for x in (-0.38, 0.38):  # 안경다리: 머리 옆을 따라 뒤로
 for x in (-0.43, 0.43):  # 볼
     parts.append(C.sphere(f"Cheek{x:+.0f}", on_surface(x, 0.08, -0.02), (0.1, 0.03, 0.065), blush, segs=24, rings=12))
 
-smile = [on_surface(x, 0.09 + 3.2 * x * x, 0.004) for x in (-0.085, -0.045, 0, 0.045, 0.085)]
+smile = [on_surface(x, 0.0 + 3.2 * x * x, 0.004) for x in (-0.075, -0.04, 0, 0.04, 0.075)]
 parts.append(C.tube("Mouth", C.catmull(smile, 6), 0.017, ink))
+
+# ── 나이 든 박사님: 처진 눈꺼풀·흰 눈썹·콧수염·옆머리 ─────────
+hair = C.material("hair", "#D3DAD9", rough=0.8, coat=0.0, sheen=0.9)
+for x in (-0.23, 0.23):
+    s = 1 if x > 0 else -1
+    lid = C.sphere(f"Lid{'R' if s > 0 else 'L'}", on_surface(x, eye_z + 0.06, 0.005), (0.095, 0.035, 0.05), white, segs=32, rings=16)
+    lid.rotation_euler = (0, s * 0.28, 0)  # 바깥쪽으로 처짐
+    parts.append(lid)
+    for i, t in enumerate((0.0, 0.25, 0.5, 0.75, 1.0)):  # 눈썹: 솜뭉치 5개, 바깥쪽이 처지고 덥수룩
+        bx = x + s * (-0.1 + 0.22 * t)
+        bz = eye_z + 0.2 + 0.035 * math.sin(t * math.pi) - 0.04 * t
+        rr = 0.045 + 0.012 * math.sin(t * math.pi)
+        parts.append(C.sphere(f"Brow{'R' if s > 0 else 'L'}{i}", on_surface(bx, bz, 0.03), (rr, rr * 0.8, rr * 0.75), hair, segs=20, rings=10))
+for s in (-1, 1):  # 콧수염: 가운데에서 양옆으로 처지는 덩어리
+    for i, t in enumerate((0.0, 0.2, 0.4, 0.6, 0.8, 1.0)):
+        mx = s * (0.03 + 0.2 * t)
+        mz = 0.1 - 0.07 * t * t
+        rr = 0.08 - 0.032 * t
+        parts.append(C.sphere(f"Mustache{'R' if s > 0 else 'L'}{i}", on_surface(mx, mz, 0.035 - 0.01 * t), (rr, rr * 0.75, rr * 0.8), hair, segs=20, rings=10))
+import random
+random.seed(3)
+for i, deg in enumerate(range(-30, 211, 12)):  # 옆·뒷머리 (앞쪽 -90° 부근은 비움, 윗머리는 맨질)
+    a = math.radians(deg)
+    for k, z in enumerate((0.44, 0.56)):
+        rr = 0.1 + random.uniform(-0.015, 0.02)
+        rad = math.sqrt(max(R2 ** 2 - max(z - L, 0) ** 2, 0)) + 0.02
+        parts.append(C.sphere(f"Hair{i}_{k}", (rad * math.cos(a), rad * math.sin(a), z + random.uniform(-0.02, 0.02)), (rr, rr, rr * 0.85), hair, segs=20, rings=10))
 
 # ── 반사경 머리띠 ───────────────────────────────────────
 band_z = L + 0.2
