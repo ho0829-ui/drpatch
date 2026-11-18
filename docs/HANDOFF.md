@@ -1,4 +1,4 @@
-# 마지막 갱신: 2026-11-18 17:52 / 작성: Claude Code
+# 마지막 갱신: 2026-11-18 / 작성: Claude Code
 
 ## 지금 하던 것
 - 심화 F3023 캘린더 연동 끝 (테스트 255개, 실제 서버+GMS: 11/21 23시 일정 → 1회차 11/22로 이동, 확정 시 캘린더 등록)
@@ -10,6 +10,8 @@
   - 기준선 태그 v1-submit은 캘린더 전 상태
 
 ## 다음에 할 것
+- 디자인 방향 변경 (v2): 와펜 패치 + 버전 세 자리 로고, 네온·3D 팝·움직임, 수집 패치(PATCH/MINOR/MAJOR). 브리프 docs/design-brief-carbon.md → Carbon이 agy/design-v2 브랜치, docs/design-v2/에 시안. 받으면 Claude Code가 확인 후 design.md 갱신 → Vue
+- 수집 패치 기능은 명세(spec) 추가가 먼저 (획득 조건은 코드가 계산)
 - Figma 디자인 끝: docs/design.md (토큰·컴포넌트·화면 4개, Figma 링크). Figma MCP는 Starter 요금제 호출 한도에 걸림 → Vue는 docs/design.md 기준으로
 - Figma "보안 관제(SOC) 대시보드" 디자인 → Vite + Vue (frontend/, 빌드 결과를 FastAPI가 제공). 캘린더 화면은 Vue에서
 - (선택) GoogleCalendar 구현체: app/calendar/google.py — 같은 인터페이스, OAuth 키는 사용자가 준비
