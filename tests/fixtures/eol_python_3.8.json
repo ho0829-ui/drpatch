@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.2.1",
+  "generated_at": "2026-11-18T01:46:12+00:00",
+  "result": {
+    "name": "3.8",
+    "codename": null,
+    "label": "3.8",
+    "releaseDate": "2019-10-14",
+    "isLts": false,
+    "ltsFrom": null,
+    "isEoas": true,
+    "eoasFrom": "2021-05-03",
+    "isEol": true,
+    "eolFrom": "2024-10-07",
+    "isMaintained": false,
+    "latest": {
+      "name": "3.8.20",
+      "date": "2024-09-06",
+      "link": "https://www.python.org/downloads/release/python-3820/"
+    },
+    "custom": {
+      "pep": "PEP-0569"
+    }
+  }
+}

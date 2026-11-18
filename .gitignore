@@ -1,0 +1,11 @@
+.venv/
+.env
+__pycache__/
+*.db
+.DS_Store
+
+# 대외비 수업 자료: 절대 커밋하지 않는다
+docs/course/
+
+# 개인 작업 환경 브리프
+ai-dev-setup-brief.md

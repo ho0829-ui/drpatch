@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.2.1",
+  "generated_at": "2026-11-18T01:46:12+00:00",
+  "result": {
+    "name": "20.04",
+    "codename": "Focal Fossa",
+    "label": "20.04 'Focal Fossa' (LTS)",
+    "releaseDate": "2020-04-23",
+    "isLts": true,
+    "ltsFrom": null,
+    "isEoas": true,
+    "eoasFrom": "2022-10-01",
+    "isEol": true,
+    "eolFrom": "2025-05-31",
+    "isEoes": false,
+    "eoesFrom": "2030-04-23",
+    "isMaintained": true,
+    "latest": {
+      "name": "20.04.6",
+      "date": "2023-03-23",
+      "link": "https://wiki.ubuntu.com/FocalFossa/ReleaseNotes/"
+    },
+    "custom": null
+  }
+}
