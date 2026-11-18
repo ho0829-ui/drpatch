@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DR.PATCH 진료 책상</title>
+<!--
+  DR.PATCH 진료 책상 시제품 (docs/design.md 기준). 한 장면, 예시 데이터 — 실제 API를 부르지 않는다.
+  보는 법: python3 -m http.server 8010 --directory prototype  →  http://localhost:8010/drpatch-desk/
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-bg: #6A4DFF; --color-desk: #CBB8FF; --color-paper: #FFFDF5; --color-ink: #231942;
+    --color-ok: #19E3A1; --color-replan: #FF4FD8; --color-hot: #FF4FA3;
+    --sans: "IBM Plex Sans KR", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { font-family: var(--sans); color: var(--color-ink);
+         background: radial-gradient(120% 90% at 50% 40%, #8C74FF 0%, #6A4DFF 55%, #4F33E0 100%); }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .brand { position: fixed; top: 20px; left: 24px; display: flex; align-items: center; gap: 12px; color: #fff; z-index: 3; }
+  .brand b { font: 700 22px/1 var(--mono); letter-spacing: .02em; }
+  .brand small { display: block; font: 500 12px/1.4 var(--sans); opacity: .85; margin-top: 4px; }
+
+  .status { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 3;
+            display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 999px;
+            background: #fff; box-shadow: 0 4px 0 #CBB8FF, 0 10px 24px rgba(35,25,66,.25); font: 600 14px/1 var(--sans); }
+  .status .dots { display: flex; gap: 6px; }
+  .status .dots i { width: 9px; height: 9px; border-radius: 50%; background: #E4DCFF; transition: background .3s; }
+  .status .dots i.on { background: var(--color-ok); }
+
+  .controls { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 3;
+              display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 32px); }
+  .btn { font: 600 15px/1 var(--sans); padding: 14px 22px; border-radius: 999px; border: 0; cursor: pointer;
+         background: #fff; color: var(--color-ink); box-shadow: 0 5px 0 #B9A6FF, 0 12px 24px rgba(35,25,66,.25);
+         transition: transform .12s, box-shadow .12s; }
+  .btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 #B9A6FF, 0 6px 12px rgba(35,25,66,.2); }
+  .btn.primary { background: var(--color-ok); box-shadow: 0 5px 0 #0FA877, 0 12px 24px rgba(35,25,66,.25); }
+  .btn.hot { background: var(--color-hot); box-shadow: 0 5px 0 #C72A78, 0 12px 24px rgba(35,25,66,.25); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .motion { display: flex; align-items: center; gap: 6px; color: #fff; font: 500 13px var(--sans); }
+
+  .ticker { position: fixed; left: 24px; bottom: 24px; z-index: 2; font: 400 12px/1.7 var(--mono); color: #fff;
+            opacity: .9; max-width: 340px; }
+  .ticker div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ticker div:first-child { font-weight: 700; }
+  .note { position: fixed; right: 24px; bottom: 28px; z-index: 2; color: #fff; font: 500 12px var(--sans); opacity: .8; }
+
+  .bubble { position: fixed; z-index: 4; max-width: 290px; padding: 14px 16px; border-radius: 22px 22px 6px 22px;
+            background: #fff; font: 500 15px/1.55 var(--sans); box-shadow: 0 6px 0 #E3D8FF, 0 16px 30px rgba(35,25,66,.3);
+            transform: translateY(-100%); width: max-content; opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .bubble.show { opacity: 1; }
+  .bubble b { display: block; font: 700 11px/1 var(--mono); letter-spacing: .06em; color: #7B61FF; margin-bottom: 6px; }
+
+  .tip { position: fixed; z-index: 6; pointer-events: none; padding: 6px 10px; border-radius: 10px; background: var(--color-ink);
+         color: #fff; font: 500 12px var(--mono); transform: translate(14px, 14px); opacity: 0; transition: opacity .12s; }
+  .tip.show { opacity: 1; }
+
+  /* 누르면 펼쳐지는 종이 */
+  .sheet { position: fixed; top: 84px; right: 24px; width: min(380px, calc(100vw - 32px)); perspective: 1400px; z-index: 5; pointer-events: none; }
+  .paper { position: relative; overflow: hidden; background: var(--color-paper); border-radius: 22px; padding: 24px 22px 20px;
+           box-shadow: 0 6px 0 #E9DFFF, 0 22px 44px rgba(35,25,66,.35);
+           transform-origin: 100% 50%; transform: rotateY(-100deg); opacity: 0;
+           transition: transform .6s cubic-bezier(.2,1.35,.35,1), opacity .2s; }
+  .sheet.open .paper { transform: none; opacity: 1; pointer-events: auto; }
+  .paper::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed rgba(35,25,66,.12); pointer-events: none; }
+  .paper .band { position: absolute; left: 0; right: 0; top: 0; height: 8px; }
+  .paper .close { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer;
+                  background: #F1ECFF; color: var(--color-ink); font: 600 18px/1 var(--sans); }
+  .eyebrow { margin: 0 0 6px; font: 700 11px/1 var(--mono); letter-spacing: .08em; color: #7B61FF; }
+  .paper h2 { margin: 0 0 12px; font: 700 24px/1.2 var(--sans); }
+  .ver { display: flex; align-items: baseline; gap: 10px; font: 700 24px/1.2 var(--mono); margin-bottom: 14px; flex-wrap: wrap; }
+  .ver .arrow { color: #8E89A6; font-weight: 400; }
+  .ver .tgt { color: #0B7A57; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .badge { font: 700 12px/1 var(--mono); padding: 6px 10px; border-radius: 999px; letter-spacing: .04em; }
+  .sev-critical { background: #FFD3DE; color: #8F0D33; } .sev-high { background: #FFE3CC; color: #8A3A00; }
+  .sev-moderate { background: #FFF3B0; color: #6B5300; } .sev-low { background: #D5EBFF; color: #0B4F8F; }
+  .sev-unknown { background: #F0EEF6; color: #4A4560; outline: 1.5px dashed #8E89A6; outline-offset: -1.5px; }
+  .chip { font: 600 12px/1 var(--sans); padding: 6px 10px; border-radius: 999px; border: 1.5px solid var(--color-replan); color: #8E1C7A; }
+  dl { display: grid; grid-template-columns: 56px 1fr; gap: 6px 10px; margin: 0 0 14px; font-size: 14px; line-height: 1.5; }
+  dt { color: #6B6585; } dd { margin: 0; }
+  .docnote { margin: 0; padding: 12px 14px; border-radius: 14px; background: #F1ECFF; font-size: 14px; line-height: 1.55; }
+  .docnote b { font: 700 11px/1 var(--mono); color: #7B61FF; display: block; margin-bottom: 4px; letter-spacing: .06em; }
+  .list { list-style: none; margin: 0 0 14px; padding: 0; }
+  .list li { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 10px 0; border-bottom: 1px solid #EEE8FF; }
+  .list li:last-child { border-bottom: 0; }
+  .list .n { font: 600 15px var(--sans); } .list .v { grid-column: 1; font: 400 13px var(--mono); color: #4A4560; }
+  .list .badge { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .log { margin: 0; padding: 0; list-style: none; font: 400 12.5px/1.8 var(--mono); max-height: 52vh; overflow: auto; }
+
+  .fallback { position: fixed; inset: 0; overflow: auto; padding: 32px 16px; background: #F5F1FF; z-index: 10; }
+  .fallback > div { max-width: 640px; margin: 0 auto; }
+
+  @media (max-width: 720px) {
+    .brand { top: 14px; left: 16px; } .brand small { display: none; }
+    .status { top: 64px; }
+    .ticker, .note { display: none; }
+    .controls { bottom: 16px; }
+    .sheet { top: auto; bottom: 120px; left: 16px; right: 16px; width: auto; }
+    .paper { transform-origin: 50% 100%; transform: rotateX(95deg); }
+    .bubble { max-width: 220px; font-size: 14px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .paper, .bubble, .btn { transition: none; } }
+  body.reduced .paper, body.reduced .bubble { transition: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="scene" aria-hidden="true"></canvas>
+
+<header class="brand">
+  <svg width="38" height="38" viewBox="0 0 38 38" aria-hidden="true">
+    <g transform="rotate(-35 19 19)">
+      <rect x="4" y="12" width="30" height="14" rx="7" fill="#19E3A1"/>
+      <path d="M11 12h8v14h-8a7 7 0 0 1 0-14z" fill="#FF2E63"/>
+      <rect x="8" y="14.5" width="9" height="2.5" rx="1.25" fill="#fff" opacity=".7"/>
+    </g>
+  </svg>
+  <div><b>DR.PATCH</b><small>진료 책상 · 시제품</small></div>
+</header>
+
+<div class="status" role="status"><span id="status-text">대기 중</span>
+  <span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
+
+<div class="ticker" id="ticker" aria-hidden="true"></div>
+<div class="note">예시 데이터 · 실제 조회 아님</div>
+
+<div class="bubble" id="bubble" aria-hidden="true"><b>DR.PATCH</b><span id="bubble-text"></span></div>
+<div class="sr-only" aria-live="polite" id="live"></div>
+<div class="tip" id="tip"></div>
+
+<div class="sheet" id="sheet"><div class="paper" role="dialog" aria-labelledby="sheet-title">
+  <div class="band" id="sheet-band"></div>
+  <button class="close" id="sheet-close" aria-label="닫기">×</button>
+  <div id="sheet-body"></div>
+</div></div>
+
+<nav class="controls">
+  <button class="btn primary" id="btn-start">진료 시작</button>
+  <button class="btn hot" id="btn-confirm" disabled>처방 확정</button>
+  <button class="btn" id="btn-reset">처음부터</button>
+  <label class="motion"><input type="checkbox" id="motion"> 움직임 줄이기</label>
+</nav>
+
+<section class="fallback" id="fallback" hidden><div>
+  <h1>DR.PATCH</h1>
+  <p>이 브라우저에서는 3D 책상을 그릴 수 없어 목록으로 보여드려요.</p>
+  <ul class="list" id="fallback-list"></ul>
+</div></section>
+
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ── 예시 데이터 (실제 조회 아님) ─────────────────────────
+const SEV = { critical: ['#FF2E63', 'CRITICAL'], high: ['#FF8A1F', 'HIGH'], moderate: ['#FFD60A', 'MODERATE'],
+              low: ['#2F9BFF', 'LOW'], unknown: ['#A7A3B8', '미상'] };
+const ROUNDS = [{ no: 1, date: '11/21', full: '2026-11-21', win: '22:00–24:00' },
+                { no: 2, date: '12/05', full: '2026-12-05', win: '22:00–24:00' }];
+const ITEMS = [
+  { name: 'Python', kind: 'runtime', cur: '3.8', tgt: '3.11', sev: 'high', round: 1, reason: '지원 종료일이 지났어요.', flags: ['큰 변경'], note: '오늘의 주인공이죠. 이걸 먼저 올려야 나머지가 따라옵니다.' },
+  { name: 'urllib3', cur: '1.24.1', tgt: '2.2.x', sev: 'critical', round: 1, reason: '알려진 취약점이 있어요.', flags: ['큰 변경'], note: '1.24.1이라니… 꽤 오래 방치하셨군요.' },
+  { name: 'requests', cur: '2.19.0', tgt: '2.32.x', sev: 'critical', round: 1, reason: '알려진 취약점이 있어요.', flags: [], note: '자주 쓰는 녀석일수록 먼저 챙겨야 합니다.' },
+  { name: 'PyYAML', cur: '5.1', tgt: '6.0.x', sev: 'critical', round: 1, reason: '알려진 취약점이 있어요.', flags: ['큰 변경'], note: 'YAML은 늘 조심해서 다뤄야죠.' },
+  { name: 'Django', cur: '2.2.0', tgt: '4.2.x', sev: 'high', round: 2, reason: 'Python 업그레이드 뒤에 올릴 수 있어요.', flags: ['큰 변경', '처방 변경'], note: '처음엔 5.2를 드리려 했는데 Python 3.8로는 못 넘어가더군요. 그래서 2회차입니다.' },
+  { name: 'Jinja2', cur: '2.10', tgt: '3.1.x', sev: 'moderate', round: 2, reason: '알려진 취약점이 있어요.', flags: ['큰 변경'], note: '급하진 않지만 미루면 서운해합니다.' },
+  { name: 'Flask', cur: '1.0.2', tgt: '3.0.x', sev: 'low', round: 2, reason: '알려진 취약점이 있어요.', flags: ['큰 변경'], note: '가벼운 증상입니다. 그래도 처방은 처방이죠.' },
+  { name: 'numpy', cur: '1.16.0', tgt: '1.24.x', sev: 'unknown', round: 2, reason: '취약점은 있지만 심각도 정보가 없어요.', flags: [], note: '등급을 못 찾았어요. 모르는 건 모른다고 적습니다.' },
+];
+const TOOL = (it) => (it.kind === 'runtime' ? 'get_eol' : 'get_vulns');
+const QUIPS = ['저요? 아주 건강합니다. 버전 관리를 잘하거든요.', '알약은 눌러야 나옵니다. 세상 이치죠.',
+               '미상은 미상입니다. 지어내진 않아요.', '진료 중엔 조용히… 아, 저만 떠들고 있군요.'];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const roundOf = (no) => ROUNDS.find((r) => r.no === no);
+
+// ── 움직임 줄이기 ───────────────────────────────────────
+let reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+$('motion').checked = reduced;
+document.body.classList.toggle('reduced', reduced);
+$('motion').addEventListener('change', (e) => { reduced = e.target.checked; document.body.classList.toggle('reduced', reduced); });
+
+function hasWebGL() {
+  try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; }
+}
+
+function badge(sev) { return `<span class="badge sev-${sev}">${SEV[sev][1]}</span>`; }
+
+function showFallback() {
+  $('fallback').hidden = false;
+  $('fallback-list').innerHTML = ITEMS.map((it) =>
+    `<li><span class="n">${esc(it.name)} · ${it.round}회차</span><span class="v">${esc(it.cur)} → ${esc(it.tgt)}</span>${badge(it.sev)}</li>`).join('');
+}
+
+if (!hasWebGL()) showFallback(); else init();
+
+async function init() {
+  try { await Promise.race([Promise.all([document.fonts.load('700 40px "IBM Plex Sans KR"'), document.fonts.load('700 40px "JetBrains Mono"')]),
+                            new Promise((r) => setTimeout(r, 1500))]); } catch { /* 글꼴 없이도 진행 */ }
+
+  // ── 렌더러·장면 ─────────────────────────────────────
+  const canvas = $('scene');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = 0.95;
+
+  const scene = new THREE.Scene();
+  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.55;
+
+  const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+  const BASE = new THREE.Vector3(0, 17.5, 11.2);
+  const TARGET = new THREE.Vector3(-0.2, 0.9, 0.2);
+  let base = BASE.clone();
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xb7a1ff, 0.45));
+  const sun = new THREE.DirectionalLight(0xffffff, 2.3);
+  sun.position.set(-6, 14, 8);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 40 });
+  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
+  scene.add(sun);
+
+  // ── 재질·도형 도우미 ────────────────────────────────
+  const soft = (color, o = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: 0.42, clearcoat: 0.7, clearcoatRoughness: 0.28,
+    sheen: 0.5, sheenRoughness: 0.6, sheenColor: new THREE.Color('#ffffff'), ...o });
+  const glass = (tint = '#ffffff', o = {}) => new THREE.MeshPhysicalMaterial({ color: tint, transmission: 1, roughness: 0.06,
+    thickness: 0.4, ior: 1.35, transparent: true, clearcoat: 1, ...o });
+  const metal = (color = '#E8EEF8', o = {}) => new THREE.MeshPhysicalMaterial({ color, metalness: 1, roughness: 0.18, ...o });
+  const shadowed = (m, cast = true, receive = true) => { m.castShadow = cast; m.receiveShadow = receive; return m; };
+  const at = (m, x, y, z) => { m.position.set(x, y, z); return m; };
+
+  function halfGeo(r, L) { // 캡슐 반쪽: 아래 반구 + 원통 (y: -L/2-r → 0)
+    const pts = [];
+    for (let i = 0; i <= 12; i++) { const a = -Math.PI / 2 + (Math.PI / 2) * (i / 12); pts.push(new THREE.Vector2(Math.max(0.0001, r * Math.cos(a)), -L / 2 + r * Math.sin(a))); }
+    pts.push(new THREE.Vector2(r, 0), new THREE.Vector2(0.0001, 0));
+    return new THREE.LatheGeometry(pts, 32);
+  }
+
+  function textTexture(w, h, draw) {
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'); const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+    const redraw = (...a) => { g.clearRect(0, 0, w, h); draw(g, w, h, ...a); tex.needsUpdate = true; };
+    redraw();
+    return { tex, redraw };
+  }
+  const FONT = (wt, px, mono) => `${wt} ${px}px ${mono ? '"JetBrains Mono", monospace' : '"IBM Plex Sans KR", sans-serif'}`;
+
+  // ── 움직임 엔진 ─────────────────────────────────────
+  const tweens = new Set();
+  const ease = { inOut: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2), out: (t) => 1 - Math.pow(1 - t, 3),
+                 back: (t) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); }, lin: (t) => t };
+  function tween(dur, update, e = ease.inOut) {
+    return new Promise((res) => { if (reduced) { update(1); res(); return; } tweens.add({ t0: performance.now(), dur, update, e, res }); });
+  }
+  const sleep = (ms) => new Promise((r) => setTimeout(r, reduced ? Math.min(ms, 250) : ms));
+
+  // ── 책상 ────────────────────────────────────────────
+  const world = new THREE.Group(); scene.add(world);
+  const desk = shadowed(new THREE.Mesh(new RoundedBoxGeometry(18, 0.8, 11.5, 6, 0.38), soft('#B7A1FF', { roughness: 0.6, clearcoat: 0.25 })), false);
+  desk.position.y = -0.4; world.add(desk);
+  const blotter = shadowed(new THREE.Mesh(new RoundedBoxGeometry(7.4, 0.08, 7.8, 4, 0.04), soft('#FFD9EE', { roughness: 0.8, clearcoat: 0.1 })), false);
+  blotter.position.set(-0.6, 0.04, 0); world.add(blotter);
+
+  const pickRoots = [];
+  const addPick = (obj, kind, data = {}) => { obj.userData = { ...obj.userData, kind, ...data }; pickRoots.push(obj); };
+
+  // ── 블리스터 팩 (한 판 = 한 회차) ───────────────────
+  const SLOT_X = [-0.75, 0.65, 2.05], SLOT_Z = [-0.62, 0.62];
+  const domeGeo = new THREE.CapsuleGeometry(0.4, 0.5, 8, 20); domeGeo.rotateZ(Math.PI / 2);
+  const blisters = ROUNDS.map((r, idx) => {
+    const g = new THREE.Group(); g.position.set(-0.6, 0, idx === 0 ? -1.75 : 1.75); world.add(g);
+    const foilMat = new THREE.MeshPhysicalMaterial({ color: '#ECE8F7', metalness: 0.6, roughness: 0.3, clearcoat: 0.6, emissive: '#7B61FF', emissiveIntensity: 0 });
+    const baseM = shadowed(new THREE.Mesh(new RoundedBoxGeometry(5.4, 0.14, 2.9, 4, 0.07), foilMat)); baseM.position.y = 0.07; g.add(baseM);
+    const label = textTexture(220, 520, (c, w, h, stamped) => {
+      c.fillStyle = '#231942'; c.beginPath(); c.roundRect(0, 0, w, h, 34); c.fill();
+      c.fillStyle = '#fff'; c.textAlign = 'center';
+      c.font = FONT(700, 120, true); c.fillText(String(r.no), w / 2, 170);
+      c.font = FONT(600, 40); c.fillText('회차', w / 2, 230);
+      c.font = FONT(700, 44, true); c.fillText(r.date, w / 2, 330);
+      c.font = FONT(400, 28, true); c.fillStyle = '#CBB8FF'; c.fillText('22–24시', w / 2, 380);
+      if (stamped) {
+        c.save(); c.translate(w / 2, 450); c.rotate(-0.25);
+        c.strokeStyle = '#19E3A1'; c.lineWidth = 8; c.beginPath(); c.roundRect(-88, -38, 176, 76, 18); c.stroke();
+        c.fillStyle = '#19E3A1'; c.font = FONT(700, 40, true); c.fillText('Rx 확정', 0, 14); c.restore();
+      }
+    });
+    const labelM = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 2.6), new THREE.MeshStandardMaterial({ map: label.tex, roughness: 0.7, transparent: true }));
+    labelM.rotation.x = -Math.PI / 2; labelM.position.set(-2.05, 0.145, 0); labelM.receiveShadow = true; g.add(labelM);
+    const slots = [];
+    for (const z of SLOT_Z) for (const x of SLOT_X) {
+      const well = new THREE.Mesh(new RoundedBoxGeometry(1.25, 0.02, 0.78, 2, 0.01), new THREE.MeshStandardMaterial({ color: '#D9D2EC', roughness: 0.5, metalness: 0.4 }));
+      well.position.set(x, 0.145, z); well.receiveShadow = true; g.add(well);
+      const dome = new THREE.Mesh(domeGeo, glass('#ffffff', { thickness: 0.2 })); dome.position.set(x, 0.14, z); dome.scale.setScalar(0.0001); dome.raycast = () => {}; g.add(dome); // 덮개 아래 캡슐이 눌리도록
+      slots.push({ x, z, dome });
+    }
+    addPick(g, 'blister', { round: r.no, foilMat });
+    return { group: g, round: r, label, slots, used: 0 };
+  });
+
+  // ── 약병 (접수된 패키지가 담겨 있음) ───────────────
+  const JAR = new THREE.Vector3(5.5, 0, -2.3);
+  const jar = new THREE.Group(); jar.position.copy(JAR); world.add(jar);
+  const jarBody = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2.3, 48), glass('#FFE3F3', { thickness: 0.6 })); jarBody.position.y = 1.15; jar.add(jarBody);
+  const jarBase = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(1.22, 1.22, 0.12, 48), soft('#FFD1EA'))); jarBase.position.y = 0.06; jar.add(jarBase);
+  const band = textTexture(1024, 128, (c, w, h) => {
+    c.fillStyle = '#FFFDF5'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#231942'; c.font = FONT(700, 46, true); c.textBaseline = 'middle';
+    c.fillText('Rx · requirements.txt · 8정 · Rx · 접수 완료 ·', 18, h / 2);
+  });
+  const bandM = new THREE.Mesh(new THREE.CylinderGeometry(1.215, 1.215, 0.62, 48, 1, true), new THREE.MeshStandardMaterial({ map: band.tex, roughness: 0.7 }));
+  bandM.position.y = 0.62; jar.add(bandM);
+  const lid = new THREE.Group(); lid.position.y = 2.3; jar.add(lid);
+  lid.add(shadowed(new THREE.Mesh(new THREE.CylinderGeometry(1.32, 1.32, 0.5, 48), soft('#FF4FA3'))));
+  const knob = shadowed(new THREE.Mesh(new THREE.SphereGeometry(0.34, 24, 16), soft('#FF4FA3'))); knob.position.y = 0.32; knob.scale.y = 0.6; lid.add(knob);
+  addPick(jar, 'jar');
+
+  // ── 캡슐 (패키지 하나) ──────────────────────────────
+  const capHalf = halfGeo(0.26, 0.46);
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const capsules = ITEMS.map((it, i) => {
+    const root = new THREE.Group(); world.add(root);
+    const lift = new THREE.Group(); root.add(lift);
+    const inner = new THREE.Group(); lift.add(inner);
+    const body = new THREE.Group(); body.rotation.z = Math.PI / 2; inner.add(body);
+    const matCur = soft('#E4DCFF'), matTgt = soft('#E4DCFF');
+    const a = shadowed(new THREE.Mesh(capHalf, matCur)); a.rotation.x = Math.PI; // 위쪽 반쪽 → 회전 후 왼쪽
+    const b = shadowed(new THREE.Mesh(capHalf, matTgt));
+    body.add(a, b);
+    const layer = Math.floor(i / 3), ang = (i % 3) / 3 * Math.PI * 2 + layer * 0.9;
+    const home = new THREE.Vector3(JAR.x + Math.cos(ang) * 0.5, 0.36 + layer * 0.5, JAR.z + Math.sin(ang) * 0.5);
+    root.position.copy(home);
+    root.rotation.set(rnd() * Math.PI, rnd() * Math.PI, rnd() * Math.PI);
+    const cap = { it, root, lift, inner, matCur, matTgt, home, inJar: true, slot: null, liftY: 0, phase: rnd() * 6 };
+    addPick(root, 'capsule', { cap });
+    return cap;
+  });
+  const capByName = (n) => capsules.find((c) => c.it.name === n);
+
+  // ── 수액 팩 (실시간 진행) ───────────────────────────
+  const iv = new THREE.Group(); iv.position.set(-6.9, 0, -2.4); world.add(iv);
+  iv.add(shadowed(at(new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.8, 0.18, 32), soft('#2B1D6B')), 0, 0.09, 0)));
+  const pole = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4.0, 16), metal())); pole.position.y = 2.1; iv.add(pole);
+  const arm = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2, 12), metal())); arm.rotation.z = Math.PI / 2; arm.position.set(0.55, 4.05, 0); iv.add(arm);
+  const bag = new THREE.Group(); bag.position.set(1.05, 2.95, 0); iv.add(bag);
+  bag.add(new THREE.Mesh(new RoundedBoxGeometry(1.3, 1.9, 0.45, 4, 0.22), glass('#ffffff', { thickness: 0.5 })));
+  const liqGeo = new RoundedBoxGeometry(1.08, 1.6, 0.3, 3, 0.14); liqGeo.translate(0, 0.8, 0);
+  const liquid = new THREE.Mesh(liqGeo, new THREE.MeshPhysicalMaterial({ color: '#19E3A1', roughness: 0.2, transmission: 0.35, thickness: 0.3, clearcoat: 1 }));
+  liquid.position.y = -0.82; bag.add(liquid);
+  const bagLabel = textTexture(360, 220, (c, w, h) => {
+    c.fillStyle = '#FFFDF5'; c.beginPath(); c.roundRect(0, 0, w, h, 26); c.fill();
+    c.fillStyle = '#231942'; c.font = FONT(700, 52, true); c.fillText('DR.PATCH', 26, 86);
+    c.font = FONT(600, 34); c.fillStyle = '#7B61FF'; c.fillText('진료 진행 수액', 26, 150);
+  });
+  const bagLabelM = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.55), new THREE.MeshStandardMaterial({ map: bagLabel.tex, transparent: true, roughness: 0.7 }));
+  bagLabelM.position.set(0, 0.35, 0.235); bag.add(bagLabelM);
+  const chamber = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.42, 20), glass()); chamber.position.y = -1.25; bag.add(chamber);
+  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.5, 8), soft('#ffffff', { transparent: true, opacity: 0.7 })); tube.position.y = -2.2; bag.add(tube);
+  const drop = new THREE.Mesh(new THREE.SphereGeometry(0.07, 16, 12), soft('#19E3A1')); drop.position.y = -0.95; drop.visible = false; bag.add(drop);
+  let level = 1;
+  async function drip() {
+    level = Math.max(0.18, level - 0.06);
+    tween(500, (p) => { liquid.scale.y = THREE.MathUtils.lerp(liquid.scale.y, level, p); });
+    drop.visible = true;
+    await tween(420, (p) => { drop.position.y = -0.95 - p * 0.42; drop.scale.setScalar(1 - p * 0.4); }, ease.lin);
+    drop.visible = false; drop.position.y = -0.95; drop.scale.setScalar(1);
+  }
+
+  // ── 진료 차트 (실행 로그) ───────────────────────────
+  const LOG = [];
+  const chart = new THREE.Group(); chart.position.set(-6.5, 0, 2.5); chart.rotation.y = 0.12; world.add(chart);
+  chart.add(shadowed(at(new THREE.Mesh(new RoundedBoxGeometry(2.6, 0.16, 3.3, 4, 0.08), soft('#FF9ACB')), 0, 0.08, 0)));
+  chart.add(shadowed(at(new THREE.Mesh(new RoundedBoxGeometry(1.0, 0.22, 0.4, 3, 0.08), metal('#D7DCE8')), 0, 0.24, -1.45)));
+  const paper = textTexture(440, 560, (c, w, h) => {
+    c.fillStyle = '#FFFDF5'; c.beginPath(); c.roundRect(0, 0, w, h, 18); c.fill();
+    c.fillStyle = '#231942'; c.font = FONT(700, 34); c.fillText('진료 기록', 26, 92);
+    c.font = FONT(400, 21, true);
+    LOG.slice(-14).forEach((line, i) => { c.fillStyle = i === Math.min(LOG.length, 14) - 1 ? '#7B61FF' : '#4A4560'; c.fillText(line.slice(0, 32), 26, 140 + i * 29); });
+    if (!LOG.length) { c.fillStyle = '#8E89A6'; c.fillText('아직 기록이 없어요', 26, 140); }
+  });
+  const paperM = new THREE.Mesh(new THREE.PlaneGeometry(2.25, 2.86), new THREE.MeshStandardMaterial({ map: paper.tex, roughness: 0.85 }));
+  paperM.rotation.x = -Math.PI / 2; paperM.position.set(0, 0.165, 0.1); paperM.receiveShadow = true; chart.add(paperM);
+  addPick(chart, 'chart');
+
+  // ── 도장 ────────────────────────────────────────────
+  const stamp = new THREE.Group(); const STAMP_HOME = new THREE.Vector3(3.3, 0, 4.1); stamp.position.copy(STAMP_HOME); world.add(stamp);
+  stamp.add(shadowed(at(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.42, 32), soft('#FF4FA3')), 0, 0.21, 0)));
+  stamp.add(shadowed(at(new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.5, 20), soft('#FFFFFF')), 0, 0.66, 0)));
+  stamp.add(shadowed(at(new THREE.Mesh(new THREE.SphereGeometry(0.32, 24, 16), soft('#FF4FA3')), 0, 1.02, 0)));
+  addPick(stamp, 'stamp');
+
+  // ── 닥터 패치 ───────────────────────────────────────
+  const doctor = new THREE.Group(); doctor.position.set(5.4, 0, 2.9); doctor.rotation.y = -0.3; doctor.scale.setScalar(1.25); world.add(doctor);
+  const docTilt = new THREE.Group(); docTilt.rotation.x = -0.32; doctor.add(docTilt);
+  const docBody = new THREE.Group(); docBody.position.y = 1.2; docTilt.add(docBody);
+  const bodyHalf = halfGeo(0.75, 0.9);
+  docBody.add(shadowed(new THREE.Mesh(bodyHalf, soft('#19E3A1'))));
+  const topHalf = shadowed(new THREE.Mesh(bodyHalf, soft('#FFFFFF'))); topHalf.rotation.x = Math.PI; docBody.add(topHalf);
+  const ink = new THREE.MeshStandardMaterial({ color: '#231942', roughness: 0.3 });
+  const eyes = [-0.22, 0.22].map((x) => { const e = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), ink); e.position.set(x, 0.42, 0.73); e.scale.z = 0.5; docBody.add(e); return e; });
+  [-0.43, 0.43].forEach((x) => { const ch = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), soft('#FF7EB6')); ch.position.set(x, 0.22, 0.6); ch.scale.z = 0.4; docBody.add(ch); });
+  const mouth = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.022, 8, 20, Math.PI), ink); mouth.position.set(0, 0.25, 0.74); mouth.rotation.z = Math.PI; docBody.add(mouth);
+  const headBand = new THREE.Mesh(new THREE.TorusGeometry(0.655, 0.045, 10, 48), soft('#2B1D6B')); headBand.rotation.x = Math.PI / 2; headBand.position.y = 0.82; docBody.add(headBand);
+  const mirror = new THREE.Group(); mirror.position.set(0.42, 0.98, 0.3); mirror.rotation.set(0.6, 0, -0.5); docBody.add(mirror);
+  mirror.add(shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.04, 40), metal('#EEF2FA', { roughness: 0.08 }))));
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.035, 10, 40), metal('#B8BFD0')); rim.rotation.x = Math.PI / 2; mirror.add(rim);
+  const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.05, 16), ink); mirror.add(hole);
+  const bandage = shadowed(new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.13, 0.05, 2, 0.03), soft('#FFC59E'))); bandage.position.set(-0.5, 0.12, 0.56); bandage.rotation.set(0, -0.7, 0.35); docBody.add(bandage);
+  [-1, 1].forEach((s) => { const a = shadowed(new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.28, 6, 12), soft('#FFFFFF'))); a.position.set(0.8 * s, -0.15, 0.1); a.rotation.z = 0.5 * s; docBody.add(a); });
+  addPick(doctor, 'doctor');
+  const docAct = {
+    nod: async () => { await tween(180, (p) => (docBody.rotation.x = 0.28 * p)); await tween(260, (p) => (docBody.rotation.x = 0.28 * (1 - p))); },
+    tilt: async () => { await tween(300, (p) => (docBody.rotation.z = 0.3 * p), ease.out); await sleep(1100); await tween(300, (p) => (docBody.rotation.z = 0.3 * (1 - p))); },
+    hop: () => tween(420, (p) => (docBody.position.y = 1.2 + Math.sin(p * Math.PI) * 0.6), ease.lin),
+  };
+
+  // ── 화면 글자: 말풍선·단계·기록 ─────────────────────
+  let typing = 0;
+  function say(text) {
+    const id = ++typing; const el = $('bubble-text');
+    $('bubble').classList.add('show'); $('live').textContent = `닥터 패치: ${text}`;
+    if (reduced) { el.textContent = text; return; }
+    el.textContent = '';
+    [...text].forEach((ch, i) => setTimeout(() => { if (id === typing) el.textContent += ch; }, i * 22));
+  }
+  const STAGES = ['접수', '검사', '판정', '처방'];
+  function setStatus(text, stage) {
+    $('status-text').textContent = text;
+    document.querySelectorAll('.status .dots i').forEach((d, i) => d.classList.toggle('on', i <= stage));
+  }
+  function logEvent(type, detail) {
+    LOG.push(`#${String(LOG.length + 1).padStart(2, '0')} ${type} ${detail}`);
+    $('ticker').innerHTML = LOG.slice(-4).reverse().map((l) => `<div>${esc(l)}</div>`).join('');
+    paper.redraw();
+  }
+
+  // ── 누르면 펼쳐지는 종이 ────────────────────────────
+  let popped = null;
+  function openSheet(html, color) {
+    $('sheet-body').innerHTML = html; $('sheet-band').style.background = color;
+    $('sheet').classList.add('open'); $('sheet-close').focus({ preventScroll: true });
+  }
+  async function closeSheet() {
+    $('sheet').classList.remove('open');
+    if (popped) { const c = popped; popped = null; await tween(320, (p) => { c.inner.position.y = 1.1 * (1 - p); }, ease.out); }
+  }
+  $('sheet-close').addEventListener('click', closeSheet);
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+
+  function itemSheet(it) {
+    const r = roundOf(it.round);
+    return `<p class="eyebrow">처방전 · ${it.round}회차</p><h2 id="sheet-title">${esc(it.name)}</h2>
+      <div class="ver"><span>${esc(it.cur)}</span><span class="arrow">→</span><span class="tgt">${esc(it.tgt)}</span></div>
+      <div class="row">${badge(it.sev)}${it.flags.map((f) => `<span class="chip">${esc(f)}</span>`).join('')}</div>
+      <dl><dt>이유</dt><dd>${esc(it.reason)}</dd><dt>회차</dt><dd>${r.full} ${r.win}</dd></dl>
+      <p class="docnote"><b>DR.PATCH</b>${esc(it.note)}</p>`;
+  }
+  function roundSheet(no) {
+    const r = roundOf(no); const items = ITEMS.filter((it) => it.round === no);
+    return `<p class="eyebrow">블리스터 · ${no}회차</p><h2 id="sheet-title">${r.full}</h2>
+      <p style="margin:0 0 10px;font:400 13px var(--mono);color:#4A4560">${r.win} · ${items.length}정</p>
+      <ul class="list">${items.map((it) => `<li><span class="n">${esc(it.name)}</span><span class="v">${esc(it.cur)} → ${esc(it.tgt)}</span>${badge(it.sev)}</li>`).join('')}</ul>
+      <p class="docnote"><b>DR.PATCH</b>${no === 1 ? '급한 것부터 담았습니다. Python이 먼저 올라가야 2회차가 편해요.' : 'Python을 올린 다음 회차입니다. 순서 바꾸시면 곤란합니다.'}</p>`;
+  }
+  function logSheet() {
+    return `<p class="eyebrow">진료 기록</p><h2 id="sheet-title">실행 로그</h2>
+      ${LOG.length ? `<ol class="log">${LOG.map((l) => `<li>${esc(l)}</li>`).join('')}</ol>` : '<p>아직 기록이 없어요. 진료를 시작해 보세요.</p>'}`;
+  }
+
+  // ── 진료 흐름 (실제 이벤트 순서를 흉내) ─────────────
+  let state = 'idle';
+  const setButtons = () => { $('btn-start').disabled = state !== 'idle'; $('btn-confirm').disabled = state !== 'planned'; };
+
+  async function hopAndColor(c) {
+    const [sevColor] = SEV[c.it.sev];
+    const fromA = c.matCur.color.clone(), fromB = c.matTgt.color.clone();
+    const toA = new THREE.Color(sevColor), toB = new THREE.Color('#19E3A1');
+    await tween(420, (p) => {
+      c.inner.position.y = Math.sin(p * Math.PI) * 1.0;
+      if (p > 0.4) { const q = (p - 0.4) / 0.6; c.matCur.color.lerpColors(fromA, toA, q); c.matTgt.color.lerpColors(fromB, toB, q); }
+    }, ease.lin);
+  }
+  async function shake(c) {
+    await tween(700, (p) => { c.inner.rotation.y = Math.sin(p * Math.PI * 8) * 0.35 * (1 - p); }, ease.lin);
+    const ok = new THREE.Color('#19E3A1'), rp = new THREE.Color('#FF4FD8');
+    await tween(900, (p) => { c.matTgt.color.lerpColors(rp, ok, p); }, ease.lin);
+  }
+  async function flyToSlot(c) {
+    const bl = blisters[c.it.round - 1]; const i = bl.used++; const slot = bl.slots[i];
+    const to = new THREE.Vector3(bl.group.position.x + slot.x, 0.27, bl.group.position.z + slot.z);
+    const from = c.root.position.clone(); const rot0 = c.root.rotation.clone();
+    c.inJar = false; c.slot = slot;
+    await tween(900, (p) => {
+      c.root.position.lerpVectors(from, to, p); c.root.position.y += Math.sin(p * Math.PI) * 2.6;
+      c.root.rotation.set(rot0.x * (1 - p), rot0.y * (1 - p), rot0.z * (1 - p));
+    });
+    c.inner.rotation.set(0, 0, 0);
+    await tween(360, (p) => slot.dome.scale.setScalar(Math.max(0.0001, p)), ease.back);
+  }
+  const lidTo = (open) => tween(520, (p) => { const q = open ? p : 1 - p; lid.position.set(q * 1.0, 2.3 + q * 1.1, 0); lid.rotation.z = -q * 0.7; }, ease.out);
+
+  async function runVisit() {
+    if (state !== 'idle') return; state = 'running'; setButtons(); closeSheet();
+    setStatus('접수', 0); logEvent('step_start', 'analyze');
+    say('어디 보자… requirements.txt 8줄. 접수됐습니다.'); drip(); docAct.nod();
+    await sleep(1600); logEvent('step_end', 'analyze');
+
+    setStatus('검사 중', 1); logEvent('step_start', 'call_tools');
+    say('검사 들어갑니다. 따끔하지 않아요. 서버는요.');
+    await lidTo(true);
+    for (const [i, c] of capsules.entries()) {
+      logEvent('tool_call', `${TOOL(c.it)} ${c.it.name}`);
+      await hopAndColor(c); drip();
+      logEvent('tool_result', `${TOOL(c.it)} ${c.it.name}`);
+      setStatus(`검사 ${i + 1}/${capsules.length}`, 1);
+    }
+    logEvent('step_end', 'call_tools');
+    say('흠, urllib3 1.24.1이라니… 꽤 오래 방치하셨군요.'); docAct.nod();
+    await sleep(1800);
+
+    setStatus('판정', 2); logEvent('step_start', 'judge');
+    for (const c of capsules) { logEvent('judgment', `${c.it.name} ${SEV[c.it.sev][1]}`); await sleep(90); }
+    const dj = capByName('Django');
+    logEvent('replan', 'Django 5.2 ✗ Python 3.8 → Python 3.11');
+    say('Django 5.2는 Python 3.8로는 못 넘어가는군요. 처방 바꿉니다. Python부터 올리죠.');
+    docAct.tilt(); await shake(dj); await sleep(900);
+    logEvent('step_end', 'judge');
+
+    setStatus('처방', 3); logEvent('step_start', 'build');
+    say('급한 것부터 1회차에 담습니다.');
+    const flights = [];
+    for (const c of capsules) { flights.push(flyToSlot(c)); await sleep(190); }
+    await Promise.all(flights); await lidTo(false);
+    logEvent('calendar_check', '겹치는 일정 없음'); logEvent('plan_built', '2회차 · 8항목');
+    setStatus('처방 완료', 3);
+    say('처방 나왔습니다. 1회차 11/21, 2회차 12/05. 궁금한 알약은 눌러 보세요.'); docAct.hop();
+    state = 'planned'; setButtons();
+  }
+
+  async function confirmPlan() {
+    if (state !== 'planned') return; state = 'confirming'; setButtons(); closeSheet();
+    say('도장 찍습니다. 확정이에요.');
+    for (const bl of blisters) {
+      const at = new THREE.Vector3(bl.group.position.x - 2.05, 0, bl.group.position.z);
+      const from = stamp.position.clone();
+      await tween(600, (p) => { stamp.position.lerpVectors(from, at, p); stamp.position.y = Math.sin(p * Math.PI) * 1.6 + p * 0.6; });
+      await tween(160, (p) => (stamp.position.y = 0.6 - p * 0.45), ease.lin);
+      bl.label.redraw(true); logEvent('tool_result', `add_calendar_event ${bl.round.no}회차`);
+      await tween(220, (p) => (stamp.position.y = 0.15 + p * 0.6), ease.out);
+    }
+    const from = stamp.position.clone();
+    await tween(700, (p) => { stamp.position.lerpVectors(from, STAMP_HOME, p); stamp.position.y += Math.sin(p * Math.PI) * 0.8 * (1 - p); });
+    stamp.position.y = 0;
+    say('확정. 11/21 밤 10시에 뵙죠. 늦으시면 서운합니다.'); docAct.hop();
+    setStatus('처방 확정', 3); state = 'done'; setButtons();
+  }
+
+  $('btn-start').addEventListener('click', runVisit);
+  $('btn-confirm').addEventListener('click', confirmPlan);
+  $('btn-reset').addEventListener('click', () => location.reload());
+
+  // ── 가리키기·누르기 ─────────────────────────────────
+  const ray = new THREE.Raycaster(); const ptr = new THREE.Vector2(); let hovered = null;
+  let mx = 0, my = 0, cmx = 0, cmy = 0;
+  const findRoot = (o) => { while (o && !o.userData.kind) o = o.parent; return o; };
+  function pick(e) {
+    ptr.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+    ray.setFromCamera(ptr, camera);
+    const hit = ray.intersectObjects(pickRoots, true)[0];
+    return hit ? findRoot(hit.object) : null;
+  }
+  function tipText(o) {
+    const d = o.userData;
+    if (d.kind === 'capsule') return state === 'idle' ? '검사 전 캡슐' : `${d.cap.it.name} ${d.cap.it.cur}`;
+    if (d.kind === 'blister') return `${d.round}회차 · ${roundOf(d.round).date}`;
+    return { chart: '진료 기록', doctor: '닥터 패치', jar: '접수된 패키지', stamp: '확정 도장' }[d.kind];
+  }
+  canvas.addEventListener('pointermove', (e) => {
+    mx = (e.clientX / innerWidth) * 2 - 1; my = (e.clientY / innerHeight) * 2 - 1;
+    const o = pick(e); hovered = o;
+    canvas.style.cursor = o ? 'pointer' : 'default';
+    const tip = $('tip');
+    if (o) { tip.textContent = tipText(o); tip.style.left = `${e.clientX}px`; tip.style.top = `${e.clientY}px`; tip.classList.add('show'); }
+    else tip.classList.remove('show');
+  });
+  canvas.addEventListener('pointerleave', () => { hovered = null; $('tip').classList.remove('show'); });
+  canvas.addEventListener('click', async (e) => {
+    const o = pick(e); if (!o) { closeSheet(); return; }
+    const d = o.userData;
+    if (d.kind === 'capsule') {
+      const c = d.cap;
+      if (state === 'idle' || state === 'running') { say(state === 'idle' ? '아직 검사 전이에요. 진료 시작부터 누르시죠.' : '검사 중엔 잠깐만요. 금방 끝납니다.'); return; }
+      if (popped && popped !== c) await closeSheet();
+      popped = c;
+      if (c.slot) tween(260, (p) => (c.slot.dome.scale.y = 1 - Math.sin(p * Math.PI) * 0.35), ease.lin);
+      tween(480, (p) => { c.inner.position.y = 1.1 * p; c.inner.rotation.x = p * Math.PI * 2; }, ease.back).then(() => (c.inner.rotation.x = 0));
+      openSheet(itemSheet(c.it), SEV[c.it.sev][0]);
+    } else if (d.kind === 'blister') {
+      if (state === 'idle' || state === 'running') { say('빈 포장지예요. 처방이 나오면 채워집니다.'); return; }
+      openSheet(roundSheet(d.round), '#231942');
+    } else if (d.kind === 'chart') openSheet(logSheet(), '#FF9ACB');
+    else if (d.kind === 'doctor') { docAct.hop(); say(QUIPS[Math.floor(Math.random() * QUIPS.length)]); }
+    else if (d.kind === 'jar') say(state === 'idle' ? '접수된 패키지 8정입니다. 진료 시작을 누르시죠.' : '약병은 이제 비었습니다. 블리스터를 보세요.');
+    else if (d.kind === 'stamp') { if (state === 'planned') confirmPlan(); else say('도장은 처방이 나온 뒤에 찍습니다.'); }
+  });
+
+  // ── 화면 크기 ───────────────────────────────────────
+  function resize() {
+    const w = innerWidth, h = innerHeight;
+    renderer.setSize(w, h, false); camera.aspect = w / h;
+    base = BASE.clone().multiplyScalar(Math.min(2.0, Math.max(1, 1.5 / camera.aspect))); // 세로 화면은 양옆이 잘리는 대신 크게
+    camera.updateProjectionMatrix();
+  }
+  addEventListener('resize', resize); resize();
+
+  // ── 매 프레임 ───────────────────────────────────────
+  const headPos = new THREE.Vector3(); let blinkAt = 2, blinkUntil = 0;
+  say('어서 오세요. 오늘은 어디가 불편한 서버인가요?');
+  function frame(now) {
+    const t = now / 1000;
+    for (const tw of tweens) { const p = Math.min(1, (now - tw.t0) / tw.dur); tw.update(tw.e(p)); if (p >= 1) { tweens.delete(tw); tw.res(); } }
+
+    cmx += ((reduced ? 0 : mx) - cmx) * 0.05; cmy += ((reduced ? 0 : my) - cmy) * 0.05;
+    camera.position.set(base.x + cmx * 1.2, base.y - cmy * 0.4, base.z + cmy * 0.8); camera.lookAt(TARGET);
+
+    if (!reduced) {
+      const breathe = Math.sin(t * 2.2);
+      docBody.scale.set(1 + breathe * 0.012, 1 + breathe * 0.022, 1 + breathe * 0.012);
+      doctor.rotation.y += ((-0.3 + cmx * 0.35) - doctor.rotation.y) * 0.05;
+      if (t > blinkAt) { blinkUntil = t + 0.12; blinkAt = t + 2.5 + Math.random() * 3; }
+      liquid.scale.x = 1 + Math.sin(t * 3) * 0.01;
+      for (const c of capsules) if (c.inJar && state === 'idle') c.inner.rotation.z = Math.sin(t * 1.6 + c.phase) * 0.08;
+    }
+    eyes.forEach((e) => (e.scale.y = t < blinkUntil ? 0.15 : 1));
+
+    for (const c of capsules) { const want = hovered === c.root && !c.inJar ? 0.18 : 0; c.liftY += (want - c.liftY) * 0.18; c.lift.position.y = c.liftY; }
+    for (const bl of blisters) { const want = hovered === bl.group ? 0.25 : 0; const m = bl.group.userData.foilMat; m.emissiveIntensity += (want - m.emissiveIntensity) * 0.15; }
+    const chartWant = hovered === chart ? 0.15 : 0; chart.position.y += (chartWant - chart.position.y) * 0.18;
+
+    headPos.set(-0.3, 3.3, 0); doctor.localToWorld(headPos); headPos.project(camera);
+    const b = $('bubble'); b.style.right = `${innerWidth - ((headPos.x + 1) / 2 * innerWidth) + 10}px`; b.style.top = `${(1 - headPos.y) / 2 * innerHeight}px`;
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>

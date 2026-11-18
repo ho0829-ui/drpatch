@@ -1,69 +1,82 @@
-# 디자인: 보안 관제(SOC) 대시보드 (2026-11-18)
+# 디자인: DR.PATCH 진료 책상 (2026-11-18, 인터뷰로 확정)
 
-Figma: https://www.figma.com/design/MVNo4L7Ru7X4tFDrpWmMNS (페이지: Screens · Foundations · Components)
-Vue 화면은 이 문서의 토큰·화면 구성을 따른다. Figma 변수 이름 = CSS 변수 이름.
+> 이전 시안(SOC 대시보드·Figma, 와펜·수집 패치, Carbon DR.PATCH 1차)은 모두 폐기했다. 이 문서가 유일한 기준이다.
+> 시제품: `prototype/drpatch-desk/index.html` (한 장면, 예시 데이터)
 
-## 글꼴
-- 본문·제목: **IBM Plex Sans KR** (Regular 400 / Medium 500 / SemiBold 600 / Bold 700)
-- 데이터·버전·로그: **JetBrains Mono** (Regular 400 / Bold 700)
-- 둘 다 Google Fonts.
+## 1. 한 줄
+**DR.PATCH — 서버를 진료하는 패치 박사님.** 화면 전체가 **살짝 기울인 진료 책상**이고, UI는 책상 위 **말랑한 3D 소품**이다.
+보이는 이름만 DR.PATCH, 저장소·코드 이름은 `sudo-patch` 그대로 (명세 반영은 아직).
 
-## 색 (Dark 하나)
+## 2. 인터뷰로 정한 것
+| 항목 | 결정 |
+|---|---|
+| 무대 | 진료 책상. 위에서 약 30° 기울인 원근 시점 (아이소메트릭 아님) |
+| UI | **UI 자체가 오브제.** 카드·표 대신 책상 위 소품 |
+| 질감 | 말랑한 3D: 두툼하고 둥근 모양, 반광 클리어코트, 부드러운 그림자 |
+| 구도 | **담겨 있다가 나온다.** 약병 안 캡슐 → 검사 → 블리스터 팩으로 포장 |
+| 색 | **비비드 캔디** (3절) |
+| 데이터 | **누르면 펼쳐진다.** 평소엔 오브제, 누르면 종이(처방전)가 카메라 쪽으로 평평하게 펼쳐져 버전·날짜·이유를 보여준다 |
+| 움직임 | **살아 있는 화면.** 마우스를 따라 시점이 살짝 움직이고, 가만히 있어도 숨 쉬듯 움직인다 |
+| 재미 | **능청스러운 박사님 말투** (5절) |
+| 캐릭터 | 책상 오른쪽의 **작은 캡슐 박사님** (기본 도형만으로 코드 구현) |
+
+## 3. 색 (비비드 캔디)
 | 토큰 | 값 | 쓰임 |
 |---|---|---|
-| `--color-bg` | #0A0E15 | 화면 바탕 |
-| `--color-surface` | #111722 | 카드·사이드바 |
-| `--color-surface-2` | #172030 | 카드 안 줄·입력칸 |
-| `--color-surface-3` | #1E293B | 강조 칸 |
-| `--color-line` | #243044 | 테두리 |
-| `--color-line-strong` | #33415A | 입력칸·버튼 테두리 |
-| `--color-text` | #E6EBF2 | 본문 |
-| `--color-text-muted` | #8C97AB | 보조 |
-| `--color-text-faint` | #5C677A | 시간·라벨 |
-| `--color-accent` / `-soft` | #22D3EE / #0E3A44 | 주요 버튼·현재 메뉴·목표 버전·패치 일정 |
-| `--color-ok` / `-soft` | #34D399 / #0F3A2C | 성공·안전·확정 |
-| `--color-sev-critical` / `-soft` | #F43F5E / #4A1220 | CRITICAL·실패·내 일정 |
-| `--color-sev-high` / `-soft` | #FB923C / #4A2410 | HIGH |
-| `--color-sev-moderate` / `-soft` | #FACC15 / #3F3508 | MODERATE |
-| `--color-sev-low` / `-soft` | #60A5FA / #112A4A | LOW |
-| `--color-sev-unknown` / `-soft` | #94A3B8 / #222C3B | 심각도 미상·확인 못 함 |
-| `--color-replan` / `-soft` | #F59E0B / #3B2A08 | 재계획·일정 이동·표시(flag)·겹침 경고 |
+| `--color-bg` | #6A4DFF | 책상 바깥 (포도 캔디) |
+| `--color-desk` | #CBB8FF | 책상 |
+| `--color-paper` | #FFFDF5 | 펼쳐지는 종이 |
+| `--color-ink` | #231942 | 글자 |
+| `--color-foil` | #ECE8F7 | 블리스터 호일 |
+| `--color-sev-critical` | #FF2E63 | CRITICAL |
+| `--color-sev-high` | #FF8A1F | HIGH |
+| `--color-sev-moderate` | #FFD60A | MODERATE |
+| `--color-sev-low` | #2F9BFF | LOW |
+| `--color-sev-unknown` | #A7A3B8 | 미상·확인 못 함 (종이에서는 점선 테두리) |
+| `--color-ok` | #19E3A1 | 목표 버전·안전·확정 |
+| `--color-replan` | #FF4FD8 | 처방 변경(재계획)·표시(flag) |
+| `--color-pending` | #E4DCFF | 검사 전 캡슐 |
 
-## 간격·모서리
-- 간격: 4 / 8 / 12 / 16 / 24 / 32 (`--space-1`~`--space-6`)
-- 모서리: 6(sm) / 10(md) / 14(lg) / 999(pill)
+- 위험도 색은 항상 글자(CRITICAL 등)와 같이 쓴다. 종이 위 배지는 연한 바탕 + 진한 글자(대비 4.5:1 이상).
+- 위험도 색을 장식(회차 색, 소품 색)에 쓰지 않는다. 회차 라벨은 잉크색, 소품은 핑크·라일락 계열.
 
-## 글자 스타일
-| 이름 | 글꼴 | 크기/줄 높이 |
+## 4. 세계관과 오브제
+| 서비스 | 오브제 | 동작 |
 |---|---|---|
-| display | Plex KR Bold | 28/36 |
-| title | Plex KR SemiBold | 18/26 |
-| subtitle | Plex KR SemiBold | 15/22 |
-| body / body-strong | Plex KR Regular / Medium | 14/22 |
-| caption | Plex KR Regular | 12/18 |
-| label | Plex KR Medium, 자간 6% | 11/16 |
-| mono / mono-strong | JetBrains Mono Regular / Bold | 13/20 |
-| mono-sm | JetBrains Mono Regular | 11/16 |
-| metric | JetBrains Mono Bold | 30/36 |
+| 업로드한 패키지 | **약병** 안 캡슐 | 접수 때 담겨 있음 |
+| 패키지 하나 | **투톤 캡슐**: 왼쪽 = 현재 버전(위험도 색), 오른쪽 = 목표 버전(민트) | 검사 결과에 색이 켜짐, 누르면 톡 튀어나옴 |
+| 회차 | **블리스터 팩** 한 판 (최대 3판), 왼쪽 라벨에 회차·날짜 | `plan_built`에 캡슐이 날아와 칸에 들어가고 투명 덮개가 씌워짐 |
+| 실시간 진행 | **수액 팩** | 단계마다 한 방울, 수위가 내려감 |
+| 실행 로그 | **진료 차트**(클립보드) | 이벤트가 한 줄씩 적힘, 누르면 전체 기록 |
+| 확정 | **도장** | 블리스터 라벨에 "Rx 확정" |
+| Agent | **닥터 패치** (캡슐 몸·반사경·반창고) | 숨쉬기·눈 깜빡임, 판정에 끄덕, 재계획에 갸웃, 누르면 폴짝 |
 
-## 컴포넌트 (Figma Components 페이지)
-| 이름 | 변형 | 내용 |
-|---|---|---|
-| Badge/Severity | CRITICAL·HIGH·MODERATE·LOW·UNKNOWN | 점 + 등급 글자, 등급 색 soft 바탕 |
-| Badge/Flag | — | 테두리만 replan 색 (큰 변경·호환 미확인·종료 이후 처리·일정 이동) |
-| Button | primary·ghost·danger | |
-| NavItem | active·default | 왼쪽 막대 + 글자 |
-| StepRow | step·tool-ok·tool-fail·decision·replan·plan | 실행 단계 한 줄 (점 + 글자 + 시간). replan·tool-fail은 바탕색 |
-| KpiCard | — | 라벨 · 큰 숫자(metric) · 보조 |
-| ItemRow | — | 패키지 이름·이유 / 현재 → 목표(mono, accent) / 등급 배지 |
+## 5. 말투 (능청스러운 박사님)
+- 예: "흠, urllib3 1.24.1이라니… 꽤 오래 방치하셨군요." / "Django 5.2는 Python 3.8로는 못 넘어가는군요. 처방 바꿉니다."
+- 능청은 **표현에만**. 버전·날짜·심각도는 확인한 값만 쓰고, 없으면 "미상" / "확인 못 함" 그대로.
+- 실제 의료 조언으로 읽히는 말("치료", "복용 권장")은 쓰지 않는다.
+- Agent 응답 문장은 LLM이 쓰므로 프롬프트(`app/agent/brain.py`)에 말투 규칙을 넣는다 → 고치면 `scripts/run_agent.py`로 실제 확인.
 
-## 화면 (1440×960 기준)
-레이아웃 공통: 왼쪽 사이드바 240px(로고, 메뉴 4개, 아래 대상 서버 카드, 출처) + 위 상단바(제목·설명·세션 칩·새 대화).
+## 6. 움직임 ↔ 실제 이벤트
+| 이벤트 | 화면 |
+|---|---|
+| `step_start` / `step_end` | 수액 한 방울, 상단 단계 표시 (접수·검사·판정·처방) |
+| `tool_call` / `tool_result` | 약병 속 캡슐이 폴짝 → 위험도 색 켜짐 |
+| `judgment` | 박사님 끄덕, 차트에 한 줄 |
+| `replan` | 박사님 갸웃 + 해당 캡슐이 흔들리고 목표 반쪽이 replan 색으로 깜빡 |
+| `plan_built` | 캡슐이 블리스터 칸으로 날아가 포장 |
+| `calendar_check` | (예정) 회차 라벨 날짜가 바뀌고 "↻ 원래 날짜" |
+| 확정 | 도장이 라벨마다 "Rx 확정" |
+| `error` | 짧은 안내만, 과한 연출 없음 |
 
-1. **대화 + 실시간 실행 단계**: KPI 4개(CRITICAL 패키지·HIGH 이상 항목·재계획·응답 시간) / 왼쪽 업로드 카드 + 메시지(스크롤) + 입력창 고정 / 오른쪽 실행 단계 패널 380px (StepRow, 재계획 강조)
-2. **회차 계획 보드**: Python 업그레이드 경로(3.8 → 3.9 → 3.10 종료 → 3.11 확정) / 회차 칸반(회차당 카드) / 오른쪽 "무엇부터(실행 순서)" + 안전·확인 못 함·보류·조회 제외
-3. **캘린더 + 계획 관리**: 월 달력(패치 회차 accent, 내 일정 critical, 이동한 회차는 "↻ 원래 날짜") / 오른쪽 저장한 계획(수정 폼·겹침 경고·삭제) + 내 일정 추가
-4. **실행 로그**: 세션 목록(실패 표시) / 이벤트 타임라인(#seq) / 오른쪽 판단 근거(judgment, plan_built 규칙)
+## 7. 꼭 지킬 것
+- **데이터는 종이 위에서 평평하게.** 버전·날짜·표·로그는 3D 위에 작게 쓰지 않고, 누르면 펼쳐지는 종이(HTML)에서 또렷하게 보인다.
+- **움직임 줄이기:** `prefers-reduced-motion` 또는 화면의 "움직임 줄이기"를 켜면 시점 이동·대기 동작을 멈추고 전환은 즉시 끝낸다.
+- **3D를 못 그리는 환경:** 평평한 목록 화면으로 대체한다.
+- 빨간 십자가(적십자 표장), 실제 회사·Python·Ubuntu 로고는 쓰지 않는다.
+- 오류는 짧은 안내만.
 
-## Figma에서 남은 것
-- 캘린더 칸 안 일정 칩 글자가 잘림 → 칩 글자를 칸 너비에 맞춰 줄바꿈 (Starter 요금제 MCP 호출 한도로 Figma에서는 못 고침, Vue에서 반영)
+## 8. 구현 메모
+- 실시간 3D: Three.js (Vue에서는 직접 쓰거나 TresJS). 장면은 하나, 오브제는 기본 도형 + RoundedBox + Lathe로 만든다 (외부 3D 모델 파일 없음).
+- 조명: RoomEnvironment 반사 + 방향광 그림자 1개. 투명 재질(transmission)은 약병·덮개·수액 팩에만.
+- 화면 구성(대화·처방전·진료 예약·진료 기록)은 이 책상 장면 위에 어떻게 얹을지 **시제품 확인 후** 정한다.
