@@ -17,6 +17,9 @@ const emit = defineEmits([
   'close-sheet',
   'bubble-pos',
   'egg-count',
+  'upload-request',
+  'plan-update',
+  'chat-turn',
 ]);
 
 const canvasRef = ref(null);
@@ -60,6 +63,9 @@ onMounted(async () => {
       },
       onBubblePos: (pos) => emit('bubble-pos', pos),
       onEggCount: (found, total) => emit('egg-count', { found, total }),
+      onUploadRequest: () => emit('upload-request'),
+      onPlanUpdate: (plan, packages) => emit('plan-update', { plan, packages }),
+      onChatTurn: (msg, finalEvent) => emit('chat-turn', { msg, finalEvent }),
     });
   } catch (err) {
     console.error(err);
@@ -73,6 +79,8 @@ onBeforeUnmount(() => {
 });
 
 defineExpose({
+  loadPackages: (pkgs) => controller?.loadPackages(pkgs),
+  sendChatMessage: (msg) => controller?.sendChatMessage(msg),
   runVisit: () => controller?.runVisit(),
   confirmPlan: () => controller?.confirmPlan(),
   unpopPill: () => controller?.unpopPill(),

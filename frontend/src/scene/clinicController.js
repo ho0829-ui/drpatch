@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import {
-  COLOR, EGGS, ITEMS, MODELS, PATCH, PER_ROUND, QUIPS, ROUNDS, SEV, TOOL, roundOf,
-} from '../demo.js';
+import * as api from '../api.js';
+import { COLOR, EGGS, MODELS, QUIPS, SEV, sevKey } from '../demo.js';
 import { BASE_DIST, createEngine } from './engine.js';
 import { addGroundShadows } from './shadows.js';
 import { createTweener, ease } from './utils.js';
@@ -17,6 +16,7 @@ import { setupDoctor } from './props/doctor.js';
 
 const TILT = 0.55;
 const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+const STEP_STAGE = { analyze: [0, '접수'], call_tools: [1, '검사 중'], judge: [2, '판정'], replan: [2, '재계획'], build: [3, '처방'] };
 
 export async function createClinicController(canvas, callbacks) {
   const {
@@ -33,6 +33,9 @@ export async function createClinicController(canvas, callbacks) {
     onPillTagsUpdate,
     onBubblePos,
     onEggCount,
+    onUploadRequest,
+    onPlanUpdate,
+    onChatTurn,
   } = callbacks;
 
   const loader = new GLTFLoader();
@@ -63,12 +66,16 @@ export async function createClinicController(canvas, callbacks) {
     obj.userData = { ...obj.userData, kind, ...data };
     pickRoots.push(obj);
   };
+  const removePick = (obj) => {
+    const idx = pickRoots.indexOf(obj);
+    if (idx >= 0) pickRoots.splice(idx, 1);
+  };
 
   setupRoom(world, scene, M);
   addGroundShadows(world);
   const { eggNodes, tick: tickEggs } = setupEggs(world, M, addPick);
-  const packs = setupBlisters(world, M, addPick);
-  const { pills, pillByName, jarTop, lidTo, nextTrayPos } = setupJarAndTray(world, M, addPick, tween);
+  const blisterApi = setupBlisters(world, M, addPick, removePick);
+  const jarApi = setupJarAndTray(world, M, addPick, removePick, tween);
   const { drip } = setupIv(world, M, tween);
 
   const logs = [];
@@ -76,10 +83,13 @@ export async function createClinicController(canvas, callbacks) {
   const { stampPacks } = setupStamp(world, M, addPick, tween);
   const { docAct, tick: tickDoctor, getBubbleAnchor } = setupDoctor(world, M, addPick, tween, sleep);
 
-  let state = 'idle';
+  let state = 'idle'; // 'idle' (업로드 전) | 'ready' (업로드됨) | 'running' | 'planned' | 'confirming' | 'done'
   let popped = null;
   let hovered = null;
   let rafId = 0;
+  let currentPlan = null;
+  let currentPackages = [];
+  let violatedNames = [];
 
   const setState = (next) => {
     state = next;
@@ -97,7 +107,7 @@ export async function createClinicController(canvas, callbacks) {
   const found = new Set();
   try {
     JSON.parse(localStorage.getItem('drpatch-eggs') || '[]').forEach((k) => found.add(k));
-  } catch { /* 저장 안 되는 환경 */ }
+  } catch { /* 무시 */ }
   onEggCount(found.size, Object.keys(EGGS).length);
 
   function runEgg(id) {
@@ -132,30 +142,32 @@ export async function createClinicController(canvas, callbacks) {
     }
   }
 
-  // ── 진료 흐름 ─────────────────────────────────────────
-  function emitFloatChip(it, extra = '') {
-    const [x, y] = toScreen(jarTop);
+  // ── 알약 애니메이션 helpers ────────────────────────────
+  function emitFloatChip(name, sev, extra = '') {
+    const k = sevKey(sev);
+    const [x, y] = toScreen(jarApi.jarTop);
     onFloatChip({
       id: `${Date.now()}-${Math.random()}`,
-      name: it.name,
-      sev: it.sev,
-      sevLabel: SEV[it.sev][1],
-      color: SEV[it.sev][0],
+      name,
+      sev: k,
+      sevLabel: SEV[k][1],
+      color: SEV[k][0],
       extra,
       x,
       y,
     });
   }
 
-  async function examine(p) {
-    await tween(320, (t) => {
+  async function examinePill(p) {
+    if (!p) return;
+    await tween(300, (t) => {
       p.inner.position.y = Math.sin(t * Math.PI) * 1.4;
     }, ease.lin);
-    emitFloatChip(p.it);
   }
 
-  async function shake(p) {
-    emitFloatChip(p.it, ' · 처방 변경');
+  async function shakePill(p) {
+    if (!p) return;
+    emitFloatChip(p.it.name, p.it.sev, ' · 처방 변경');
     await tween(
       700,
       (t) => {
@@ -190,19 +202,21 @@ export async function createClinicController(canvas, callbacks) {
     await tween(240, (t) => (p.lift.rotation.x = TILT * t), ease.out);
   }
 
-  async function packPill(p) {
-    const bl = packs[p.it.round - 1];
+  async function packPill(p, bl) {
     const slot = bl.slots[bl.used++];
+    if (!slot) return;
     p.slot = slot;
     p.pack = bl;
     await flyTo(p, worldOfSlot(bl, slot), bl.group.scale.x * 1.1);
-    slot.wellMat.color.set(SEV[p.it.sev][0]);
+    slot.wellMat.color.set(SEV[sevKey(p.it.sev)][0]);
     p.hasTag = true;
+    p.tagText = p.it.name;
   }
 
   async function trayPill(p) {
-    await flyTo(p, nextTrayPos(), 0.95, 2.2);
+    await flyTo(p, jarApi.nextTrayPos(), 0.95, 2.2);
     p.hasTag = true;
+    p.tagText = p.it.name;
   }
 
   async function unpopPill() {
@@ -215,92 +229,226 @@ export async function createClinicController(canvas, callbacks) {
     }
   }
 
-  async function runVisit() {
-    if (state !== 'idle') return;
+  // ── 업로드 · 실데이터 반영 ─────────────────────────────
+  function loadPackages(packages) {
+    currentPackages = packages || [];
+    currentPlan = null;
+    violatedNames = [];
+    blisterApi.clearPacks();
+    jarApi.setPackages(currentPackages);
+    onPlanUpdate?.(null, currentPackages);
+    if (currentPackages.length) {
+      setState('ready');
+      onStatus('접수 완료', 0);
+      onSay(`requirements.txt ${currentPackages.length}개 패키지 접수됐습니다. 진료를 시작하거나 조건을 말씀해 주세요.`);
+    } else {
+      setState('idle');
+      onStatus('대기 중', -1);
+      onSay('어서 오세요. requirements.txt를 올려 주세요.');
+    }
+  }
+
+  async function applyPlan(plan) {
+    currentPlan = plan;
+    onPlanUpdate?.(plan, currentPackages);
+    jarApi.resetToJar();
+
+    const rounds = plan.rounds || [];
+    const packs = blisterApi.rebuild(rounds, plan.window);
+
+    await jarApi.lidTo(true);
+    const flights = [];
+
+    for (const r of rounds) {
+      const bl = packs.find((pk) => pk.round.round_no === r.round_no);
+      for (const item of r.items || []) {
+        const p = jarApi.ensurePill({ name: item.name, version: item.current_version });
+        Object.assign(p.it, {
+          cur: item.current_version || '미상',
+          tgt: item.target_version || '미상',
+          sev: sevKey(item.severity),
+          round: r.round_no,
+          status: 'patch',
+          reason: item.reason || '',
+          flags: item.flags || [],
+          eol_date: item.eol_date || null,
+          kind: item.kind || p.it.kind,
+        });
+        if (bl) {
+          flights.push(packPill(p, bl));
+          await sleep(100);
+        }
+      }
+    }
+
+    for (const safeName of plan.safe || []) {
+      const p = jarApi.ensurePill({ name: safeName });
+      Object.assign(p.it, {
+        tgt: p.it.cur,
+        sev: 'safe',
+        round: null,
+        status: 'safe',
+        reason: '알려진 취약점이 없어요.',
+        flags: [],
+      });
+      flights.push(trayPill(p));
+      await sleep(80);
+    }
+
+    for (const item of plan.unassigned || []) {
+      const p = jarApi.ensurePill({ name: item.name, version: item.current_version });
+      Object.assign(p.it, {
+        cur: item.current_version || '미상',
+        tgt: item.target_version || '미상',
+        sev: sevKey(item.severity),
+        round: null,
+        status: 'next',
+        reason: item.reason || '회차가 꽉 차서 다음 진료로 미뤘어요.',
+        flags: item.flags || [],
+        eol_date: item.eol_date || null,
+      });
+      p.hasTag = true;
+      p.tagText = `${p.it.name} · 다음 진료`;
+    }
+
+    for (const u of plan.unchecked || []) {
+      const p = jarApi.ensurePill({ name: u.name });
+      Object.assign(p.it, {
+        sev: 'unchecked',
+        round: null,
+        status: 'unchecked',
+        reason: u.reason || '확인 못 함',
+        flags: [],
+      });
+      p.hasTag = true;
+      p.tagText = `${p.it.name} · 확인 못 함`;
+    }
+
+    for (const h of plan.held || []) {
+      const p = jarApi.ensurePill({ name: h.name });
+      Object.assign(p.it, {
+        sev: 'held',
+        round: null,
+        status: 'held',
+        reason: h.reason || '보류',
+        flags: [],
+      });
+      p.hasTag = true;
+      p.tagText = `${p.it.name} · 보류`;
+    }
+
+    await Promise.all(flights);
+    await jarApi.lidTo(false);
+  }
+
+  // ── /chat 실데이터 스트림 실행 ─────────────────────────
+  async function sendChatMessage(message) {
+    if (state === 'running' || state === 'confirming') return null;
+    const prevState = state;
     setState('running');
     onCloseSheetRequest();
     await unpopPill();
 
-    onStatus('접수', 0);
-    logEvent('step_start', 'analyze');
-    onSay(`흠, 어디 보자… requirements.txt ${ITEMS.length - 1}줄에 Python까지. 접수됐습니다.`);
-    drip();
-    docAct.nod();
-    await sleep(1600);
-    logEvent('step_end', 'analyze');
+    let finalEvent = null;
+    try {
+      finalEvent = await api.chat(api.getSession(), message, (ev) => {
+        if (ev.type === 'step_start') {
+          const st = STEP_STAGE[ev.step];
+          if (st) onStatus(st[1], st[0]);
+          logEvent('step_start', ev.step || '');
+          drip();
+          if (ev.step === 'call_tools') docAct.point();
+          else if (ev.step === 'analyze') docAct.nod();
+        } else if (ev.type === 'step_end') {
+          logEvent('step_end', ev.step || '');
+        } else if (ev.type === 'tool_call') {
+          const pkgName = ev.args?.name || ev.args?.product || '';
+          logEvent('tool_call', `${ev.tool || ''} ${pkgName}`.trim());
+          const p = jarApi.pillByName(pkgName);
+          if (p) examinePill(p);
+          drip();
+        } else if (ev.type === 'tool_result') {
+          const pkgName = ev.args?.name || ev.args?.product || '';
+          logEvent('tool_result', `${ev.tool || ''} ${pkgName} ${ev.ok ? 'ok' : ev.error_code || 'err'}`.trim());
+          if (pkgName) {
+            emitFloatChip(pkgName, ev.ok ? 'safe' : 'unchecked', ev.ok ? '' : ' · 확인 못 함');
+          }
+        } else if (ev.type === 'judgment') {
+          const pkgs = ev.packages || [];
+          violatedNames = ev.violations || [];
+          for (const item of pkgs) {
+            const p = jarApi.pillByName(item.name);
+            if (p) p.it.sev = sevKey(item.severity);
+          }
+          logEvent('judgment', `${pkgs.length}개 판정 (위반 ${violatedNames.length})`);
+          docAct.nod();
+        } else if (ev.type === 'replan') {
+          logEvent('replan', ev.python ? `Python ${ev.python}` : ev.result || 'hold');
+          docAct.tilt();
+          for (const vn of violatedNames) {
+            shakePill(jarApi.pillByName(vn));
+          }
+        } else if (ev.type === 'plan_built') {
+          logEvent('plan_built', `${(ev.rounds || []).length}회차`);
+        } else if (ev.type === 'calendar_check') {
+          blisterApi.updateCalendarCheck(ev.rounds || []);
+          logEvent('calendar_check', ev.status || '');
+        } else if (ev.type === 'error') {
+          logEvent('error', `${ev.step || ''} ${ev.kind || ''}`.trim());
+          onSay('처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
+        }
+      });
+    } catch (err) {
+      onSay(err.message || '요청을 처리하지 못했어요.');
+      setState(prevState);
+      return null;
+    }
 
-    onStatus('검사 중', 1);
-    logEvent('step_start', 'call_tools');
-    onSay('검사 들어갑니다. 따끔하지 않아요. 서버는요.');
-    docAct.point();
-    await lidTo(true);
-    for (const [i, p] of pills.entries()) {
-      logEvent('tool_call', `${TOOL(p.it)} ${p.it.name}`);
-      await examine(p);
-      drip();
-      logEvent('tool_result', `${TOOL(p.it)} ${p.it.name}`);
-      onStatus(`검사 ${i + 1}/${pills.length}`, 1);
-    }
-    logEvent('step_end', 'call_tools');
-    onSay('허허, urllib3 1.24.1이라니… 꽤 오래 방치하셨군요.');
-    docAct.nod();
-    await sleep(1700);
+    onChatTurn?.(message, finalEvent);
 
-    onStatus('판정', 2);
-    logEvent('step_start', 'judge');
-    for (const p of pills) {
-      logEvent('judgment', `${p.it.name} ${SEV[p.it.sev][1]}`);
-      await sleep(60);
+    if (finalEvent.plan) {
+      await applyPlan(finalEvent.plan);
     }
-    logEvent('replan', 'Django 5.2 ✗ Python 3.8 → Python 3.11');
-    onSay('Django 5.2는 Python 3.8로는 못 넘어가는군요. 처방 바꿉니다. Python부터 올리죠.');
-    docAct.tilt();
-    await shake(pillByName('Django'));
-    await sleep(800);
-    logEvent('step_end', 'judge');
 
-    onStatus('처방', 3);
-    logEvent('step_start', 'build');
-    onSay(`급한 것부터 회차마다 ${PER_ROUND}정씩 담습니다. 건강한 녀석들은 곡반으로.`);
-    const flights = [];
-    for (const p of pills) {
-      if (p.it.status === 'patch') flights.push(packPill(p));
-      else if (p.it.status === 'safe') flights.push(trayPill(p));
-      else continue;
-      await sleep(150);
+    if (finalEvent.confirmed?.length) {
+      const packs = blisterApi.getPacks();
+      await stampPacks(packs, (roundNo) => {
+        const conf = finalEvent.confirmed.find((c) => c.round_no === roundNo);
+        const pack = packs.find((pk) => pk.round.round_no === roundNo);
+        if (pack && conf?.calendar_event) {
+          pack.redrawLabel({ stamped: true, reserved: true });
+        }
+        logEvent('tool_result', `confirm ${roundNo}회차`);
+      });
+      docAct.wave();
+      onStatus('처방 확정', 3);
+      setState('done');
+    } else if (finalEvent.plan?.rounds?.length) {
+      docAct.hop();
+      onStatus('처방 완료', 3);
+      setState('planned');
+    } else {
+      setState(currentPackages.length ? 'ready' : 'idle');
     }
-    await Promise.all(flights);
-    const left = pills.filter((p) => p.it.status === 'next');
-    for (const p of left) {
-      await tween(300, (t) => (p.inner.position.y = Math.sin(t * Math.PI) * 0.6), ease.lin);
+
+    if (finalEvent.answer) {
+      onSay(finalEvent.answer);
     }
-    await lidTo(false);
-    logEvent('calendar_check', '겹치는 일정 없음');
-    logEvent('plan_built', `${ROUNDS.length}회차 · ${PATCH.length}항목`);
-    onStatus('처방 완료', 3);
-    onSay(
-      `처방 나왔습니다. ${ROUNDS.map((r) => r.date).join(', ')}. ${
-        left.length ? `${left.map((p) => p.it.name).join(', ')}은 자리가 없어 다음 진료예요. ` : ''
-      }궁금한 알약은 눌러 보세요.`,
-    );
-    docAct.hop();
-    setState('planned');
+    return finalEvent;
+  }
+
+  async function runVisit() {
+    if (!currentPackages.length) {
+      onSay('먼저 requirements.txt를 올려 주세요.');
+      onUploadRequest?.();
+      return;
+    }
+    await sendChatMessage('패치 계획 짜줘');
   }
 
   async function confirmPlan() {
     if (state !== 'planned') return;
-    setState('confirming');
-    onCloseSheetRequest();
-    await unpopPill();
-
-    onSay('도장 찍습니다. 확정이에요.');
-    await stampPacks(packs, (roundNo) => {
-      logEvent('tool_result', `add_calendar_event ${roundNo}회차`);
-    });
-    onSay(`확정. ${ROUNDS[0].date} 밤 10시에 뵙죠. 늦으시면 서운합니다.`);
-    docAct.wave();
-    onStatus('처방 확정', 3);
-    setState('done');
+    await sendChatMessage('확정해줘');
   }
 
   // ── 가리키기 · 누르기 · 키보드 ─────────────────────────
@@ -320,14 +468,21 @@ export async function createClinicController(canvas, callbacks) {
     const d = o.userData;
     if (d.kind === 'pill') {
       const it = d.pill.it;
-      return state === 'idle' ? '검사 전' : `${it.name} ${it.cur}${it.status === 'next' ? ' · 다음 진료' : ''}`;
+      if (it.status === 'pending') return `${it.name} ${it.cur}`;
+      if (it.status === 'next') return `${it.name} · 다음 진료`;
+      if (it.status === 'unchecked') return `${it.name} · 확인 못 함`;
+      if (it.status === 'held') return `${it.name} · 보류`;
+      return `${it.name} ${it.cur}`;
     }
-    if (d.kind === 'blister') return `${d.round}회차 · ${roundOf(d.round).date}`;
+    if (d.kind === 'blister') {
+      const r = currentPlan?.rounds?.find((x) => x.round_no === d.round);
+      return r ? `${d.round}회차 · ${r.date}` : `${d.round}회차`;
+    }
     if (d.kind === 'egg') return EGGS[d.egg].tip;
     return {
       chart: '진료 기록',
       doctor: '닥터 패치',
-      jar: '접수된 패키지',
+      jar: currentPackages.length ? '접수된 패키지' : 'requirements.txt 올리기',
       stamp: '확정 도장',
       tray: '곡반 · 패치 필요 없음',
     }[d.kind];
@@ -364,8 +519,8 @@ export async function createClinicController(canvas, callbacks) {
     }
     if (d.kind === 'pill') {
       const p = d.pill;
-      if (state === 'idle' || state === 'running') {
-        onSay(state === 'idle' ? '아직 검사 전이에요. 진료 시작부터 누르시죠.' : '검사 중엔 잠깐만요. 금방 끝납니다.');
+      if (state === 'running' || state === 'confirming') {
+        onSay('진료 중엔 잠깐만요. 금방 끝납니다.');
         return;
       }
       if (popped && popped !== p) {
@@ -381,24 +536,25 @@ export async function createClinicController(canvas, callbacks) {
         },
         ease.back,
       ).then(() => (p.inner.rotation.x = 0));
-      onOpenSheet({ kind: 'item', item: p.it, color: SEV[p.it.sev][0] });
+      onOpenSheet({ kind: 'item', item: p.it, plan: currentPlan, color: SEV[sevKey(p.it.sev)][0] });
     } else if (d.kind === 'blister') {
-      if (state === 'idle' || state === 'running') {
-        onSay('빈 포장지예요. 처방이 나오면 채워집니다.');
-        return;
-      }
-      onOpenSheet({ kind: 'round', roundNo: d.round, color: COLOR.ink });
+      onOpenSheet({ kind: 'round', roundNo: d.round, plan: currentPlan, color: COLOR.ink });
     } else if (d.kind === 'chart') {
       onOpenSheet({ kind: 'log', logs: [...logs], color: COLOR.teal });
     } else if (d.kind === 'tray') {
-      if (state === 'idle' || state === 'running') onSay('곡반은 건강한 녀석들 자리입니다.');
-      else onOpenSheet({ kind: 'tray', color: COLOR.teal });
+      if (!currentPlan) onSay('곡반은 건강한 녀석들 자리입니다.');
+      else onOpenSheet({ kind: 'tray', plan: currentPlan, color: COLOR.teal });
     } else if (d.kind === 'doctor') {
       docAct.hop();
       onSay(QUIPS[Math.floor(Math.random() * QUIPS.length)]);
     } else if (d.kind === 'jar') {
-      if (state === 'planned' || state === 'done') onOpenSheet({ kind: 'jar', color: COLOR.ink });
-      else onSay(`접수된 패키지 ${ITEMS.length}개입니다. 진료 시작을 누르시죠.`);
+      if (!currentPackages.length) {
+        onUploadRequest?.();
+      } else if (currentPlan) {
+        onOpenSheet({ kind: 'jar', plan: currentPlan, color: COLOR.ink });
+      } else {
+        onSay(`접수된 패키지 ${currentPackages.length}개입니다. 진료를 시작해 보세요.`);
+      }
     } else if (d.kind === 'stamp') {
       if (state === 'planned') confirmPlan();
       else onSay('도장은 처방이 나온 뒤에 찍습니다.');
@@ -408,6 +564,9 @@ export async function createClinicController(canvas, callbacks) {
   let konamiAt = 0;
   let typed = '';
   const onKeyDown = (e) => {
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
     const off = camera.position.clone().sub(controls.target);
     if (e.key === '+' || e.key === '=') camera.position.copy(controls.target).add(off.multiplyScalar(1 / 1.15));
     if (e.key === '-') camera.position.copy(controls.target).add(off.multiplyScalar(1.15));
@@ -438,7 +597,7 @@ export async function createClinicController(canvas, callbacks) {
 
   // ── 매 프레임 ─────────────────────────────────────────
   const tmpV = new THREE.Vector3();
-  onSay('어서 오세요. 오늘은 어디가 불편한 서버인가요?');
+  onSay('어서 오세요. requirements.txt를 올려 주세요.');
 
   function frame(now) {
     const t = now / 1000;
@@ -449,9 +608,12 @@ export async function createClinicController(canvas, callbacks) {
     tickDoctor(t, reduced, controls.getAzimuthalAngle());
     tickEggs(t);
 
+    const pills = jarApi.getPills();
     if (!reduced) {
       for (const p of pills) {
-        if (p.inJar && state === 'idle') p.inner.rotation.z = Math.sin(t * 1.6 + p.phase) * 0.08;
+        if (p.inJar && (state === 'idle' || state === 'ready')) {
+          p.inner.rotation.z = Math.sin(t * 1.6 + p.phase) * 0.08;
+        }
       }
     }
 
@@ -473,8 +635,8 @@ export async function createClinicController(canvas, callbacks) {
       p.root.localToWorld(tmpV);
       const [x, y, front] = toScreen(tmpV);
       tagList.push({
-        name: p.it.name,
-        color: SEV[p.it.sev][0],
+        name: p.tagText || p.it.name,
+        color: SEV[sevKey(p.it.sev)][0],
         x,
         y,
         visible: showTags && front && popped !== p,
@@ -495,6 +657,8 @@ export async function createClinicController(canvas, callbacks) {
   };
 
   return {
+    loadPackages,
+    sendChatMessage,
     runVisit,
     confirmPlan,
     unpopPill,

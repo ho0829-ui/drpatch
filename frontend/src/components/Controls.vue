@@ -4,12 +4,19 @@ defineProps({
   reduced: Boolean,
 });
 
-const emit = defineEmits(['start', 'confirm', 'reset', 'update:reduced']);
+const emit = defineEmits(['upload', 'start', 'confirm', 'reset', 'update:reduced']);
 </script>
 
 <template>
   <nav class="controls">
-    <button class="btn primary" :disabled="state !== 'idle'" @click="emit('start')">진료 시작</button>
+    <button
+      class="btn"
+      :disabled="state === 'running' || state === 'confirming'"
+      @click="emit('upload')"
+    >
+      파일 올리기
+    </button>
+    <button class="btn primary" :disabled="state !== 'ready'" @click="emit('start')">진료 시작</button>
     <button class="btn hot" :disabled="state !== 'planned'" @click="emit('confirm')">처방 확정</button>
     <button class="btn" @click="emit('reset')">처음부터</button>
     <label class="motion">

@@ -1,6 +1,3 @@
-// 예시 데이터 (실제 조회 아님) — T1 시제품 기준
-export const PER_ROUND = 4;
-
 export const SEV = {
   critical: ['#E5484D', 'CRITICAL'],
   high: ['#F59E0B', 'HIGH'],
@@ -8,7 +5,16 @@ export const SEV = {
   low: ['#3B82F6', 'LOW'],
   unknown: ['#A3AEB0', '미상'],
   safe: ['#3E9E98', '안전'],
+  unchecked: ['#A3AEB0', '확인 못 함'],
+  held: ['#7C5CD6', '보류'],
+  next: ['#16313A', '다음 진료'],
 };
+
+export function sevKey(sev) {
+  if (!sev) return 'unknown';
+  const k = String(sev).toLowerCase();
+  return SEV[k] ? k : 'unknown';
+}
 
 export const COLOR = {
   replan: '#7C5CD6',
@@ -19,46 +25,10 @@ export const COLOR = {
   well: '#C9D3D4',
 };
 
-export const ROUNDS = [
-  { no: 1, date: '11/21', full: '2026-11-21', win: '22:00–24:00' },
-  { no: 2, date: '12/05', full: '2026-12-05', win: '22:00–24:00' },
-  { no: 3, date: '12/19', full: '2026-12-19', win: '22:00–24:00' },
-];
-
-const P = (name, cur, tgt, sev, round, reason, note, flags = [], extra = {}) => ({
-  name,
-  cur,
-  tgt,
-  sev,
-  round,
-  reason,
-  note,
-  flags,
-  ...extra,
-});
-
-export const ITEMS = [
-  P('Python', '3.8', '3.11', 'high', 1, '지원 종료일이 지났어요.', '오늘의 주인공이죠. 이걸 먼저 올려야 나머지가 따라옵니다.', ['큰 변경'], { kind: 'runtime' }),
-  P('urllib3', '1.24.1', '2.2.x', 'critical', 1, '알려진 취약점이 있어요.', '1.24.1이라니… 꽤 오래 방치하셨군요.', ['큰 변경']),
-  P('requests', '2.19.0', '2.32.x', 'critical', 1, '알려진 취약점이 있어요.', '자주 쓰는 녀석일수록 먼저 챙겨야 합니다.'),
-  P('PyYAML', '5.1', '6.0.x', 'critical', 1, '알려진 취약점이 있어요.', 'YAML은 늘 조심해서 다뤄야죠.', ['큰 변경']),
-  P('Django', '2.2.0', '4.2.x', 'high', 2, 'Python 업그레이드 뒤에 올릴 수 있어요.', '처음엔 5.2를 드리려 했는데 Python 3.8로는 못 넘어가더군요. 그래서 2회차입니다.', ['큰 변경', '처방 변경']),
-  P('Jinja2', '2.10', '3.1.x', 'moderate', 2, '알려진 취약점이 있어요.', '급하진 않지만 미루면 서운해합니다.', ['큰 변경']),
-  P('Flask', '1.0.2', '3.0.x', 'low', 2, '알려진 취약점이 있어요.', '가벼운 증상입니다. 그래도 처방은 처방이죠.', ['큰 변경']),
-  P('numpy', '1.16.0', '1.24.x', 'unknown', 2, '취약점은 있지만 심각도 정보가 없어요.', '등급을 못 찾았어요. 모르는 건 모른다고 적습니다.'),
-  P('pandas', '0.24.2', '2.0.x', 'moderate', 3, '알려진 취약점이 있어요.', 'numpy랑 같이 다니는 녀석이라 3회차로 모셨습니다.', ['큰 변경']),
-  P('pytest', '4.6.0', '8.3.x', 'low', 3, '알려진 취약점이 있어요.', '테스트 도구도 아프면 서럽습니다.', ['큰 변경']),
-  P('gunicorn', '19.9.0', '23.0.x', 'moderate', 3, '알려진 취약점이 있어요.', '서버 문지기죠. 미루지 마세요.', ['큰 변경']),
-  P('celery', '4.3.0', '5.4.x', 'low', 3, '알려진 취약점이 있어요.', '일꾼도 건강검진은 받아야죠.', ['큰 변경']),
-  P('click', '8.1.7', '8.1.7', 'safe', null, '최신이고 알려진 취약점이 없어요.', '아주 건강합니다. 돌려보내죠.', [], { status: 'safe' }),
-  P('idna', '3.7', '3.7', 'safe', null, '최신이고 알려진 취약점이 없어요.', '깨끗합니다.', [], { status: 'safe' }),
-  P('six', '1.16.0', '1.16.0', 'safe', null, '최신이고 알려진 취약점이 없어요.', '오래됐지만 멀쩡한 친구예요.', [], { status: 'safe' }),
-  P('itsdangerous', '2.2.0', '2.2.0', 'safe', null, '최신이고 알려진 취약점이 없어요.', '이름은 무섭지만 괜찮습니다.', [], { status: 'safe' }),
-  P('lxml', '4.3.0', '5.3.x', 'low', null, '회차 3개가 꽉 차서 다음 진료로 미뤘어요.', '오늘은 자리가 없네요. 다음에 꼭 오세요.', [], { status: 'next' }),
-].map((it) => ({ status: 'patch', kind: 'package', ...it }));
-
-export const PATCH = ITEMS.filter((i) => i.status === 'patch');
-export const TOOL = (it) => (it.kind === 'runtime' ? 'get_eol' : 'get_vulns');
+export const POPULAR = new Set([
+  'python', 'requests', 'urllib3', 'django', 'flask',
+  'numpy', 'pandas', 'pytest', 'pyyaml', 'jinja2',
+]);
 
 export const QUIPS = [
   '허허, 저 말입니까? 이 일만 삼십 년째입니다.',
@@ -93,18 +63,15 @@ export const MODELS = [
   'bottle', 'tray', 'iv', 'chart', 'stamp', 'doctor',
 ];
 
-// 배치 (three 좌표: x 오른쪽, y 위, z 사용자 쪽). design/blender/scene_preview.py와 같게.
 export const LAYOUT = {
   bottle: [-5.9, 0, -1.9],
-  tray: [-5.4, 0.075, 2.7], // 곡반은 패드보다 살짝 높여 겹치지 않게
+  tray: [-5.4, 0.075, 2.7],
   chart: [7.1, 0, 0.1, -0.08],
   stamp: [8.2, 0, 3.0],
-  iv: [-12.0, -8.05, -9.6, 0, 3.3], // 높이 ≈1.3m: 책상 옆에서 튀지 않게
+  iv: [-12.0, -8.05, -9.6, 0, 3.3],
   pad: { x: 0.6, z: 0.9, w: 10.0, d: 4.8 },
   doctor: { x: 0, z: -7.0, seat: -2.6, scale: 2.8 },
 };
 
 export const CELL = { w: 1.4, d: 1.24 };
 export const END_W = 1.2;
-
-export const roundOf = (no) => ROUNDS.find((r) => r.no === no);
