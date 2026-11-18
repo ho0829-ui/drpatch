@@ -1,6 +1,6 @@
 # 프로젝트: sudo-patch
 서버 패치·EOL 점검 플래너. freeze로 만든 requirements.txt + OS·Python 버전을 받아 회차별 패치 계획을 만드는 Agent 서비스.
-Python 3.10+, FastAPI, SQLite, LangGraph + langchain-openai, 화면은 HTML/CSS/JS. 명세는 docs/spec.md.
+Python 3.10+, FastAPI, SQLite, LangGraph + langchain-openai, 화면은 HTML/CSS/JS. 명세는 docs/spec.md, 구조는 docs/architecture.md.
 
 ## 명령어
 - 설치: `python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`

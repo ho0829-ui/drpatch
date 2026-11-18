@@ -11,6 +11,7 @@
   - 버전 비교·정식 버전 판별·requires_python 판정은 packaging 사용 (packaging==26.3 추가함)
 
 ## 주의
+- 구조는 docs/architecture.md (v1): web/ + app/api·agent·events·db. /chat은 ndjson 스트리밍, Agent는 작업 스레드(동기), 병렬 4개
 - FastAPI: app/main.py 뼈대(/health만). 실습 원본은 docs/course/1일차_FastAPI/(참고용, 영화 예제·/api/plans). 라우터는 app/api/에 추가 예정
 - scripts/walk_example.py의 버전 계산은 임시(>=3.N 위주). 실제 판정 코드로 쓰지 말 것
 - OSV는 없는 패키지도 200 {} → 0건. endoflife.date는 없는 제품·줄기 모두 같은 404
