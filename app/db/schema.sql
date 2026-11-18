@@ -44,3 +44,17 @@ CREATE TABLE IF NOT EXISTS events (
 
 CREATE INDEX IF NOT EXISTS idx_events_session ON events (session_id, seq);
 CREATE INDEX IF NOT EXISTS idx_plans_date ON plans (date);
+
+-- 캘린더 (심화 F3023, 로컬 구현체). source: user(직접 넣은 일정) / sudo-patch(확정 계획에서 등록)
+CREATE TABLE IF NOT EXISTS calendar_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    title       TEXT NOT NULL,
+    date        TEXT NOT NULL,
+    start_time  TEXT,
+    end_time    TEXT,
+    source      TEXT NOT NULL DEFAULT 'user',
+    plan_id     INTEGER,
+    created_at  TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar_events (date);

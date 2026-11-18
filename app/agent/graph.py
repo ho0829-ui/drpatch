@@ -9,7 +9,7 @@ analyze ─┬─ 계획인데 입력 빠짐 → ask
 """
 
 from collections.abc import Callable
-from datetime import date
+from datetime import date, timedelta
 
 from langgraph.graph import END, START, StateGraph
 
@@ -17,7 +17,8 @@ from app.agent.brain import AgentBrain
 from app.agent.planner.items import PackageResult, build_items, top_severity
 from app.agent.planner.priority import sort_items
 from app.agent.planner.python_upgrade import UpgradePlan, candidate_versions, plan_python_upgrade
-from app.agent.planner.rounds import RoundsResult, split_rounds
+from app.agent.planner.calendar_fit import SEARCH_DAYS, conflicts_on, find_free_date
+from app.agent.planner.rounds import RoundsResult, move_round, split_rounds
 from app.agent.planner.versions import is_newer, pick_latest
 from app.agent.render import fallback_text, plan_dict
 from app.agent.runner import Emit, ToolRunner, no_emit
@@ -258,7 +259,9 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         # "무엇부터"의 순서: 위험한 순서이되, Python 업그레이드가 필요한 항목은 업그레이드 뒤로 (순서 제약 먼저)
         doing_order = [i for r in split_rounds(ordered, max(len(ordered), 1), state["today"], 1).rounds
                        for i in r.items] if ordered else []
+        calendar_check = fit_to_calendar(rounds.rounds, c.window_start, c.window_end)
         plan = plan_dict(items, rounds, state.get("upgrade"), doing_order)
+        plan["calendar_check"] = calendar_check
         plan["schedule_missing"] = schedule_missing
         plan["window"] = {"start": c.window_start, "end": c.window_end}
         plan["excluded"] = c.excluded
@@ -267,6 +270,32 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
             "python": py_r["data"] if py_r and py_r["ok"] else "확인 못 함",
         }
         return {"plan": plan}
+
+    def fit_to_calendar(rounds: list, start: str | None, end: str | None) -> str:
+        """회차마다 캘린더를 조회해 겹치면 다음 빈 날로 (F3023). 캘린더 Tool이 없으면 건너뜀."""
+        if "list_calendar_events" not in runner.registry.names():
+            return "사용 안 함"
+        if not rounds:
+            return "확인함"
+        status = "확인함"
+        for r in rounds:
+            result = runner.call("list_calendar_events", {
+                "date_from": r.date.isoformat(),
+                "date_to": (r.date + timedelta(days=SEARCH_DAYS)).isoformat()})
+            if not result["ok"]:
+                status = "확인 못 함"  # 날짜는 그대로 (지어내지 않음)
+                continue
+            events = result["data"]["events"]
+            free = find_free_date(r.date, start, end, events)
+            if free is None:
+                r.calendar_conflicts = [e["title"] for e in conflicts_on(r.date, start, end, events)]
+            elif free != r.date:
+                move_round(r, free)
+        emit("calendar_check", {"status": status, "rounds": [
+            {"round_no": r.round_no, "date": r.date.isoformat(),
+             "moved_from": r.moved_from.isoformat() if r.moved_from else None,
+             "conflicts": r.calendar_conflicts} for r in rounds]})
+        return status
 
     def respond(state: AgentState) -> dict:
         try:
@@ -327,9 +356,11 @@ def run_agent(
     emit: Emit = no_emit,
     runner: ToolRunner | None = None,
     last_turn: dict | None = None,
+    calendar=None,
+    db_path: str | None = None,
 ) -> dict:
     """요청 하나를 처리한다. 결과: intent, answer, conditions(갱신됨), plan(계획 수립일 때), missing, tool_plan."""
-    runner = runner or ToolRunner(build_registry(), emit)
+    runner = runner or ToolRunner(build_registry(calendar, db_path), emit)
     graph = build_graph(brain, runner, emit)
     state = graph.invoke({"message": message, "conditions": conditions, "today": today or date.today(),
                           "last_turn": last_turn})

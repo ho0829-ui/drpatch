@@ -61,7 +61,10 @@ const R = (() => {
     const rounds = plan.rounds.map((r) => `
       <div class="round">
         <div class="round-head"><strong>${r.round_no}회차 · ${esc(r.date)}</strong>
-          <span class="extra">${timeWindow(window.start, window.end)}</span></div>
+          <span class="extra">${timeWindow(window.start, window.end)}
+            ${r.moved_from ? `<span class="badge flag">일정 충돌로 이동 (원래 ${esc(r.moved_from)})</span>` : ""}
+            ${(r.calendar_conflicts || []).length ? `<span class="badge overlap">⚠ 일정과 겹침: ${esc(r.calendar_conflicts.join(", "))}</span>` : ""}
+          </span></div>
         <table class="items">${itemRows(r.items)}</table>
       </div>`).join("");
     const extras = [
@@ -115,6 +118,13 @@ const R = (() => {
       case "plan_built":
         return `<li class="plan">회차 배정: ${e.rounds.map((r) => `${r.round_no}회차 [${esc(r.items.join(", "))}]`).join(" · ")}
           <span class="why">${esc(e.rule)}</span></li>`;
+      case "calendar_check": {
+        const moved = (e.rounds || []).filter((r) => r.moved_from);
+        const text = e.status !== "확인함" ? `캘린더 ${esc(e.status)}`
+          : moved.length ? moved.map((r) => `${r.round_no}회차 ${esc(r.moved_from)} → ${esc(r.date)}`).join(", ") + " (일정 충돌로 이동)"
+          : "캘린더: 겹치는 일정 없음";
+        return `<li class="${moved.length ? "replan" : "plan"}">${text}${t}</li>`;
+      }
       case "error":
         return `<li class="error">문제 발생 (${esc(STEP[e.step] || e.step)})</li>`;
       default:

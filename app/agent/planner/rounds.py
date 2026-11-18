@@ -19,12 +19,20 @@ class Round:
     round_no: int
     date: date
     items: list[Item]
+    moved_from: date | None = None  # 캘린더 일정과 겹쳐 옮겼으면 원래 날짜 (F3023)
+    calendar_conflicts: list[str] = field(default_factory=list)  # 옮기지 못한 겹치는 일정 제목
 
 
 @dataclass
 class RoundsResult:
     rounds: list[Round] = field(default_factory=list)
     unassigned: list[Item] = field(default_factory=list)
+
+
+def move_round(r: Round, new_date: date) -> None:
+    """회차 날짜를 옮기고 '종료 이후 처리' 표시를 새 날짜로 다시 계산한다."""
+    r.moved_from, r.date = r.date, new_date
+    r.items = [_mark_after_eol(i, new_date) for i in r.items]
 
 
 def _mark_after_eol(item: Item, when: date) -> Item:

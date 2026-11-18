@@ -65,3 +65,19 @@ class PlanOut(BaseModel):
     created_at: str
     updated_at: str
     overlaps: list[dict] = Field(default_factory=list, description="같은 날 시간이 겹치는 다른 계획 (저장은 됨)")
+
+
+class CalendarEventIn(BaseModel):
+    """내 기존 일정 (심화 F3023). 시각이 없으면 하루 전체."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+    date: Date
+    start: Time | None = None
+    end: Time | None = None
+
+    @model_validator(mode="after")
+    def check_window(self):
+        _check_window(self.start, self.end)
+        return self

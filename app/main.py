@@ -18,12 +18,21 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import chat, logs, plans, upload
+from app.api import calendar, chat, logs, plans, upload
 from app.db import repo
 from app.events.bus import EventBus
 from app.events.logger import LoggingAgent
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+
+
+def make_calendar_backend(db_path: str):
+    from app.calendar.backend import make_calendar
+
+    try:
+        return make_calendar(db_path)
+    except Exception:  # Google 구현체 미준비 등 → 캘린더 없이 동작
+        return None
 
 
 def make_brain():
@@ -46,6 +55,7 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass  # 로깅 없이도 서비스는 동작
     app.state.brain = make_brain()
+    app.state.calendar = make_calendar_backend(app.state.db_path)
     yield
     if app.state.logger:
         app.state.logger.stop()
@@ -65,6 +75,7 @@ app.include_router(upload.router)
 app.include_router(chat.router)
 app.include_router(plans.router)
 app.include_router(logs.router)
+app.include_router(calendar.router)
 
 
 @app.get("/health")

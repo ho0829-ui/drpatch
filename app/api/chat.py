@@ -13,11 +13,13 @@ import threading
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
+from app.agent.runner import ToolRunner
 from app.agent.session import chat_turn, new_session_id
 from app.api.deps import save_confirmed_plan
 from app.api.schemas import ChatIn
 from app.db import repo
 from app.events.bus import Event
+from app.tools.default import build_registry
 
 router = APIRouter(tags=["chat"])
 
@@ -50,6 +52,16 @@ def _final(session_id: str, out: dict | None, answer: str | None = None, confirm
     }
 
 
+def register_on_calendar(app, session_id: str, plans: list[dict]) -> None:
+    """확정한 회차를 캘린더에 등록한다 (F3023, Tool 경유 → 로그에 남음). 실패해도 확정은 그대로."""
+    if app.state.calendar is None:
+        return
+    runner = ToolRunner(build_registry(app.state.calendar, app.state.db_path), app.state.bus.emitter(session_id))
+    for plan in plans:
+        result = runner.call("add_calendar_event", {"plan_id": plan["id"]})
+        plan["calendar_event"] = result["data"] if result["ok"] else None
+
+
 @router.post("/chat")
 def chat(body: ChatIn, request: Request):
     app = request.app
@@ -66,7 +78,8 @@ def chat(body: ChatIn, request: Request):
 
     def work() -> None:
         try:
-            box["out"] = chat_turn(session_id, body.message, brain, bus=bus, db_path=app.state.db_path)
+            box["out"] = chat_turn(session_id, body.message, brain, bus=bus, db_path=app.state.db_path,
+                                   calendar=app.state.calendar)
         except Exception as e:
             box["error"] = type(e).__name__
             bus.publish(session_id, "error", {"step": "chat", "kind": type(e).__name__})
@@ -99,6 +112,10 @@ def chat(body: ChatIn, request: Request):
                     confirmed = save_confirmed_plan(conn, session_id, out["last_plan"], out.get("confirm_rounds"))
                 finally:
                     conn.close()
+                register_on_calendar(app, session_id, confirmed)
+                while (event := sub.get(0)) is not None:  # 등록 Tool 호출 이벤트도 화면에
+                    if event.session_id == session_id:
+                        yield _line(public_event(event))
             yield _line(_final(session_id, out, confirmed=confirmed))
         finally:
             sub.close()

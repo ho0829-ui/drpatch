@@ -57,6 +57,7 @@ def chat_turn(
     db_path: str | None = None,
     today: date | None = None,
     runner: ToolRunner | None = None,
+    calendar=None,
 ) -> dict:
     """run_agent 결과 + session_id, last_plan(확정 대상), saved(기억 저장 성공 여부)."""
     session_id = session_id or new_session_id()
@@ -66,7 +67,7 @@ def chat_turn(
         runner.emit = emit
 
     out = run_agent(message, session["conditions"], brain, today=today, emit=emit,
-                    runner=runner, last_turn=session["last_turn"])
+                    runner=runner, last_turn=session["last_turn"], calendar=calendar, db_path=db_path)
 
     # 새 계획을 만들었을 때만 확정 대상을 바꾼다 (사실 질문 뒤에 "확정해줘"해도 직전 계획이 남게)
     # 회차가 없는 결과(우선순위만)는 확정할 대상이 아니므로 직전 계획을 그대로 둔다

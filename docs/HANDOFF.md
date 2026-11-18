@@ -1,17 +1,17 @@
-# 마지막 갱신: 2026-11-18 17:44 / 작성: Claude Code
+# 마지막 갱신: 2026-11-18 17:52 / 작성: Claude Code
 
 ## 지금 하던 것
-- 제출 기준선 정리 끝 → 태그 v1-submit (테스트 238개). README는 모든 기능을 끝낸 뒤 작성 (사용자 결정)
-  - 대표 시나리오 5개·완료 기준: docs/scenario-check.md (scripts/run_scenarios.py, --big은 20개)
-  - spec v1.14: 일정만 빠지면 우선순위(업그레이드 의존 반영) 먼저 + 일정만 되묻기 / "1회차 확정"은 그 회차만
-  - 공부 노트: docs/study/ (큰 그림, 요청 따라가기, 설계 결정, 과제)
+- 심화 F3023 캘린더 연동 끝 (테스트 255개, 실제 서버+GMS: 11/21 23시 일정 → 1회차 11/22로 이동, 확정 시 캘린더 등록)
+  - app/calendar/backend.py: CalendarBackend 인터페이스 + LocalCalendar(SQLite calendar_events), make_calendar(.env CALENDAR_BACKEND=local|google|off)
+  - app/tools/calendar_tools.py: list_calendar_events(date_from, date_to), add_calendar_event(plan_id) — kind local, build_registry(calendar, db_path)일 때만 등록
+  - app/agent/planner/calendar_fit.py: find_free_date (7일 안, 내가 등록한 일정 무시) / graph build의 fit_to_calendar → rounds의 moved_from·calendar_conflicts, plan.calendar_check, calendar_check 이벤트
+  - /chat 확정 → register_on_calendar (Tool 경유), /calendar/events GET·POST·DELETE
+  - app/timewindow.py: 시각 구간 계산 공용 (planner가 app.api를 부르지 않게)
+  - 기준선 태그 v1-submit은 캘린더 전 상태
 
-## 다음에 할 것 (사용자 결정, 2026-11-18)
-- 캘린더 연동 F3023: 로컬 저장소 구현 먼저 → Google Calendar로 교체 가능하게. 기존 일정과 겹치는 회차는 다음 빈 날로 이동(최대 7일) + 표시
-- Figma로 "보안 관제(SOC) 대시보드" 디자인 → Vite + Vue로 화면 다시 만들기 (frontend/ → 빌드 결과를 FastAPI가 제공)
-- 심화 F3020~F3022도 가능하면 (이상 징후, Planner·Worker, RAG)
-- 명세 밖 나만의 기능은 사용자가 더 고민 중
-- [G·Carbon] 제출 전 대조 (agy-guide ③)는 사용자가 실행
+## 다음에 할 것
+- Figma "보안 관제(SOC) 대시보드" 디자인 → Vite + Vue (frontend/, 빌드 결과를 FastAPI가 제공). 캘린더 화면은 Vue에서
+- (선택) GoogleCalendar 구현체: app/calendar/google.py — 같은 인터페이스, OAuth 키는 사용자가 준비
 
 ## 주의
 - spec v1.11 (리뷰 반영 규칙). 이벤트 종류에 plan_built 추가

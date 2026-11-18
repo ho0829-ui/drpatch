@@ -25,7 +25,9 @@ def plan_dict(items: ItemsResult, rounds: RoundsResult, upgrade: UpgradePlan | N
     return {
         "priority": [item_dict(i) for i in (ordered or [])],  # 회차와 별개로 위험한 순서 (일정이 없어도 보여 줌)
         "rounds": [
-            {"round_no": r.round_no, "date": r.date.isoformat(), "items": [item_dict(i) for i in r.items]}
+            {"round_no": r.round_no, "date": r.date.isoformat(), "items": [item_dict(i) for i in r.items],
+             "moved_from": r.moved_from.isoformat() if r.moved_from else None,
+             "calendar_conflicts": r.calendar_conflicts}
             for r in rounds.rounds
         ],
         "unassigned": [item_dict(i) for i in rounds.unassigned],
