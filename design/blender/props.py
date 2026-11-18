@@ -104,6 +104,7 @@ def iv():
     objs.append(C.cylinder("PoleCap", (0, 0, 4.12), 0.08, 0.06, m["teal"], bevel=0.02))
     objs.append(C.tube("Arm", C.catmull([(0, 0, 4.1), (0.5, 0, 4.12), (1.05, 0, 4.1)], 6), 0.04, m["metal"]))
     objs.append(C.tube("Hook", C.catmull([(1.05, 0, 4.1), (1.05, 0, 3.98), (1.0, 0, 3.92), (0.96, 0, 3.98)], 6), 0.022, m["metal"]))
+    bag_from = len(objs)  # 여기부터 수액 팩 부품 → 걸이 기준으로 줄인다
     objs.append(C.rbox("Hanger", (1.05, 0, 3.86), (0.5, 0.06, 0.18), m["white"], 0.03))
     objs.append(C.rbox("Bag", (1.05, 0, 2.9), (1.3, 0.42, 1.9), C.glass_mat("#F2FBF8", "bag"), 0.2))
     liquid = C.rbox("Liquid", (1.05, 0, 2.87), (1.1, 0.28, 1.6), C.material("liquid", "#6CC6B4", rough=0.12, transmission=0.55, coat=1.0), 0.12)
@@ -123,10 +124,16 @@ def iv():
     objs.append(C.cylinder("Chamber", (1.05, 0, 1.64), 0.11, 0.38, m["glass"]))
     objs.append(C.cylinder("ChamberCap", (1.05, 0, 1.43), 0.08, 0.06, m["white"]))
     objs.append(C.sphere("Drop", (1.05, 0, 1.76), (0.045, 0.045, 0.055), C.material("drop", "#6CC6B4", rough=0.1, coat=1.0), segs=16, rings=8))
+    BAG_S = 0.6  # 수액 팩은 거치대보다 작게 (500ml 팩 비율)
+    bag = C.empty("BagGroup", (1.05, 0, 3.86))
+    C.parent(objs[bag_from:], bag)
+    bag.scale = (BAG_S,) * 3
+    objs = objs[:bag_from] + [bag]
+    cz = 3.86 + (1.40 - 3.86) * BAG_S  # 줄어든 점적통 아래 끝
     # 관은 거치대에 감아 둔다 (장식용 — 어디에도 꽂지 않음)
-    tube_pts = C.catmull([(1.05, 0, 1.4), (1.0, -0.05, 1.05), (0.6, -0.12, 0.95), (0.18, -0.12, 1.0), (0.12, 0.12, 1.05), (0.25, 0.2, 1.15)], 8)
+    tube_pts = C.catmull([(1.05, 0, cz), (1.0, -0.05, cz - 0.55), (0.6, -0.12, cz - 0.95), (0.18, -0.12, cz - 1.05), (0.12, 0.12, cz - 1.0), (0.25, 0.2, cz - 0.9)], 8)
     objs.append(C.tube("Line", tube_pts, 0.022, C.material("line", "#E2F2EE", rough=0.2, transmission=0.4)))
-    objs.append(C.rbox("RollerClamp", (0.62, -0.12, 0.95), (0.24, 0.13, 0.12), m["teal"], 0.03))
+    objs.append(C.rbox("RollerClamp", (0.62, -0.12, cz - 0.95), (0.24, 0.13, 0.12), m["teal"], 0.03))
     return finish("IV", objs)
 
 
