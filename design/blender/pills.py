@@ -39,15 +39,15 @@ def capsule(key, c1, c2, letters):
     lip = C.torus(f"{key}_lip", (0, 0, -0.05), r2, 0.01, mat(key, c2))
     objs = [a, b, lip]
     C.apply_rot(objs, (0, PI / 2, 0))
-    t = C.text(f"{key}_txt", letters, (0.26, 0, r2 + 0.002), 0.17, mat(key, c1), extrude=0.012)
+    t = C.text(f"{key}_txt", letters, (0.26, 0, r2 + 0.004), 0.24, mat(key, c1), extrude=0.016)
     return objs + [t]
 
 
 def caplet(key, c1, c2, letters):
     body = C.rbox(f"{key}_body", (0, 0, 0), (1.0, 0.48, 0.34), mat(key, c1), 0.165)
     score = C.rbox(f"{key}_score", (0, 0, 0.166), (0.03, 0.26, 0.012), mat(key, c2), 0.004)
-    t1 = C.text(f"{key}_txt", letters, (-0.24, 0, 0.172), 0.2, mat(key, c2), extrude=0.012)
-    t2 = C.text(f"{key}_txt2", "Rx", (0.25, 0, 0.172), 0.16, mat(key, c2), extrude=0.012)
+    t1 = C.text(f"{key}_txt", letters, (-0.23, 0, 0.176), 0.28, mat(key, c2), extrude=0.016)
+    t2 = C.text(f"{key}_txt2", "Rx", (0.26, 0, 0.176), 0.18, mat(key, c2), extrude=0.014)
     return [body, score, t1, t2]
 
 
@@ -55,8 +55,8 @@ def tablet(key, c1, c2, letters):
     body = C.lathe(f"{key}_body", [(0.0, -0.15), (0.3, -0.12), (0.42, -0.06), (0.45, 0.0), (0.42, 0.06), (0.3, 0.12), (0.0, 0.15)], mat(key, c1), segs=56)
     body.scale = (1.05, 1.05, 1.0)
     band = C.torus(f"{key}_band", (0, 0, 0), 0.468, 0.022, mat(key, c2))
-    score = C.rbox(f"{key}_score", (0, -0.25, 0.135), (0.5, 0.025, 0.02), mat(key, c2), 0.008)
-    t = C.text(f"{key}_txt", letters, (0, 0.06, 0.152), 0.2, mat(key, c2), extrude=0.012)
+    score = C.rbox(f"{key}_score", (0, -0.3, 0.128), (0.4, 0.025, 0.02), mat(key, c2), 0.008)
+    t = C.text(f"{key}_txt", letters, (0, 0.04, 0.156), 0.3, mat(key, c2), extrude=0.016)
     return [body, band, score, t]
 
 
@@ -65,7 +65,7 @@ def softgel(key, c1, c2, letters):
     core = C.sphere(f"{key}_core", (0, 0, -0.02), (0.38, 0.2, 0.16), mat(key, c1), segs=32, rings=16)
     seam = C.torus(f"{key}_seam", (0, 0, 0), 1.0, 0.012, mat(key, c2))
     seam.scale = (0.52, 0.3, 1.0)
-    t = C.text(f"{key}_txt", letters, (0, 0, 0.262), 0.15, mat(key, c2), extrude=0.01)
+    t = C.text(f"{key}_txt", letters, (0, 0, 0.264), 0.22, mat(key, c2), extrude=0.014)
     return [gel, core, seam, t]
 
 

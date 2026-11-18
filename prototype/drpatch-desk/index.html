@@ -225,7 +225,7 @@ const MODELS = ['room', 'desk', 'blister_cell', 'blister_end', 'capsule', 'pills
 
 // 배치 (three 좌표: x 오른쪽, y 위, z 사용자 쪽). design/blender/scene_preview.py와 같게.
 const LAYOUT = {
-  bottle: [-5.9, 0, -1.9], tray: [-5.4, 0, 2.7], chart: [7.1, 0, 0.1, -0.08], stamp: [8.2, 0, 3.0],
+  bottle: [-5.9, 0, -1.9], tray: [-5.4, 0.075, 2.7] /* 곡반은 패드보다 살짝 높여 겹치지 않게 */, chart: [7.1, 0, 0.1, -0.08], stamp: [8.2, 0, 3.0],
   iv: [-12.6, -8.05, -9.2, 0, 2.5], pad: { x: 0.6, z: 0.9, w: 10.0, d: 4.8 },
   doctor: { x: 0, z: -7.0, seat: -2.6, scale: 2.8 },
 };
@@ -290,7 +290,7 @@ async function init() {
   key.position.set(-7, 20, 12); key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
   Object.assign(key.shadow.camera, { left: -16, right: 16, top: 14, bottom: -14, near: 1, far: 60 });
-  key.shadow.bias = -0.0003; key.shadow.normalBias = 0.03; key.shadow.radius = 4;
+  key.shadow.bias = -0.0006; key.shadow.normalBias = 0.06; key.shadow.radius = 4; // 얇은 잎·패드의 그림자 얼룩 방지
   scene.add(key);
   const windowLight = new THREE.DirectionalLight(0xe3f6ff, 0.7); windowLight.position.set(14, 8, -16); scene.add(windowLight);
 
@@ -589,7 +589,9 @@ async function init() {
     p.inner.rotation.set(0, 0, 0);
     await tween(260, (t) => { const q = Math.sin(t * Math.PI); p.inner.scale.set(1 + q * 0.12, 1 - q * 0.18, 1 + q * 0.12); }, ease.lin); // 칸에 쏙: 살짝 눌렸다 복원
     p.inner.scale.set(1, 1, 1);
+    await tween(240, (t) => (p.lift.rotation.x = TILT * t), ease.out); // 각인이 카메라 쪽을 보게 살짝 세운다
   }
+  const TILT = 0.55;
   async function packPill(p) {
     const bl = packs[p.it.round - 1]; const slot = bl.slots[bl.used++];
     p.slot = slot; p.pack = bl;
@@ -598,7 +600,7 @@ async function init() {
   }
   async function trayPill(p) {
     const [sx, sz] = TRAY_SPOTS[trayUsed++ % TRAY_SPOTS.length];
-    await flyTo(p, new THREE.Vector3(tray.position.x + sx, 0.32, tray.position.z + sz), 0.95, 2.2);
+    await flyTo(p, new THREE.Vector3(tray.position.x + sx, tray.position.y + 0.33, tray.position.z + sz), 0.95, 2.2);
     addTag(p);
   }
   const lidTo = (open) => tween(520, (t) => { const q = open ? t : 1 - t; lid.position.set(LID0.x + q * 1.0, LID0.y + q * 1.2, LID0.z); lid.rotation.z = -q * 0.7; }, ease.out);

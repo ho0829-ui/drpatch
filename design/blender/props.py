@@ -222,33 +222,32 @@ def desk():
     objs.append(C.rbox("Memo", (4.6, 3.5, 0.12), (1.3, 1.3, 0.24), m["paper"], 0.03, rot=(0, 0, -0.15)))
     objs.append(C.rbox("Sticky1", (4.65, 3.45, 0.25), (1.0, 1.0, 0.02), m["mint"], 0.01, rot=(0, 0, -0.05)))
     objs.append(C.rbox("Sticky2", (5.0, 3.1, 0.27), (0.7, 0.7, 0.02), C.material("sticky_coral", "#FFC7B5", rough=0.8, coat=0.0), 0.01, rot=(0, 0, 0.25)))
-    th = C.lathe("Thermo", C.capsule_profile(0.08, 0.55), m["white"], segs=24)
-    tip = C.lathe("ThermoTip", C.capsule_profile(0.07, 0.08), m["teal"], segs=24)
-    tip.location = (0, 0, -0.62)
-    disp = C.rbox("ThermoDisp", (0, -0.075, 0.15), (0.09, 0.02, 0.3), m["ink"], 0.01)
-    C.apply_rot([th, tip, disp], (0, PI / 2, 0))
-    for o in (th, tip, disp):
-        o.location = (6.4, 3.7, 0.09)
-        o.rotation_euler = (0, 0, 0.4)
-    objs += [th, tip, disp]
+    # 볼펜 (머그컵 왼쪽): 금속 촉 · 고무 그립 · 흰 몸통 · 청록 뒤캡 · 노크 버튼 · 클립
+    chrome = C.material("chrome", "#E9EEF0", rough=0.12, metal=1.0, coat=0.0)
+    rubber = C.material("rubber", "#1F3A40", rough=0.8, coat=0.0, sheen=0.3)
+    gloss = C.material("pen_body", "#FFFFFF", rough=0.18, coat=1.0, coat_rough=0.05)
+    parts = [
+        C.lathe("PenTip", [(0.0, 0.0), (0.012, 0.012), (0.03, 0.09), (0.06, 0.16), (0.0, 0.16)], chrome, segs=32),
+        C.lathe("PenGrip", [(0.0, 0.15), (0.068, 0.15), (0.074, 0.2), (0.074, 0.5), (0.07, 0.55), (0.0, 0.55)], rubber, segs=32),
+        C.lathe("PenRing", [(0.0, 0.54), (0.078, 0.54), (0.078, 0.6), (0.0, 0.6)], chrome, segs=32),
+        C.lathe("PenBody", [(0.0, 0.6), (0.078, 0.6), (0.08, 1.1), (0.076, 1.42), (0.0, 1.42)], gloss, segs=32),
+        C.lathe("PenCap", [(0.0, 1.41), (0.08, 1.41), (0.08, 1.6), (0.07, 1.64), (0.0, 1.64)], m["teal"], segs=32),
+        C.lathe("PenClick", [(0.0, 1.63), (0.04, 1.63), (0.04, 1.73), (0.0, 1.76)], chrome, segs=24),
+    ]
+    clip = C.rbox("PenClip", (0, -0.095, 1.35), (0.05, 0.02, 0.5), chrome, 0.008)
+    clip_top = C.rbox("PenClipTop", (0, -0.055, 1.59), (0.05, 0.07, 0.04), chrome, 0.01)
+    parts += [clip, clip_top]
+    C.apply_rot(parts, (0, PI / 2, 0))  # 눕힌다 (+X로 뻗음)
+    for o in parts:
+        o.location = (5.6, 3.6, 0.081)
+        o.rotation_euler = (0, 0, 2.7)
+    objs += parts
     # 머그컵
     mug = C.lathe("Mug", [(0.0, 0.0), (0.42, 0.0), (0.45, 0.8), (0.4, 0.8), (0.38, 0.08), (0.0, 0.08)], m["coral"])
     mug.location = (8.0, 2.4, 0)
     handle = C.torus("MugHandle", (8.47, 2.4, 0.42), 0.2, 0.05, m["coral"], rot=(PI / 2, 0, 0))
     tea = C.cylinder("Tea", (8.0, 2.4, 0.66), 0.39, 0.02, C.material("tea", "#7A5A44", rough=0.15, coat=1.0))
     objs += [mug, handle, tea]
-    # 스탠드 (박사님 쪽 왼쪽 뒤)
-    lx, ly = -7.4, 3.6
-    objs.append(C.cylinder("LampBase", (lx, ly, 0.08), 0.6, 0.16, m["deep"], bevel=0.05))
-    objs.append(C.sphere("LampJoint0", (lx, ly, 0.22), (0.12, 0.12, 0.12), m["metal"]))
-    objs.append(C.tube("LampArm", C.catmull([(lx, ly, 0.22), (lx + 0.3, ly - 0.2, 1.8), (lx + 0.6, ly - 0.5, 3.0)], 6), 0.07, m["teal"]))
-    objs.append(C.tube("LampArm2", C.catmull([(lx + 0.6, ly - 0.5, 3.0), (lx + 1.4, ly - 1.2, 3.2), (lx + 2.0, ly - 1.7, 2.9)], 6), 0.06, m["teal"]))
-    objs.append(C.sphere("LampJoint1", (lx + 0.6, ly - 0.5, 3.0), (0.11, 0.11, 0.11), m["metal"]))
-    head = C.lathe("LampHead", [(0.0, 0.5), (0.18, 0.5), (0.3, 0.3), (0.62, -0.25), (0.6, -0.3), (0.0, -0.05)], m["teal"], segs=40)
-    head.location = (lx + 2.15, ly - 1.85, 2.75)
-    head.rotation_euler = (0.5, -0.35, 0)
-    bulb = C.sphere("LampBulb", (lx + 2.2, ly - 1.95, 2.55), (0.22, 0.22, 0.22), C.emissive("bulb", "#FFF4D6", 4.0))
-    objs += [head, bulb]
     # 화분 (앞쪽 왼쪽 모서리): 다육이 잎을 겹겹이
     px, py = -8.0, -3.6
     pot = C.lathe("Pot", [(0.0, 0.0), (0.45, 0.0), (0.58, 0.8), (0.62, 0.86), (0.62, 0.95), (0.0, 0.95)], m["white"])
@@ -263,7 +262,8 @@ def desk():
         for k in range(count):
             a = k * 2 * PI / count + ring * 0.4
             lf = C.leaf(f"Leaf{ring}_{k}", length, width, 0.12, lm)
-            lf.location = (px, py, 0.95 + ring * 0.05)
+            # 밑동을 링마다 높이고 바깥으로 벌려, 잎끼리 같은 자리에서 겹쳐 깜빡이지 않게
+            lf.location = (px + 0.06 * (2 - ring) * math.cos(a), py + 0.06 * (2 - ring) * math.sin(a), 0.97 + ring * 0.09)
             lf.rotation_euler = (tilt * 0.6, 0, a)
             leaves.append(lf)
     objs += leaves
