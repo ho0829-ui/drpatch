@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { SEV, sevKey } from '../demo.js';
 import CalendarSheet from './CalendarSheet.vue';
+import LogSheet from './LogSheet.vue';
 
 const props = defineProps({
   sheet: { type: Object, default: null },
@@ -174,12 +175,7 @@ onBeforeUnmount(() => removeEventListener('keydown', onKeyDown));
       </template>
 
       <template v-else-if="sheet?.kind === 'log'">
-        <p class="eyebrow">진료 기록</p>
-        <h2 id="sheet-title">실행 로그</h2>
-        <ol v-if="sheet.logs?.length" class="log">
-          <li v-for="(l, idx) in sheet.logs" :key="idx">{{ l }}</li>
-        </ol>
-        <p v-else>아직 기록이 없어요. 진료를 시작해 보세요.</p>
+        <LogSheet />
       </template>
     </div>
   </div>
