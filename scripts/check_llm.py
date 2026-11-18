@@ -12,7 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.llm import LLMConfigError, get_llm, load_llm_config  # noqa: E402
-from app.tools.specs import TOOL_SPECS  # noqa: E402
+from app.tools.specs import llm_tool_specs  # noqa: E402
 
 SYSTEM = (
     "너는 서버 패치 계획을 돕는 Agent다. 필요한 정보가 있으면 주어진 Tool을 골라 호출을 요청한다. "
@@ -45,7 +45,7 @@ def main() -> int:
     print(f"  응답: {reply.text}\n")
 
     print("② Tool 선택 확인")
-    llm_with_tools = llm.bind_tools(TOOL_SPECS)
+    llm_with_tools = llm.bind_tools(llm_tool_specs())
     passed = 0
     for question, expected in CASES:
         try:

@@ -4,7 +4,7 @@ import pytest
 
 from app import llm as llm_module
 from app.llm import REQUIRED_ENV, LLMConfigError, get_llm, load_llm_config
-from app.tools.specs import TOOL_SPECS
+from app.tools.specs import TOOL_SPECS, llm_tool_specs
 
 
 @pytest.fixture
@@ -36,9 +36,11 @@ def test_get_llm_uses_env(monkeypatch, no_dotenv):
 
 
 def test_tool_specs_match_spec():
-    names = [s["function"]["name"] for s in TOOL_SPECS]
+    specs = llm_tool_specs()
+    names = [s["function"]["name"] for s in specs]
     assert names == ["get_eol", "get_vulns", "get_package_versions"]
-    required = {s["function"]["name"]: s["function"]["parameters"]["required"] for s in TOOL_SPECS}
+    required = {s["function"]["name"]: s["function"]["parameters"]["required"] for s in specs}
+    assert all(s.kind == "external" for s in TOOL_SPECS)
     assert required == {
         "get_eol": ["product", "cycle"],
         "get_vulns": ["name", "version"],
@@ -50,6 +52,6 @@ def test_tool_specs_bind_without_network(monkeypatch, no_dotenv):
     monkeypatch.setenv("GMS_KEY", "k")
     monkeypatch.setenv("GMS_BASE_URL", "https://example.invalid/v1")
     monkeypatch.setenv("LLM_MODEL", "test-model")
-    bound = get_llm().bind_tools(TOOL_SPECS)
+    bound = get_llm().bind_tools(llm_tool_specs())
     sent = bound.kwargs["tools"]
     assert [t["function"]["name"] for t in sent] == ["get_eol", "get_vulns", "get_package_versions"]
