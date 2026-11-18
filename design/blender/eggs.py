@@ -70,7 +70,13 @@ duck = [C.sphere("duck_body", (dx, dy, dz + 0.3 * S), (0.42 * S, 0.34 * S, 0.3 *
         C.sphere("duck_tail", (dx + 0.36 * S, dy, dz + 0.45 * S), (0.12 * S, 0.1 * S, 0.14 * S), yellow, segs=20, rings=10),
         C.sphere("duck_head", (dx - 0.22 * S, dy - 0.02, dz + 0.72 * S), (0.24 * S, 0.24 * S, 0.24 * S), yellow, segs=40, rings=20),
         C.sphere("duck_beak", (dx - 0.36 * S, dy - 0.18 * S, dz + 0.68 * S), (0.13 * S, 0.1 * S, 0.05 * S), beak, segs=20, rings=10)]
-duck += [C.sphere(f"duck_eye{s}", (dx - 0.27 * S + s * 0.1 * S, dy - 0.21 * S, dz + 0.8 * S), (0.03 * S, 0.02 * S, 0.035 * S), ink, segs=12, rings=6) for s in (-1, 1)]
+from mathutils import Vector  # noqa: E402
+hc, hr = Vector((dx - 0.22 * S, dy - 0.02, dz + 0.72 * S)), 0.24 * S
+for i, d in enumerate((Vector((-0.62, -0.62, 0.44)), Vector((0.2, -0.86, 0.46)))):  # 머리 양옆 (카메라 쪽으로 조금 돌린)
+    d.normalize()
+    duck.append(C.sphere(f"duck_eyeW{i}", tuple(hc + d * hr * 0.93), (0.075 * S, 0.075 * S, 0.085 * S), C.plastic("paper"), segs=20, rings=10))
+    duck.append(C.sphere(f"duck_eye{i}", tuple(hc + d * (hr * 0.93 + 0.045 * S)), (0.045 * S, 0.045 * S, 0.052 * S), ink, segs=16, rings=8))
+    duck.append(C.sphere(f"duck_shine{i}", tuple(hc + d * (hr * 0.93 + 0.08 * S) + Vector((0.012, -0.004, 0.025)) * S), (0.014 * S,) * 3, C.plastic("paper"), segs=8, rings=4))
 egg("duck", duck)
 
 # ── MONKEY PATCH 반창고 상자 (책상 뒤쪽 왼편, 예전 스탠드 자리) ──────
@@ -125,22 +131,21 @@ clk += [pivot, C.sphere("ClockPin", (kx, 12.61, kz), (0.07, 0.03, 0.07), ink, se
 clk.append(C.text("ClockUTC", "UTC", (kx, 12.67, kz - 0.42), 0.12, C.plastic("deep"), rot=FRONT, extrude=0.003))
 egg("clock", clk)
 
-# ── /dev/null 휴지통 (책상 오른쪽 앞 바닥) ──────────────────
-tx, ty = 11.4, -3.6
-bin_parts = [C.lathe("bin_body", [(0, 0), (0.78, 0), (0.9, 2.3), (0, 2.3)], white, segs=48),
-             C.lathe("bin_lid", [(0.0, 2.3), (0.95, 2.3), (0.95, 2.42), (0.6, 2.62), (0.0, 2.66)], teal, segs=48),
-             C.rbox("bin_pedal", (0, -0.85, 0.12), (0.6, 0.4, 0.08), deep, 0.03),
-             C.rbox("bin_band", (0, 0, 0.2), (0.1, 0.1, 0.1), white, 0.01)]
-for o in bin_parts[:2]:
-    o.location = (tx, ty, FLOOR)
-bin_parts[2].location = (tx, ty - 0.85, FLOOR + 0.12)
-bin_parts.pop()
-bin_parts.append(C.rbox("bin_label", (tx, ty - 0.86, FLOOR + 1.45), (1.1, 0.02, 0.4), paper, 0.04, rot=(0.05, 0, 0)))
-bin_parts.append(C.text("bin_text", "/dev/null", (tx, ty - 0.875, FLOOR + 1.45), 0.2, ink, rot=FRONT, extrude=0.005))
-egg("devnull", bin_parts)
+# ── /dev/null 페달 휴지통 (책상 오른쪽 앞 바닥, 높이 ≈60cm) ──────────────
+tx, ty = 11.6, -3.4
+bn = [C.lathe("bin_body", [(0, 0), (0.78, 0), (0.9, 2.3), (0, 2.3)], white, segs=48),
+      C.lathe("bin_lid", [(0.0, 2.3), (0.95, 2.3), (0.95, 2.42), (0.6, 2.62), (0.0, 2.66)], teal, segs=48),
+      C.rbox("bin_pedal", (0, -0.85, 0.12), (0.6, 0.4, 0.08), deep, 0.03),
+      C.rbox("bin_label", (0, -0.86, 1.45), (1.1, 0.02, 0.4), paper, 0.04, rot=(0.05, 0, 0)),
+      C.text("bin_text", "/dev/null", (0, -0.875, 1.45), 0.2, ink, rot=FRONT, extrude=0.005)]
+binroot = C.empty("bin_scale")
+C.parent(bn, binroot)
+binroot.location = (tx, ty, FLOOR)
+binroot.scale = (2.2,) * 3
+egg("devnull", [binroot])
 
 # ── node_modules 이름표 (큰 화분) ───────────────────────────
-px, py = 22.0, 1.8  # room.py 큰 화분과 같은 자리
+px, py = 22.4, -13.0  # room.py 큰 화분과 같은 자리
 tag = [C.rbox("nm_card", (px - 0.2, py - 1.86, FLOOR + 2.55), (1.5, 0.03, 0.5), paper, 0.05, rot=(0, 0.12, 0)),
        C.text("nm_text", "node_modules", (px - 0.2, py - 1.885, FLOOR + 2.57), 0.15, ink, rot=(PI / 2, 0.12, 0), extrude=0.004),
        C.text("nm_sub", "WATER: npm install", (px - 0.2, py - 1.885, FLOOR + 2.4), 0.07, C.plastic("deep"), rot=(PI / 2, 0.12, 0), extrude=0.003),
@@ -172,5 +177,26 @@ legs = [C.rbox(f"leg{s}{k}", (bx2 + s * 0.17, 12.7, bz2 + 0.08 - k * 0.1), (0.16
 xr.append(C.join(legs, "bug_legs"))
 xr.append(C.text("xr_text", "CHEST PA  ·  PROD-01", (xx, 12.705, xz - 1.38), 0.1, C.material("xr_label", "#9FD6CB", rough=0.5, coat=0.0), rot=FRONT, extrude=0.003))
 egg("xray", xr)
+
+# ── 학위증 (뒷벽, 박사님 머리 위 왼쪽) ─────────────────────
+dx2, dz2 = 0.4, 7.9
+gold = C.material("gold", "#C9A23F", rough=0.35, metal=0.6, coat=0.5)
+dip = [C.rbox("dip_frame", (dx2, 12.92, dz2), (3.0, 0.14, 2.3), C.material("dip_wood", "#6B4A35", rough=0.5, coat=0.4), 0.06),
+       C.rbox("dip_paper", (dx2, 12.84, dz2), (2.6, 0.04, 1.9), C.material("dip_paper", "#FBF6EA", rough=0.8, coat=0.0), 0.02),
+       C.text("dip_t1", "DIPLOMA", (dx2, 12.81, dz2 + 0.6), 0.22, ink, rot=FRONT, extrude=0.003),
+       C.text("dip_t2", "Doctor of Patchology", (dx2, 12.81, dz2 + 0.2), 0.14, ink, rot=FRONT, extrude=0.003),
+       C.text("dip_t3", "/dev/null University", (dx2, 12.81, dz2 - 0.12), 0.11, C.plastic("deep"), rot=FRONT, extrude=0.003),
+       C.cylinder("dip_seal", (dx2 + 0.85, 12.81, dz2 - 0.55), 0.22, 0.03, gold, rot=FRONT),
+       C.rbox("dip_ribbonA", (dx2 + 0.78, 12.815, dz2 - 0.85), (0.1, 0.01, 0.35), coral, 0.01, rot=(0, 0.3, 0)),
+       C.rbox("dip_ribbonB", (dx2 + 0.92, 12.815, dz2 - 0.85), (0.1, 0.01, 0.35), coral, 0.01, rot=(0, -0.3, 0)),
+       C.rbox("dip_sign", (dx2 - 0.6, 12.815, dz2 - 0.6), (0.9, 0.01, 0.02), ink, 0.005)]
+egg("diploma", dip)
+
+# ── 진료실 200호 문패 (왼쪽 벽, 문 옆) ───────────────────────
+plate = [C.rbox("door_plate", (-24.6, -1.6, FLOOR + 15.2), (0.12, 2.6, 1.3), white, 0.08),
+         C.rbox("door_plate_bar", (-24.53, -1.6, FLOOR + 15.75), (0.02, 2.6, 0.2), teal, 0.02),
+         C.text("door_plate_t", "ROOM 200", (-24.52, -1.6, FLOOR + 15.15), 0.36, ink, rot=(PI / 2, 0, PI / 2), extrude=0.006),
+         C.text("door_plate_ok", "OK", (-24.52, -1.6, FLOOR + 14.72), 0.2, C.plastic("teal"), rot=(PI / 2, 0, PI / 2), extrude=0.005)]
+egg("room200", plate)
 
 C.export_glb("eggs.glb")

@@ -153,7 +153,7 @@ for k in range(5):
     objs.append(C.sphere(f"Caster{k}", (2.0 * math.cos(a), 7.4 + 2.0 * math.sin(a), FLOOR + 0.22), (0.22, 0.22, 0.22), ink, segs=16, rings=8))
 
 # 큰 화분 (오른쪽 앞 바닥)
-pxx, pyy = 22.0, 1.8  # 침대(뒤)와 휠체어(앞) 사이 빈자리
+pxx, pyy = 22.4, -13.0  # 오른쪽 앞 구석 (침대는 오른쪽 벽을 따라 놓임)
 objs.append(C.lathe("FloorPot", [(0, 0), (1.3, 0), (1.7, 3.2), (1.8, 3.4), (0, 3.4)], white))
 objs[-1].location = (pxx, pyy, FLOOR)
 objs.append(C.lathe("FloorPotBand", [(1.66, 2.6), (1.72, 2.6), (1.74, 3.0), (1.68, 3.0)], teal))

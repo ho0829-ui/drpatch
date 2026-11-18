@@ -153,7 +153,7 @@
   <span class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
 
 <div class="ticker" id="ticker" aria-hidden="true"></div>
-<div class="note">예시 데이터 · 실제 조회 아님 · 드래그 회전 · 오른쪽 드래그 이동 · 휠 줌 · 더블클릭 처음으로 · <span id="egg-count">숨은 것 0/14</span></div>
+<div class="note">예시 데이터 · 실제 조회 아님 · 드래그 회전 · 오른쪽 드래그 이동 · 휠 줌 · 더블클릭 처음으로 · <span id="egg-count">숨은 것 0/16</span></div>
 
 <div class="bubble" id="bubble" aria-hidden="true"><img class="avatar" src="brand/mascot.svg" alt=""><b>DR.PATCH</b><span id="bubble-text"></span></div>
 <div class="sr-only" aria-live="polite" id="live"></div>
@@ -238,6 +238,8 @@ const EGGS = {
   eyechart: { tip: '시력표', say: '맨 아래 줄까지 읽으셨다면 시력이 아주 좋으신 겁니다. D… R… P… A… T… C… H… S… U… D… O.' },
   konami: { say: '↑↑↓↓←→←→BA! 무적 모드입니다. 오늘은 버그가 없을 겁니다. 아마도요.' },
   sudo: { say: '사용자는 sudoers 파일에 없습니다. 이 일은 보고될 겁니다.' },
+  diploma: { tip: '학위증 · Doctor of Patchology', say: '/dev/null 대학교 패치학 박사입니다. 졸업 논문도 /dev/null에 잘 보관돼 있죠.' },
+  room200: { tip: '진료실 200호 · OK', say: '여기는 200호, 들어오시면 OK입니다. 404호는… 아직 아무도 못 찾았어요.' },
   xray: { tip: '흉부 X-ray · PROD-01', say: '갈비뼈 사이에 버그가 보이네요. 꽤 오래 산 녀석입니다. 재현이 안 돼서 아무도 못 잡았죠.' },
 };
 const MODELS = ['room', 'ward', 'desk', 'eggs', 'blister_cell', 'blister_end', 'capsule', 'pills', 'bottle', 'tray', 'iv', 'chart', 'stamp', 'doctor'];
@@ -245,7 +247,7 @@ const MODELS = ['room', 'ward', 'desk', 'eggs', 'blister_cell', 'blister_end', '
 // 배치 (three 좌표: x 오른쪽, y 위, z 사용자 쪽). design/blender/scene_preview.py와 같게.
 const LAYOUT = {
   bottle: [-5.9, 0, -1.9], tray: [-5.4, 0.075, 2.7] /* 곡반은 패드보다 살짝 높여 겹치지 않게 */, chart: [7.1, 0, 0.1, -0.08], stamp: [8.2, 0, 3.0],
-  iv: [-12.6, -8.05, -9.2, 0, 2.5], pad: { x: 0.6, z: 0.9, w: 10.0, d: 4.8 },
+  iv: [-12.0, -8.05, -9.6, 0, 4.4] /* 실제 높이 ≈1.8m */, pad: { x: 0.6, z: 0.9, w: 10.0, d: 4.8 },
   doctor: { x: 0, z: -7.0, seat: -2.6, scale: 2.8 },
 };
 const CELL = { w: 1.4, d: 1.24 }, END_W = 1.2;
@@ -374,6 +376,19 @@ async function init() {
   const bulb = M.desk.getObjectByName('LampBulb');
   if (bulb) { const lamp = new THREE.PointLight(0xffe7b8, 6, 14, 1.6); bulb.getWorldPosition(lamp.position); scene.add(lamp); }
   world.add(prep(M.ward));
+  const tvTex = textTexture(850, 470, (c, w, h) => { // 대기 번호 모니터
+    c.fillStyle = '#0F3A3A'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#3E9E98'; c.fillRect(0, 0, w, 70);
+    c.fillStyle = '#FFFFFF'; c.font = FONT(700, 34, true); c.fillText('DR.PATCH  진료실 200', 28, 48);
+    c.fillStyle = '#B9E2D9'; c.font = FONT(500, 30); c.fillText('지금 진료 중', 40, 140);
+    c.fillStyle = '#FFFFFF'; c.font = FONT(700, 170, true); c.fillText('042', 36, 320);
+    c.fillStyle = '#B9E2D9'; c.font = FONT(500, 28); c.fillText('다음 환자', 470, 140);
+    c.fillStyle = '#FFFFFF'; c.font = FONT(700, 40, true); c.fillText('localhost', 470, 200); c.fillText('127.0.0.1', 470, 252);
+    c.fillStyle = '#F2734A'; c.font = FONT(600, 26); c.fillText('예상 대기 0ms', 470, 320);
+    c.fillStyle = '#1F6F6B'; c.fillRect(0, h - 64, w, 64);
+    c.fillStyle = '#B9E2D9'; c.font = FONT(500, 24); c.fillText('손 씻기 · 금요일 배포 금지 · 백업 필수', 28, h - 22);
+  });
+  const tvFace = M.ward.getObjectByName('TVFace'); if (tvFace) tvFace.material = new THREE.MeshBasicMaterial({ map: tvTex.tex, toneMapped: false });
   mergeStatic(M.room, [], false); mergeStatic(M.ward); mergeStatic(M.desk);
 
   const pickRoots = [];
