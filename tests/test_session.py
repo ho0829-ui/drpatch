@@ -120,7 +120,7 @@ def test_old_db_file_gets_new_columns(tmp_path):
 
 def test_review_13_confirm_without_plan(db):
     out = chat_turn("new", "확정해줘", FakeBrain(Analysis(intent="confirm", intent_reason="확정")), db_path=db, today=TODAY)
-    assert out["last_plan"] is None and "확정할 계획이 아직 없어요" in out["answer"]
+    assert out["last_plan"] is None and "도장은 처방이 나온 뒤에" in out["answer"]
 
 
 def test_priority_only_result_does_not_replace_confirm_target(db):

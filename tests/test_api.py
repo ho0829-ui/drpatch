@@ -79,7 +79,7 @@ def test_chat_stream_then_confirm_saves_rounds(client):
 
 def test_confirm_without_plan(client):
     final = chat(client, "확정해줘", None, FakeBrain(Analysis(intent="confirm", intent_reason="확정")))[-1]
-    assert final["confirmed"] is None and "확정할 계획이 아직 없어요" in final["answer"]
+    assert final["confirmed"] is None and "도장은 처방이 나온 뒤에" in final["answer"]
 
 
 def test_missing_input_stream_has_no_tool_events(client):

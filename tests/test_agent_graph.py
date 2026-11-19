@@ -303,7 +303,7 @@ def test_review_6_all_tools_down_stops_with_notice(transport):
                    ["eol_ubuntu_20.04", "eol_python_3.8", "osv_requests_2.19.0", "osv_django_2.2.0"]})
     events, emit = collect()
     out = run_agent("…", EXAMPLE_FILE, FakeBrain(EXAMPLE_MESSAGE), today=TODAY, emit=emit)
-    assert "가져오지 못했어요" in out["answer"] and out["plan"] is None
+    assert "못 가져왔네요" in out["answer"] and out["plan"] is None
     assert not any(e == "step_start" and p["step"] == "judge" for e, p in events)
     assert any(e == "error" and p["kind"] == "all_tools_failed" for e, p in events)
     assert "pypi_requests_all" not in t.calls  # 취약점 조회가 다 실패 → 버전 목록은 부르지 않음
@@ -385,7 +385,7 @@ def test_priority_first_when_only_schedule_missing(transport):
     plan = out["plan"]
     assert plan["rounds"] == [] and plan["schedule_missing"] == ["capacity", "first_date", "interval_days"]
     assert [i["name"] for i in plan["priority"]] == ["Python", "Ubuntu", "django", "requests"]  # 업그레이드가 먼저
-    assert "회차로 나눈 일정을 만들려면" in out["answer"] and "OS와 버전" not in out["answer"]
+    assert "회차 일정을 잡으려면" in out["answer"] and "OS와 버전" not in out["answer"]
 
 
 def test_priority_fallback_text_without_llm(transport):
@@ -419,7 +419,7 @@ def test_v117_macos_followup_asks_only_version():
     assert out2["conditions"].os_version is None
     assert out2["missing"] == ["os"]
     assert out2["tool_calls"] == 0
-    assert "macOS 버전" in out2["answer"]
+    assert "맥이시군요" in out2["answer"] and "macOS 15" in out2["answer"]
     assert out2["answer"] != out1["answer"]
 
 
