@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/review-frontend] R2 완료: `docs/review-frontend.md` 작성 (`frontend/src` 자원 정리·매 프레임 낭비·오류·누수·접근성·명세·보안 리뷰 및 I3~I6 반영 항목 정리)
 - [Claude Code 2026-11-19] R1(review-final) 검증 → 5건 모두 맞음. 1·2·3·5 직접 고침(제외 목록 표시, 캘린더 없을 때도 도장, 로그 건수·LLM 판단 표시, 조회 칩 중립), 4는 I5에, 숨긴 탭 첫 로딩 문제는 I3에 덧붙임. 실제 GMS로 업로드→계획→확정 확인, 255 통과. 다음: R2(Neon)·S7(Flash)
 - [agy/review-final] R1 완료: `docs/review-final.md` 작성 (명세 v1.16 완료 기준·화면·말투 ↔ 코드·테스트 대조 및 제출 전 필수 수정 5건 정리)
 - [Claude Code 2026-11-19] agy T1~T7 검증 → main 합침(ff, 1e8a378). 범위 OK(app/main.py만), 빌드 OK, 실제 GMS로 업로드→대화→회차 3판→처방전→확정→캘린더→기록→목록 보기 확인
