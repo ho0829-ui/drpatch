@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/fe-17-examples] I13 완료: 예시 시뮬레이션 4종(`frontend/public/examples/index.json`·4개 freeze 파일), 도크 📎 옆 `"예시"` 버튼 + `ExampleSheet.vue` + 자동 업로드/조건 채우기(동적 다음 화요일·미자동전송) + 오프라인 파싱·정규식 테스트(`tests/test_examples.py`), 268 통과·빌드 경고 0
 - [agy/fs-16-calendar] I12 완료: `plans` 완료 상태(`status`/`done_at`·항목 전체 체크 연동·겹침 제외·기존 DB 자동 컬럼 추가) + 예약 달력 카드(`PlanCard.vue`, 다가오는 점검·끝난 점검 접기·현재 세션 기본 필터·달력 회차 배지·수정/삭제·좁은 폭 `⋯` 메뉴·블리스터 `끝` 도장), 266 통과·빌드 경고 0
 - [agy/fs-15-conditions] I11 완료: 입력창 위 조건 칩 줄(`ConditionChips.vue`, 빠진 칩 클릭 시 예시 조각 입력, 모바일 가로 스크롤) + 계획 답 맨 앞 코드 생성 조건 한 줄(`conditions_header`), 262 통과·빌드 경고 0
 - [agy/fe-14-restart] I10 완료: `final.missing` 시 상태 칩 `"정보 필요"` 전환, `"처음부터"` 확인+`"새 차트입니다"` 인사, 업로드 중 `"접수 중…"` 차단 및 `pendingUpload` 대기(세션 엇갈림 방지)

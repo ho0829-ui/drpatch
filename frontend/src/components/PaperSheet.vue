@@ -2,13 +2,14 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { SEV, sevKey } from '../demo.js';
 import CalendarSheet from './CalendarSheet.vue';
+import ExampleSheet from './ExampleSheet.vue';
 import LogSheet from './LogSheet.vue';
 
 const props = defineProps({
   sheet: { type: Object, default: null },
 });
 
-const emit = defineEmits(['close', 'inspect-item', 'plan-done-change']);
+const emit = defineEmits(['close', 'inspect-item', 'plan-done-change', 'select-example']);
 const closeBtn = ref(null);
 
 const sevLabel = (sev) => SEV[sevKey(sev)][1];
@@ -203,6 +204,10 @@ onBeforeUnmount(() => removeEventListener('keydown', onKeyDown));
 
       <template v-else-if="sheet?.kind === 'log'">
         <LogSheet />
+      </template>
+
+      <template v-else-if="sheet?.kind === 'examples'">
+        <ExampleSheet @select="emit('select-example', $event)" />
       </template>
     </div>
   </div>
