@@ -1,6 +1,9 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-19] spec v1.17 — 직접 써 보며 나온 문제를 명세로: OS 입력(macOS·Windows, 버전만 되묻기), 고정 문구도 박사님 말투, 약병 알약 24알 상한, 말풍선 눌러 닫기, 왼쪽 위 로고. agy 작업 문서 `docs/agy-prompt-next.md`(I7 OS → I8 말투, I9 화면). 코드는 안 고침
+  - 재현(임시 DB, 실제 GMS): 130개 freeze 업로드 → "Python 3.11…" → OS 물음 → "로컬 맥북" → os=macos·버전 없음 → 같은 문장 또 물음. endoflife: macos 15 → NO_EOL_DATE(eolFrom null·isMaintained true), windows 11 → PRODUCT_NOT_FOUND(실제 cycle `11-24h2-w` 꼴)
+  - 로고 "작게 검게 변함"은 1024px 창에서 재현 못 함 → I9에서 재현부터. 따로 본 것: 계획 답에 "Ubuntu 20.04 → 미상으로 올립니다" 문장(명세에 안 넣음, 확인 필요)
 - [agy/docs-cleanup] 완료·폐기된 agy 프롬프트 문서 3개 삭제(`agy-guide.md`, `agy-prompt-drpatch.md`, `agy-prompt-next.md`) 및 `docs/tasks.md`·`docs/HANDOFF.md` 정리
 - [Claude Code 2026-11-19] I3~I6 검증 → main 합침(ff, 319478c). 범위 OK(frontend만, 새 라이브러리 없음), 빌드 경고 없음, 255 통과
   - 브라우저 확인: 로딩 진행률, I5(11/21 일정 → 1회차 11/22, "원래 11/21"·옮김 안내, 확인 후 일정 삭제), I4(413 문구, API 키 없는 서버 → "설정 필요", 계획 중 서버 끔 → "연결 끊김"+[다시 시도] → 다시 켜고 누르니 계획 완료), 모바일 375 배치
@@ -34,6 +37,7 @@
   - 기준선 태그 v1-submit은 캘린더 전 상태
 
 ## 다음에 할 것
+- agy I7(`agy/be-01-os`) → I8(`agy/be-02-tone`), I9(`agy/fe-12-polish`) — 끝나면 Claude Code가 확인·합침
 - 저장소 정리: 구 화면 `web/` 삭제 여부 결정, `main`에 합쳐진 `agy/*` 로컬 브랜치 정리, `git push`
 - 최종 제출 마무리: 셀프 체크리스트 점검, `README.md` 최종 작성
 - (선택) R2 잔여 소규모 항목: `logs`·`chatMessages` 배열 상한 설정 (`clinicController.js`, `App.vue`)
