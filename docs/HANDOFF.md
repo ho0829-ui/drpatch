@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/docs-cleanup] 완료·폐기된 agy 프롬프트 문서 3개 삭제(`agy-guide.md`, `agy-prompt-drpatch.md`, `agy-prompt-next.md`) 및 `docs/tasks.md`·`docs/HANDOFF.md` 정리
 - [Claude Code 2026-11-19] I3~I6 검증 → main 합침(ff, 319478c). 범위 OK(frontend만, 새 라이브러리 없음), 빌드 경고 없음, 255 통과
   - 브라우저 확인: 로딩 진행률, I5(11/21 일정 → 1회차 11/22, "원래 11/21"·옮김 안내, 확인 후 일정 삭제), I4(413 문구, API 키 없는 서버 → "설정 필요", 계획 중 서버 끔 → "연결 끊김"+[다시 시도] → 다시 켜고 누르니 계획 완료), 모바일 375 배치
   - 고침: 답이 대화 기록에 두 번 들어가던 것(onChatTurn 한 곳에서만 넣음)
@@ -33,28 +34,12 @@
   - 기준선 태그 v1-submit은 캘린더 전 상태
 
 ## 다음에 할 것
-- 디자인 확정: **DR.PATCH 진료 책상** (docs/design.md가 유일한 기준). 이전 시안(SOC·Figma, 와펜·수집 패치, Carbon 1차)과 agy/design-* 브랜치·브리프는 모두 삭제
-  - 시제품 prototype/drpatch-desk/index.html (Three.js, 예시 데이터). 보기: launch.json "drpatch-proto" → http://localhost:8010/drpatch-desk/
-  - 사용자 피드백 받은 뒤: 명세에 보이는 이름(DR.PATCH)·말투 규칙 반영 → tasks.md를 작은 작업으로 쪼개기
-  - 역할: 계획·검증·디자인은 Claude Code(Opus), 구현은 agy 하이드로젠 (agy/ 브랜치, 합치기 전 diff·pytest 확인). 첫 작업은 작게 시험
-- 디자인 2차 (인터뷰): 팔레트 '병원 청록'(흰 가구·민트 벽·청록·코랄 강조, 코랄은 소품에만), 3D는 Blender 스크립트로 .glb
-  - design/blender/common.py(팔레트·재질·도형) + 소품별 스크립트 → prototype/drpatch-desk/models/*.glb, 미리보기 design/blender/previews/
-  - 실행: blender -b --factory-startup -P design/blender/doctor.py (Blender 5.3)
-  - 완료: 닥터 패치(나이 든 박사님) + 소품 7종(capsule·blister·iv·bottle·chart·stamp·desk) → 시제품이 .glb 사용, 팔레트 병원 청록. docs/design.md 갱신함
-  - 3차: 진료실(room.glb), 진짜 책상(나무 상판), 앉은 박사님, 줌, 블리스터 자동 조립(blister_cell/end), 곡반·다음 진료, 특별 알약(pills.glb), GTAO
-  - 4차: 최적화(유리·합치기·AO 자동), 유격, 덮개 제거, 수액 관, 이름표·검사 결과 칩, 천장·줌 한계 → docs/design.md 4-2
-  - 이스터에그 13개 (eggs.py, design.md 4-3). 약장 위 칸을 앞이 뚫린 틀로 고침. 화분 깨짐 원인 = 막힌 윗면과 흙이 같은 높이
-  - 병실 소품(ward.py)·X-ray 이스터에그(14개)·볼펜 실제 비율·블라인드 끈·자유 카메라(OrbitControls, 범위 제한) → design.md 4-4
-  - 병실 소품을 실제 크기로(1단위≈9.4cm) 다시 + 빈 곳 채움(문·대기 의자·처치 카트·가스 패널·진료등·대기 모니터 등), 이스터에그 16개
-  - 로고 확정 (design/logo, design.md 4-5): 메인=안경 쓴 캡슐, 아이콘=반사경·안경·콧수염, 마스코트=얼굴 배지. 시제품 적용(사이드바·파비콘·말풍선·로딩)
-  - agy(하이드로젠) 작업 프롬프트: docs/agy-prompt-drpatch.md (T1 시험 작업 → T7, 작업마다 Claude Code 확인 후 main 합치기)
-  - 다음: T1 넘기기 / 명세에 이름(DR.PATCH)·말투 반영은 Claude Code가 (brain.py 프롬프트는 agy에 안 맡김)
-  - (이전 메모) 사용자 피드백 → 로고(캐릭터 기반) → 명세에 이름·말투 반영 → 하이드로젠용 작업 쪼개기
-- 화면은 Vite + Vue (frontend/, 빌드 결과를 FastAPI가 제공) + Three.js 책상 장면
-- (선택) GoogleCalendar 구현체: app/calendar/google.py — 같은 인터페이스, OAuth 키는 사용자가 준비
+- 저장소 정리: 구 화면 `web/` 삭제 여부 결정, `main`에 합쳐진 `agy/*` 로컬 브랜치 정리, `git push`
+- 최종 제출 마무리: 셀프 체크리스트 점검, `README.md` 최종 작성
+- (선택) R2 잔여 소규모 항목: `logs`·`chatMessages` 배열 상한 설정 (`clinicController.js`, `App.vue`)
 
 ## 주의
-- spec v1.11 (리뷰 반영 규칙). 이벤트 종류에 plan_built 추가
+- spec v1.16 (DR.PATCH 진료실 화면·말투·캘린더 반영). 이벤트 종류에 plan_built·calendar_check 포함
 - 가짜 LLM 테스트는 GmsBrain 자체를 검사하지 않음 → brain.py를 고치면 scripts/run_agent.py로 실제 확인할 것
 - 응답 시간: 예시 한 건 25~28초. 대부분 LLM 4번(analyze·plan·replan·respond). judge의 목표 버전 재조회는 패키지마다 순서대로 → 3일차 측정 때 병렬화 후보
 - 재계획 방식은 LLM이 고름(upgrade_python/hold), 실패하면 upgrade_python. 되묻기 문장은 코드 (spec v1.9)

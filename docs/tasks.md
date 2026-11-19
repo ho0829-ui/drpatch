@@ -32,7 +32,7 @@
 - [x] [C] 화면 탭 3개 + 실행 단계 표시 + 오류 안내 (F3018~F3019)
 - [x] [나] 대표 시나리오 5개를 화면에서 직접 돌려보기 (spec 완료 기준 체크) → docs/scenario-check.md (Claude Code가 실제 서버로 대신 실행)
 - [x] [나] 패키지 20개 파일로 응답 시간 재기 → 느리면 [C] 병렬 호출·캐시 → docs/scenario-check.md (Claude Code가 실제 서버로 대신 실행)
-- [ ] [G·Carbon] 제출 전: 전체 코드 vs spec 완료 기준 대조 (agy-guide ③, 백그라운드로 돌려두기)
+- [x] [G·Neon] 제출 전: 전체 코드 vs spec 완료 기준 대조 및 프론트엔드 리뷰 → docs/review-final.md, docs/review-frontend.md (반영 완료)
 - [ ] [나] 셀프 체크리스트로 점검 → 제출
 - [x] (시간 남으면) 심화 하나 선택 → F3023 캘린더 연동 (로컬 구현체, 충돌 회차 이동, 확정 시 등록)
 
@@ -40,7 +40,6 @@
 - [x] ~~ [C] Figma "보안 관제(SOC) 대시보드" 디자인 → docs/design.md (화면 4개·컴포넌트 7개·토큰)~~ (폐기)
 - [x] [C] 디자인 인터뷰 → DR.PATCH 진료 책상 방향 (docs/design.md) + 시제품 prototype/drpatch-desk/
 - [x] [C·G] Vite + Vue로 화면 다시 만들기 (캘린더 화면 포함) — agy T1~T7, Claude Code 검증·수정 (2026-11-19)
-- [ ] [C] (선택) Google Calendar 구현체 — OAuth 준비 후
-- [ ] [C] (선택) 심화 F3020 이상 징후 / F3021 Planner·Worker / F3022 RAG
-- [ ] [나] 명세 밖 나만의 기능 정하기
+- [x] [C·G] 화면 마무리 I3~I6 (청크 분리·로딩, 오류 화면·재시도, 캘린더 이동 경고, 모바일 터치) (2026-11-19)
+- [x] ~~ [C] (선택) Google Calendar 구현체 — OAuth 준비 후~~ (폐기 — SQLite 로컬 캘린더로 마무리)
 - [ ] [나] 모든 기능 끝난 뒤 README
