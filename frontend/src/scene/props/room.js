@@ -6,11 +6,14 @@ export function setupRoom(world, scene, M, addPick) {
   world.add(prep(M.desk));
 
   const bulb = M.desk.getObjectByName('LampBulb');
+  let lamp = null;
   if (bulb) {
-    const lamp = new THREE.PointLight(0xffe7b8, 6, 14, 1.6);
+    lamp = new THREE.PointLight(0xffe7b8, 6, 14, 1.6);
     bulb.getWorldPosition(lamp.position);
     scene.add(lamp);
   }
+  // 창 하늘판은 합치지 않고 남겨 둔다 — 야간 모드가 밤하늘 그림으로 바꾼다
+  const sky = M.room.getObjectByName('WindowSky');
 
   world.add(prep(M.ward));
 
@@ -49,8 +52,9 @@ export function setupRoom(world, scene, M, addPick) {
     tvFace.material = new THREE.MeshBasicMaterial({ map: tvTex.tex, toneMapped: false });
   }
 
-  mergeStatic(M.room, [], false);
+  mergeStatic(M.room, sky ? [sky] : [], false);
   mergeStatic(M.ward, tvFace ? [tvFace] : []);
   mergeStatic(M.desk);
   if (tvFace && addPick) addPick(tvFace, 'calendar');
+  return { lamp, sky, tvFace };
 }

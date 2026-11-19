@@ -31,7 +31,8 @@ export function createEngine(canvas, tween, isReduced) {
   const camera = new THREE.PerspectiveCamera(36, 1, 0.5, 150);
   let distScale = 1;
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x9fcfc4, 0.6));
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x9fcfc4, 0.6);
+  scene.add(hemi);
   const key = new THREE.DirectionalLight(0xfff8ef, 2.1);
   key.position.set(-7, 20, 12);
   key.castShadow = true;
@@ -165,6 +166,7 @@ export function createEngine(canvas, tween, isReduced) {
     renderer,
     scene,
     camera,
+    lights: { hemi, key, windowLight }, // 야간 모드가 낮↔밤으로 바꾼다 (night.js)
     controls,
     getDistScale: () => distScale,
     getUseAO: () => useAO,

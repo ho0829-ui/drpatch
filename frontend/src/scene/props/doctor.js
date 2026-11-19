@@ -102,5 +102,5 @@ export function setupDoctor(world, M, addPick, tween, sleep) {
     };
   }
 
-  return { doctor, docAct, tick, getBubbleAnchor };
+  return { doctor, docBody, docAct, tick, getBubbleAnchor };
 }

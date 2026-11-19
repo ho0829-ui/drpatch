@@ -41,6 +41,22 @@ export const QUIPS = [
   '휠을 굴려 보세요. 진료실이 더 넓답니다.',
 ];
 
+// 야간 당직 진료실 (숨은 것 16/16을 다 찾으면 열림)
+export const QUIPS_NIGHT = [
+  '새벽 세 시에 오는 서버는 대개 사연이 있죠.',
+  '야간엔 핫픽스만 받습니다. 농담입니다. 아마도요.',
+  '이 시간엔 로그도 졸고 있습니다. 조용히 보시죠.',
+  '밤에 하는 배포는 아침에 후회가 됩니다. 메모해 두세요.',
+  '모자는 신경 쓰지 마세요. 당직의 특권입니다.',
+];
+
+export const NIGHT_LINES = {
+  unlock: '허허… 다 찾으셨군요. 이제 진짜 진료실을 보여 드리죠. 오늘은 제가 야간 당직입니다.',
+  toNight: '불을 낮춥니다. 야간 당직 시작이에요.',
+  toDay: '해가 떴군요. 다시 낮 진료입니다.',
+  greeting: '어서 오세요. 야간 당직입니다. 오늘 밤은 어디가 아픈 서버인가요? requirements.txt부터 올려 주시죠.',
+};
+
 export const EGGS = {
   hotfix: { tip: '해열제 HOTFIX', say: '열 날 때 한 알. 핫픽스는 원래 급할 때 먹는 겁니다. 부작용으로 또 다른 핫픽스가 생길 수 있어요.' },
   rollback: { tip: '되돌림 시럽 ROLLBACK', say: '어제 배포가 체했으면 이걸로 되돌립니다. 백업이 있을 때만 효과가 있어요.' },
@@ -63,7 +79,7 @@ export const EGGS = {
 export const MODELS = [
   'room', 'ward', 'desk', 'eggs',
   'blister_cell', 'blister_end', 'capsule', 'pills',
-  'bottle', 'tray', 'iv', 'chart', 'stamp', 'doctor',
+  'bottle', 'tray', 'iv', 'chart', 'stamp', 'doctor', 'night',
 ];
 
 export const LAYOUT = {

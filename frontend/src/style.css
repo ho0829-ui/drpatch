@@ -509,3 +509,8 @@ dd { margin: 0; }
   .paper, .bubble, .btn { transition: none; }
 }
 body.reduced .paper, body.reduced .bubble { transition: none; }
+
+/* 야간 당직 토글 (숨은 것 16/16) */
+.night-toggle { border: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font: inherit; }
+.night-toggle[aria-pressed="true"] { background: #24406B; color: #FFF3C4; }
+.night-toggle:focus-visible { outline: 3px solid var(--color-deep); outline-offset: 2px; }

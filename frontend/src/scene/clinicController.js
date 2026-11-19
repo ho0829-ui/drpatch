@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as api from '../api.js';
-import { COLOR, EGGS, MODELS, QUIPS, SEV, sevKey } from '../demo.js';
+import { COLOR, EGGS, MODELS, NIGHT_LINES, QUIPS, QUIPS_NIGHT, SEV, sevKey } from '../demo.js';
+import { setupNight } from './night.js';
 import { BASE_DIST, createEngine } from './engine.js';
 import { addGroundShadows } from './shadows.js';
 import { createTweener, ease } from './utils.js';
@@ -38,6 +39,7 @@ export async function createClinicController(canvas, callbacks) {
     onPlanUpdate,
     onChatTurn,
     onRetryChange,
+    onNightChange,
   } = callbacks;
 
   const manager = new THREE.LoadingManager();
@@ -78,7 +80,7 @@ export async function createClinicController(canvas, callbacks) {
     if (idx >= 0) pickRoots.splice(idx, 1);
   };
 
-  setupRoom(world, scene, M, addPick);
+  const roomApi = setupRoom(world, scene, M, addPick);
   addGroundShadows(world);
   const { eggNodes, tick: tickEggs } = setupEggs(world, M, addPick);
   const blisterApi = setupBlisters(world, M, addPick, removePick);
@@ -88,7 +90,8 @@ export async function createClinicController(canvas, callbacks) {
   const logs = [];
   const chartApi = setupChart(world, M, addPick, () => logs);
   const { stampPacks } = setupStamp(world, M, addPick, tween);
-  const { docAct, tick: tickDoctor, getBubbleAnchor } = setupDoctor(world, M, addPick, tween, sleep);
+  const { docBody, docAct, tick: tickDoctor, getBubbleAnchor } = setupDoctor(world, M, addPick, tween, sleep);
+  const nightApi = setupNight({ world, scene, renderer: engine.renderer, lights: engine.lights, room: roomApi, docBody, M, tween });
 
   let state = 'idle'; // 'idle' (업로드 전) | 'ready' (업로드됨) | 'running' | 'planned' | 'confirming' | 'done'
   let popped = null;
@@ -117,10 +120,41 @@ export async function createClinicController(canvas, callbacks) {
   } catch { /* 무시 */ }
   onEggCount(found.size, Object.keys(EGGS).length);
 
+  // ── 야간 당직 진료실 (16/16) ───────────────────────────
+  const NIGHT_KEY = 'drpatch-night';
+  const allFound = () => found.size >= Object.keys(EGGS).length;
+  let nightPref = false;
+  try {
+    nightPref = localStorage.getItem(NIGHT_KEY) === '1';
+  } catch { /* 무시 */ }
+  if (nightPref && allFound()) {
+    nightApi.set(true, { animate: false });
+  }
+  onNightChange?.({ unlocked: allFound(), night: nightApi.isNight() });
+
+  async function setNight(on, { say = true } = {}) {
+    if (!allFound()) return;
+    try {
+      localStorage.setItem(NIGHT_KEY, on ? '1' : '0');
+    } catch { /* 무시 */ }
+    onNightChange?.({ unlocked: true, night: on });
+    if (say) onSay(on ? NIGHT_LINES.toNight : NIGHT_LINES.toDay);
+    await nightApi.set(on, { animate: !isReduced() });
+  }
+
+  async function unlockNight() {
+    await sleep(2600); // 마지막 숨은 것의 대사를 먼저 읽게
+    onSay(NIGHT_LINES.unlock);
+    docAct.dance();
+    logEvent('easter_egg', 'night_shift');
+    await setNight(true, { say: false });
+  }
+
   function runEgg(id) {
     const e = EGGS[id];
     if (!e) return;
     const first = !found.has(id);
+    const wasAll = allFound();
     found.add(id);
     onEggCount(found.size, Object.keys(EGGS).length);
     try {
@@ -128,6 +162,7 @@ export async function createClinicController(canvas, callbacks) {
     } catch { /* 무시 */ }
     onSay((first ? '(숨은 것 발견!) ' : '') + e.say);
     logEvent('easter_egg', id);
+    if (first && !wasAll && allFound()) unlockNight();
 
     const node = eggNodes[id];
     if (e.act === 'no') docAct.no();
@@ -259,7 +294,7 @@ export async function createClinicController(canvas, callbacks) {
   onSay(
     restarted
       ? '새 차트입니다. 파일부터 올려 주시죠.'
-      : '어서 오세요. 오늘은 어디가 불편한 서버인가요? requirements.txt부터 올려 주시죠.',
+      : nightApi.isNight() ? NIGHT_LINES.greeting : '어서 오세요. 오늘은 어디가 불편한 서버인가요? requirements.txt부터 올려 주시죠.',
   );
     }
   }
@@ -656,7 +691,8 @@ export async function createClinicController(canvas, callbacks) {
       else onOpenSheet({ kind: 'tray', plan: currentPlan, color: COLOR.teal });
     } else if (d.kind === 'doctor') {
       docAct.hop();
-      onSay(QUIPS[Math.floor(Math.random() * QUIPS.length)]);
+      const qs = nightApi.isNight() ? QUIPS_NIGHT : QUIPS;
+      onSay(qs[Math.floor(Math.random() * qs.length)]);
     } else if (d.kind === 'jar') {
       if (!currentPackages.length) {
         onUploadRequest?.();
@@ -739,7 +775,7 @@ export async function createClinicController(canvas, callbacks) {
   onSay(
     restarted
       ? '새 차트입니다. 파일부터 올려 주시죠.'
-      : '어서 오세요. 오늘은 어디가 불편한 서버인가요? requirements.txt부터 올려 주시죠.',
+      : nightApi.isNight() ? NIGHT_LINES.greeting : '어서 오세요. 오늘은 어디가 불편한 서버인가요? requirements.txt부터 올려 주시죠.',
   );
 
   function frame(now) {
@@ -852,6 +888,7 @@ export async function createClinicController(canvas, callbacks) {
     confirmPlan,
     unpopPill,
     markRoundDone,
+    setNight,
     destroy() {
       cancelAnimationFrame(rafId);
       cancelLongPress();
@@ -866,6 +903,7 @@ export async function createClinicController(canvas, callbacks) {
       removeEventListener('keydown', onKeyDown);
       removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      nightApi.dispose();
       engine.dispose();
     },
   };

@@ -36,6 +36,7 @@ const bubblePos = ref({ right: 0, top: 0 });
 const logs = ref([]);
 const activeSheet = ref(null);
 const eggCount = ref({ found: 0, total: 16 });
+const nightState = ref({ unlocked: false, night: false });
 const currentPlan = ref(null);
 const currentPackages = ref([]);
 const currentConditions = ref(null);
@@ -424,6 +425,7 @@ function reloadPage() {
       @plan-update="currentPlan = $event.plan; currentPackages = $event.packages"
       @chat-turn="onChatTurn"
       @retry-change="retryMessage = $event"
+      @night-change="nightState = $event"
     />
 
     <div v-if="dragging" class="drop-overlay" @click="clearDrag">
@@ -445,6 +447,8 @@ function reloadPage() {
     <TopTools
       :reduced="reduced"
       :eggs="eggCount"
+      :night-state="nightState"
+      @toggle-night="sceneRef?.setNight(!nightState.night)"
       @update:reduced="reduced = $event"
       @toggle-list="listView = true"
       @reset="reloadPage"

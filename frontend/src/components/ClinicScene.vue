@@ -21,6 +21,7 @@ const emit = defineEmits([
   'plan-update',
   'chat-turn',
   'retry-change',
+  'night-change',
 ]);
 
 const canvasRef = ref(null);
@@ -75,6 +76,7 @@ onMounted(async () => {
       onPlanUpdate: (plan, packages) => emit('plan-update', { plan, packages }),
       onChatTurn: (msg, finalEvent) => emit('chat-turn', { msg, finalEvent }),
       onRetryChange: (msg) => emit('retry-change', msg),
+      onNightChange: (st) => emit('night-change', st),
     });
     if (disposed) {
       ctrl.destroy();
@@ -100,6 +102,7 @@ defineExpose({
   confirmPlan: () => controller?.confirmPlan(),
   unpopPill: () => controller?.unpopPill(),
   markRoundDone: (roundNo, done) => controller?.markRoundDone(roundNo, done),
+  setNight: (on) => controller?.setNight(on),
 });
 </script>
 

@@ -5,8 +5,9 @@ import { ref } from 'vue';
 defineProps({
   reduced: Boolean,
   eggs: { type: Object, default: () => ({ found: 0, total: 16 }) },
+  nightState: { type: Object, default: () => ({ unlocked: false, night: false }) },
 });
-const emit = defineEmits(['toggle-list', 'reset', 'update:reduced']);
+const emit = defineEmits(['toggle-list', 'reset', 'update:reduced', 'toggle-night']);
 const helpOpen = ref(false);
 </script>
 
@@ -25,6 +26,18 @@ const helpOpen = ref(false);
       <p><b>드래그</b> 돌려 보기 · <b>오른쪽 드래그</b>(Shift) 이동 · <b>휠</b> 줌 · <b>더블클릭</b> 처음 시점</p>
       <p>알약·블리스터·차트·약병을 누르면 종이가 펼쳐져요.</p>
     </div>
-    <div class="egg-chip" :title="'진료실 곳곳의 숨은 것'">숨은 것 {{ eggs.found }}/{{ eggs.total }}</div>
+    <!-- 16/16을 다 찾으면 숨은 것 칩이 낮/밤 전환 버튼이 된다 (야간 당직 진료실) -->
+    <button
+      v-if="nightState.unlocked"
+      type="button"
+      class="egg-chip night-toggle"
+      :aria-pressed="nightState.night"
+      :title="nightState.night ? '낮 진료실로' : '야간 당직 진료실로'"
+      @click="emit('toggle-night')"
+    >
+      <span aria-hidden="true">{{ nightState.night ? '☀' : '🌙' }}</span>
+      {{ nightState.night ? '낮으로' : '야간 당직' }} · {{ eggs.found }}/{{ eggs.total }}
+    </button>
+    <div v-else class="egg-chip" :title="'진료실 곳곳의 숨은 것'">숨은 것 {{ eggs.found }}/{{ eggs.total }}</div>
   </div>
 </template>
