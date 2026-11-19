@@ -32,7 +32,7 @@ class EolInput(_Input):
 
 
 class EolData(BaseModel):
-    eol_date: date = Field(description="일반 지원 종료일")
+    eol_date: date | None = Field(description="일반 지원 종료일. 지원 중이고 미발표면 null")
     esm_date: date | None = Field(description="확장 지원(ESM) 종료일. 없으면 null")
     is_eol: bool
     lts: bool

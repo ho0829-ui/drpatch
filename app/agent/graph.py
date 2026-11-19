@@ -28,6 +28,7 @@ from app.agent.state import (
     ask_message,
     SCHEDULE_KEYS,
     missing_inputs,
+    normalize_os_name,
     normalize_os_version,
     schedule_ask_message,
     tool_inputs_missing,
@@ -71,7 +72,9 @@ def merge_conditions(prev: Conditions, analysis) -> Conditions:
     """이번 메시지에서 나온 값만 덮어쓴다 (F3010: 바뀐 조건만 갱신)."""
     updates: dict = {}
     if analysis.os_name:
-        updates["os_name"] = analysis.os_name.strip().lower()
+        norm_os = normalize_os_name(analysis.os_name)
+        if norm_os:
+            updates["os_name"] = norm_os
     os_name = updates.get("os_name", prev.os_name)
     if analysis.os_version:
         updates["os_version"] = normalize_os_version(os_name, analysis.os_version)
@@ -118,7 +121,7 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
                 "confirm_rounds": a.confirm_rounds}
 
     def ask(state: AgentState) -> dict:
-        return {"answer": ask_message(state["missing"])}
+        return {"answer": ask_message(state["missing"], state.get("conditions"))}
 
     def plan_tools(state: AgentState) -> dict:
         try:

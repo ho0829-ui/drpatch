@@ -25,12 +25,50 @@ class Conditions(BaseModel):
 # 계획에 꼭 필요한 값과 되물을 때 쓰는 이름 (spec "빠진 입력")
 REQUIRED = [
     ("packages", "requirements.txt 파일 (pip freeze로 만든 것)"),
-    ("os", "OS와 버전 (예: Ubuntu 20.04)"),
+    ("os", "OS와 버전 (예: Ubuntu 20.04 / macOS 15 / Windows 11 24H2)"),
     ("python_version", "Python 버전 (예: 3.8)"),
     ("capacity", "한 번에 처리할 개수 (예: 5개까지)"),
     ("first_date", "첫 점검 날짜 (예: 11/21)"),
     ("interval_days", "점검 간격 (매주 / 격주 / 매월 / N일)"),
 ]
+
+OS_NAME_ALIASES = {
+    "맥": "macos",
+    "맥북": "macos",
+    "맥os": "macos",
+    "mac": "macos",
+    "macos": "macos",
+    "mac os": "macos",
+    "os x": "macos",
+    "osx": "macos",
+    "darwin": "macos",
+    "윈도우": "windows",
+    "윈도우즈": "windows",
+    "윈도": "windows",
+    "windows": "windows",
+    "win": "windows",
+    "우분투": "ubuntu",
+    "ubuntu": "ubuntu",
+}
+
+MACOS_CODENAMES = {
+    "타호": "26",
+    "tahoe": "26",
+    "세쿼이아": "15",
+    "세콰이어": "15",
+    "sequoia": "15",
+    "소노마": "14",
+    "sonoma": "14",
+    "벤투라": "13",
+    "벤추라": "13",
+    "ventura": "13",
+    "몬터레이": "12",
+    "몬테레이": "12",
+    "monterey": "12",
+    "빅서": "11",
+    "big sur": "11",
+    "bigsur": "11",
+}
 
 
 def missing_inputs(c: Conditions) -> list[str]:
@@ -59,21 +97,78 @@ def schedule_ask_message(missing: list[str]) -> str:
     return f"회차로 나눈 일정을 만들려면 아래 내용을 알려 주세요.\n{lines}"
 
 
-def ask_message(missing: list[str]) -> str:
-    """빠진 것만 묻는 고정 문장 (spec v1.9: 되묻기는 코드가)."""
+def _os_missing_label(os_name: str | None) -> str:
+    if not os_name:
+        return dict(REQUIRED)["os"]
+    if os_name == "macos":
+        return "macOS 버전 (예: macOS 15 — 이 Mac에 관하여에서 확인)"
+    if os_name == "windows":
+        return "Windows 버전과 기능 업데이트 (예: Windows 11 24H2 — 설정 > 시스템 > 정보)"
+    if os_name == "ubuntu":
+        return "Ubuntu 버전 (예: Ubuntu 20.04)"
+    return f"{os_name} 버전"
+
+
+def ask_message(missing: list[str], conditions: Conditions | None = None) -> str:
+    """빠진 것만 묻는 고정 문장 (spec v1.9·v1.17: 되묻기는 코드가, OS 이름을 알면 버전만)."""
     labels = dict(REQUIRED)
-    lines = "\n".join(f"- {labels[key]}" for key in missing)
+    os_name = conditions.os_name if conditions else None
+    if missing == ["os"] and os_name:
+        return f"{_os_missing_label(os_name)}만 알려 주세요."
+    lines = "\n".join(
+        f"- {_os_missing_label(os_name) if key == 'os' else labels[key]}"
+        for key in missing
+    )
     return f"계획을 세우려면 아래 내용이 더 필요해요.\n{lines}"
 
 
+def normalize_os_name(name: str | None) -> str | None:
+    """OS 이름 정규화: 맥·맥북·macOS·OS X → macos, 윈도우·Windows → windows."""
+    if not name:
+        return None
+    cleaned = re.sub(r"\s+", " ", name.strip()).lower()
+    if not cleaned:
+        return None
+    return OS_NAME_ALIASES.get(cleaned, cleaned)
+
+
 def normalize_os_version(os_name: str | None, version: str | None) -> str | None:
-    """'우분투 20' → 20.04 (Ubuntu LTS는 .04)."""
+    """OS별 버전 정규화 (spec v1.17). 알 수 없거나 불완전하면 None(= 되묻기)."""
     if not version:
         return None
-    version = version.strip()
-    if os_name == "ubuntu" and re.fullmatch(r"\d{2}", version):
-        return f"{version}.04"
-    return version
+    v = re.sub(r"\s+", " ", version.strip())
+    if not v:
+        return None
+
+    if os_name == "ubuntu":
+        v = re.sub(r"^ubuntu\s+", "", v, flags=re.I)
+        if re.fullmatch(r"\d{2}", v):
+            return f"{v}.04"
+        return v
+
+    if os_name == "macos":
+        v = re.sub(r"^(?:mac\s*os|os\s*x|osx|맥\s*os|맥북|맥)\s+", "", v, flags=re.I).strip()
+        if v.lower() in MACOS_CODENAMES:
+            return MACOS_CODENAMES[v.lower()]
+        m = re.fullmatch(r"(\d+)(?:\.\d+)*", v)
+        return m[1] if m else None
+
+    if os_name == "windows":
+        v = re.sub(r"^(?:windows|윈도우즈|윈도우|윈도|win)\s+", "", v, flags=re.I).strip()
+        if re.fullmatch(r"(?:10|11)-\d{2}h[12]-[we]", v, flags=re.I):
+            return v.lower()
+        m = re.fullmatch(
+            r"(10|11)[\s\-]+(\d{2}h[12])(?:\s+(home|pro|workstation|enterprise|education|iot|w|e))?",
+            v,
+            flags=re.I,
+        )
+        if not m:
+            return None  # 주 버전("11")만 있으면 기능 업데이트(24H2 등)를 되묻는다
+        major, feat, edition = m[1], m[2].lower(), (m[3] or "").lower()
+        suffix = "e" if edition in {"enterprise", "education", "e"} else "w"
+        return f"{major}-{feat}-{suffix}"
+
+    return v
 
 
 def normalize_python(version: str | None) -> str | None:

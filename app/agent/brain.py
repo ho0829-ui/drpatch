@@ -29,8 +29,11 @@ class Analysis(BaseModel):
         "confirm=제안한 계획을 확정·저장해 달라는 요청, other=그 밖의 대화"
     )
     intent_reason: str = Field(description="그렇게 분류한 이유 한 문장")
-    os_name: str | None = Field(None, description="이번 메시지에 나온 OS 이름(소문자). 예: ubuntu. 없으면 null")
-    os_version: str | None = Field(None, description="OS 버전. '우분투 20'이면 20.04. 없으면 null")
+    os_name: str | None = Field(None, description="이번 메시지에 나온 OS 이름(소문자). 예: ubuntu, macos, windows. 없으면 null")
+    os_version: str | None = Field(
+        None,
+        description="OS 버전. '우분투 20'이면 20.04, 'macOS 15'·'세쿼이아'면 15, '윈도우 11 24H2'면 '11 24H2'. 없으면 null",
+    )
     python_version: str | None = Field(None, description="Python 버전. 예: 3.8. 없으면 null")
     capacity: int | None = Field(None, description="'이번에 5개까지' → 5. 없으면 null")
     first_date: str | None = Field(None, description="첫 점검 날짜 YYYY-MM-DD. 연도가 없으면 오늘 이후 가장 가까운 날. 없으면 null")

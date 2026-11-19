@@ -25,19 +25,23 @@ def parse_eol(body: dict, *, product: str, requested_cycle: str, queried_cycle: 
         return fail(UPSTREAM_ERROR, "endoflife.date 응답 형식이 예상과 다릅니다")
 
     eol_date = release.get("eolFrom")
-    if not eol_date:
+    is_maintained = bool(release.get("isMaintained"))
+    if not eol_date and not is_maintained:
         return fail(NO_EOL_DATE, f"{product} {queried_cycle}의 지원 종료일 정보가 없습니다")
 
     latest = release.get("latest") or {}
-    note = None
+    notes = []
+    if not eol_date and is_maintained:
+        notes.append("지원 중 (종료일 미발표)")
     if queried_cycle != requested_cycle:
-        note = f"요청한 {requested_cycle} 대신 릴리스 줄기 {queried_cycle} 기준으로 조회했습니다"
+        notes.append(f"요청한 {requested_cycle} 대신 릴리스 줄기 {queried_cycle} 기준으로 조회했습니다")
+    note = " / ".join(notes) if notes else None
 
     return ok(
         {
             "eol_date": eol_date,
             "esm_date": release.get("eoesFrom"),  # 없으면 null (확인 못 함)
-            "is_eol": bool(release.get("isEol")),
+            "is_eol": False if (not eol_date and is_maintained) else bool(release.get("isEol")),
             "lts": bool(release.get("isLts")),
             "latest_patch": latest.get("name"),
             "label": release.get("label") or f"{product} {queried_cycle}",
