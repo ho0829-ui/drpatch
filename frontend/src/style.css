@@ -423,7 +423,7 @@ dd { margin: 0; }
   .cond-chips::-webkit-scrollbar { display: none; }
   .cond-chips > .cond-chip:first-of-type { margin-inline-start: auto; }
   .cond-chips > .cond-chip:last-of-type { margin-inline-end: auto; }
-  .chat-history { max-height: 40vh; }
+  .chat-history { max-height: 30vh; } /* 40vh면 처방 뒤 블리스터를 다 가림 */
   .bubble { max-height: 22vh; }
 }
 
