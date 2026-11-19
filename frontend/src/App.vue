@@ -30,6 +30,7 @@ const state = ref('idle');
 const status = ref({ text: '대기 중', stage: -1 });
 const bubbleText = ref('');
 const bubbleSeq = ref(0);
+const bubbleAction = ref(null);
 const bubblePos = ref({ right: 0, top: 0 });
 const logs = ref([]);
 const activeSheet = ref(null);
@@ -41,13 +42,48 @@ const chatMessages = ref([]);
 const dragging = ref(false);
 const uploading = ref(false);
 const retryMessage = ref(null);
+const exampleCatalog = ref([]);
+const activeExampleId = ref(null);
+
+const DONE_EXAMPLES_KEY = 'drpatch.examples.done';
 
 const isBusy = computed(() => uploading.value || state.value === 'running' || state.value === 'confirming');
 const tickerLines = computed(() => logs.value.slice(-4).reverse());
 
-function sayBubble(text) {
+function sayBubble(text, action = null) {
   bubbleText.value = text;
+  bubbleAction.value = action;
   bubbleSeq.value++;
+}
+
+function onSceneSay(text) {
+  const isGreeting =
+    currentPackages.value.length === 0 &&
+    (String(text).startsWith('어서 오세요') || String(text).startsWith('새 차트입니다'));
+  const action = isGreeting
+    ? { prefix: '파일이 없으시면 ', label: '예시 차트', suffix: '부터 보시죠.', kind: 'examples', focusId: '' }
+    : null;
+  sayBubble(text, action);
+}
+
+function openExamples(focusId = '') {
+  activeSheet.value = { kind: 'examples', color: '#3E9E98', focusId };
+}
+
+function onBubbleAction(action) {
+  if (action?.kind === 'examples') {
+    openExamples(action.focusId || '');
+  }
+}
+
+function markExampleDone(id) {
+  if (!id) return;
+  try {
+    const cur = JSON.parse(localStorage.getItem(DONE_EXAMPLES_KEY) || '[]');
+    const set = new Set(Array.isArray(cur) ? cur : []);
+    set.add(id);
+    localStorage.setItem(DONE_EXAMPLES_KEY, JSON.stringify([...set]));
+  } catch { /* 무시 */ }
 }
 
 function focusChatInput() {
@@ -88,13 +124,14 @@ function triggerUpload() {
   fileInputRef.value?.click();
 }
 
-async function handleUploadFile(file) {
+async function handleUploadFile(file, opts = {}) {
   if (!file || uploading.value) return false;
   uploading.value = true;
   status.value = { text: '접수 중…', stage: 0 };
   try {
     const res = await api.upload(file);
     currentPackages.value = res.packages || [];
+    activeExampleId.value = opts.exampleId || null;
     sceneRef.value?.loadPackages(currentPackages.value);
     const excluded = res.excluded || [];
     const lines = [`흠, 어디 보자… ${file.name} ${currentPackages.value.length}줄. 접수됐습니다.`];
@@ -117,23 +154,53 @@ async function handleUploadFile(file) {
   }
 }
 
-function nextTuesdayLabel() {
+function nextTuesdayDate(offsetDays = 0) {
   const d = new Date();
   // 다음 화요일 (0=일, 2=화). 오늘이 화요일이면 7일 뒤.
   const diff = (2 - d.getDay() + 7) % 7 || 7;
-  d.setDate(d.getDate() + diff);
+  d.setDate(d.getDate() + diff + offsetDays);
+  return d;
+}
+
+function nextTuesdayLabel() {
+  const d = nextTuesdayDate(0);
   return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+function toIsoDate(d) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+async function ensureSeedEvent(se) {
+  if (!se?.title) return;
+  const iso = toIsoDate(nextTuesdayDate(se.offset_days || 0));
+  try {
+    const existing = await api.calendar.list(iso, iso);
+    const dup = (existing || []).some((ev) => ev.date === iso && ev.title === se.title);
+    if (!dup) {
+      await api.calendar.add({
+        title: se.title,
+        date: iso,
+        start: se.start || null,
+        end: se.end || null,
+      });
+    }
+  } catch { /* 캘린더 추가 실패해도 예시 진행 */ }
 }
 
 async function onSelectExample(ex) {
   if (!ex?.file || isBusy.value) return;
   closeSheet();
   try {
+    if (ex.addSeedEvent && ex.seed_event) {
+      await ensureSeedEvent(ex.seed_event);
+    }
     const res = await fetch(`/examples/${ex.file}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('예시 파일을 불러오지 못했어요.');
     const text = await res.text();
     const file = new File([text], ex.file, { type: 'text/plain' });
-    const ok = await handleUploadFile(file);
+    const ok = await handleUploadFile(file, { exampleId: ex.id });
     if (!ok) return;
     const condText = String(ex.condition_template || '').replace('{date}', nextTuesdayLabel());
     chatBarRef.value?.setText(condText);
@@ -204,6 +271,12 @@ onMounted(() => {
   window.addEventListener('drop', clearDrag);
   window.addEventListener('blur', clearDrag);
   window.addEventListener('keydown', onWindowKeyDown);
+  fetch('/examples/index.json')
+    .then((r) => (r.ok ? r.json() : []))
+    .then((list) => {
+      if (Array.isArray(list)) exampleCatalog.value = list;
+    })
+    .catch(() => {});
 });
 
 onBeforeUnmount(() => {
@@ -232,6 +305,18 @@ function onChatTurn({ msg, finalEvent }) {
   const lastUser = [...chatMessages.value].reverse().find((m) => m.role === 'user');
   if (lastUser?.text !== msg) chatMessages.value.push({ role: 'user', text: msg });
   if (finalEvent?.answer) chatMessages.value.push({ role: 'assistant', text: finalEvent.answer });
+
+  // 예시로 올린 세션에서 처방(계획)이 나오면 진료함 기록 + 다음 환자 권유
+  if (finalEvent?.plan && !(finalEvent.missing?.length) && activeExampleId.value) {
+    markExampleDone(activeExampleId.value);
+    const idx = exampleCatalog.value.findIndex((e) => e.id === activeExampleId.value);
+    const nextEx = idx >= 0 && idx < exampleCatalog.value.length - 1 ? exampleCatalog.value[idx + 1] : null;
+    if (nextEx) {
+      const nextLine = `다음 환자도 보시겠어요? — ${nextEx.title}`;
+      chatMessages.value.push({ role: 'assistant', text: nextLine });
+      bubbleAction.value = { prefix: '', label: nextLine, suffix: '', kind: 'examples', focusId: nextEx.id };
+    }
+  }
 }
 
 function reloadPage() {
@@ -271,7 +356,7 @@ function reloadPage() {
       @fallback="onFallback"
       @state-change="state = $event"
       @status="status = $event"
-      @say="sayBubble($event)"
+      @say="onSceneSay($event)"
       @log="logs = $event.logs"
       @open-sheet="activeSheet = $event"
       @close-sheet="activeSheet = null"
@@ -307,7 +392,15 @@ function reloadPage() {
       @reset="reloadPage"
     />
 
-    <SpeechBubble :text="bubbleText" :seq="bubbleSeq" :reduced="reduced" :pos="bubblePos" @closed="focusChatInput" />
+    <SpeechBubble
+      :text="bubbleText"
+      :seq="bubbleSeq"
+      :reduced="reduced"
+      :pos="bubblePos"
+      :action="bubbleAction"
+      @closed="focusChatInput"
+      @action="onBubbleAction"
+    />
 
     <ChatBar
       ref="chatBarRef"
@@ -315,7 +408,7 @@ function reloadPage() {
       :busy="isBusy"
       @send="onSendChat"
       @upload="triggerUpload"
-      @examples="activeSheet = { kind: 'examples', color: '#3E9E98' }"
+      @examples="openExamples()"
     >
       <Controls
         :state="uploading ? 'running' : state"
@@ -331,6 +424,7 @@ function reloadPage() {
           :packages-count="currentPackages.length"
           :conditions="currentConditions"
           @upload="triggerUpload"
+          @examples="openExamples()"
           @fill="chatBarRef?.appendSnippet($event)"
         />
       </template>

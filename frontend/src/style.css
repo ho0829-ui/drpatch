@@ -356,7 +356,13 @@ dd { margin: 0; }
 .ex-open-btn { white-space: nowrap; flex-shrink: 0; }
 .ex-lead { font-size: 12.5px; color: var(--color-ink-soft); margin: 0 0 12px; line-height: 1.5; }
 .ex-muted { font-size: 12.5px; color: var(--color-ink-soft); margin: 12px 0; }
+.ex-groups { display: grid; gap: 16px; }
+.ex-group-title {
+  margin: 0 0 8px; font-size: 12px; font-weight: 800; letter-spacing: .04em;
+  color: var(--color-deep); text-transform: uppercase;
+}
 .ex-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.ex-item { display: grid; gap: 6px; }
 .ex-card {
   width: 100%; text-align: left; font: inherit; color: var(--color-ink);
   background: rgba(255, 255, 255, .72); border: 1px solid var(--color-border);
@@ -364,16 +370,46 @@ dd { margin: 0; }
   display: grid; gap: 6px; transition: border-color .15s, background .15s, transform .15s;
 }
 .ex-card:hover { border-color: var(--color-accent); background: #fff; transform: translateY(-1px); }
-.ex-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.ex-card:focus-visible, .ex-card.focused { outline: 2px solid var(--color-accent); outline-offset: 2px; background: #fff; }
 .ex-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.ex-title { font-size: 14px; font-weight: 800; color: var(--color-ink); }
+.ex-title { font-size: 14px; font-weight: 800; color: var(--color-ink); display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ex-done-badge {
+  font-size: 10.5px; font-weight: 700; color: #1F6F6B;
+  background: #D9F2EC; border-radius: 999px; padding: 1px 7px; white-space: nowrap;
+}
 .ex-count { font-size: 11.5px; font-family: var(--font-mono); color: var(--color-ink-soft); white-space: nowrap; }
 .ex-desc { margin: 0; font-size: 12.5px; color: var(--color-ink-soft); line-height: 1.45; }
+.ex-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.ex-tag {
+  font-size: 11px; font-weight: 600; color: var(--color-deep);
+  background: rgba(22, 49, 58, .06); border-radius: 6px; padding: 2px 7px; white-space: nowrap;
+}
 .ex-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 .ex-pill {
   font-size: 11px; font-weight: 700; color: var(--color-ink);
   background: rgba(62, 158, 152, .12); border-radius: 999px; padding: 2px 8px; white-space: nowrap;
 }
+.ex-seed-box {
+  background: rgba(62, 158, 152, .08); border: 1px solid rgba(62, 158, 152, .25);
+  border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; justify-items: start;
+}
+.ex-seed-check {
+  display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--color-ink); cursor: pointer;
+}
+.cond-chips-wrap { position: relative; width: 100%; }
+.file-choice-pop {
+  position: absolute; bottom: calc(100% + 6px); left: 0; z-index: 12;
+  display: inline-flex; gap: 6px; padding: 6px 8px; border-radius: 14px;
+  background: #fff; box-shadow: 0 6px 20px rgba(22, 49, 58, .18); border: 1px solid var(--color-border);
+}
+.bubble-action { margin: 8px 0 0; font-size: 13.5px; color: var(--color-ink); }
+.bubble-link {
+  display: inline; padding: 1px 4px; margin: 0 1px; border: 0; border-radius: 6px;
+  background: rgba(62, 158, 152, .14); color: var(--color-deep); font: inherit; font-weight: 700;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.bubble-link:hover { background: rgba(62, 158, 152, .26); }
+.bubble-link:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 
 @media (max-width: 720px) {
   .brand { top: 10px; left: 12px; padding: 5px 14px 5px 8px; gap: 7px; }

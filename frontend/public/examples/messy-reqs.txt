@@ -1,0 +1,16 @@
+# 운영 서버에서 모은 requirements 예시 (빈 줄·주석은 무시)
+
+-r base.txt
+--index-url https://pypi.org/simple
+
+requests==2.19.0
+Django[argon2]==4.2.0
+urllib3==1.24.1  # via requests
+pywin32==306 ; sys_platform == "win32"
+
+flask>=2.0
+pytest
+Requests==2.25.0
+-e git+https://github.com/example/private.git#egg=private
+internal-pkg @ https://example.com/internal_pkg-1.0.whl
+???not_a_package

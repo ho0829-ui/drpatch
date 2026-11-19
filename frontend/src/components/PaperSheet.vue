@@ -207,7 +207,7 @@ onBeforeUnmount(() => removeEventListener('keydown', onKeyDown));
       </template>
 
       <template v-else-if="sheet?.kind === 'examples'">
-        <ExampleSheet @select="emit('select-example', $event)" />
+        <ExampleSheet :focus-id="sheet.focusId || ''" @select="emit('select-example', $event)" />
       </template>
     </div>
   </div>

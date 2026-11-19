@@ -1,12 +1,16 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const props = defineProps({
   packagesCount: { type: Number, default: 0 },
   conditions: { type: Object, default: null },
 });
 
-const emit = defineEmits(['fill', 'upload']);
+const emit = defineEmits(['fill', 'upload', 'examples']);
+
+const fileMenuOpen = ref(false);
+const fileMenuRef = ref(null);
+const uploadOptRef = ref(null);
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const OS_NAMES = { ubuntu: 'Ubuntu', macos: 'macOS', windows: 'Windows' };
@@ -101,28 +105,83 @@ const chips = computed(() => {
   return list;
 });
 
+function closeFileMenu() {
+  fileMenuOpen.value = false;
+}
+
 function onClickChip(chip) {
   if (chip.action === 'upload') {
-    emit('upload');
+    if (chip.missing) {
+      fileMenuOpen.value = !fileMenuOpen.value;
+      if (fileMenuOpen.value) nextTick(() => uploadOptRef.value?.focus({ preventScroll: true }));
+    } else {
+      fileMenuOpen.value = false;
+      emit('upload');
+    }
   } else if (chip.missing && chip.snippet) {
+    fileMenuOpen.value = false;
     emit('fill', chip.snippet);
   }
 }
+
+function pickUpload() {
+  fileMenuOpen.value = false;
+  emit('upload');
+}
+
+function pickExamples() {
+  fileMenuOpen.value = false;
+  emit('examples');
+}
+
+function onGlobalKeyDown(e) {
+  if (e.key === 'Escape' && fileMenuOpen.value) {
+    e.stopPropagation();
+    closeFileMenu();
+  }
+}
+
+function onGlobalPointerDown(e) {
+  if (fileMenuOpen.value && fileMenuRef.value && !fileMenuRef.value.contains(e.target)) {
+    closeFileMenu();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onGlobalKeyDown);
+  window.addEventListener('pointerdown', onGlobalPointerDown);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onGlobalKeyDown);
+  window.removeEventListener('pointerdown', onGlobalPointerDown);
+});
 </script>
 
 <template>
-  <div class="cond-chips" role="group" aria-label="입력된 점검 조건">
-    <button
-      v-for="chip in chips"
-      :key="chip.key"
-      type="button"
-      class="cond-chip"
-      :class="{ missing: chip.missing, filled: !chip.missing }"
-      :title="chip.missing ? (chip.action === 'upload' ? '눌러서 파일 올리기' : `누르면 '${chip.snippet}' 입력`) : chip.label"
-      @click="onClickChip(chip)"
-    >
-      <template v-if="!chip.missing">{{ chip.value }}</template>
-      <template v-else>{{ chip.value || chip.label }} <em>필요</em></template>
-    </button>
+  <div class="cond-chips-wrap">
+    <div v-if="fileMenuOpen && packagesCount === 0" ref="fileMenuRef" class="file-choice-pop" role="menu" aria-label="파일 입력 방법 선택">
+      <button ref="uploadOptRef" type="button" class="btn btn-sm ghost" role="menuitem" @click="pickUpload">
+        파일 올리기
+      </button>
+      <button type="button" class="btn btn-sm primary" role="menuitem" @click="pickExamples">
+        예시 고르기
+      </button>
+    </div>
+    <div class="cond-chips" role="group" aria-label="입력된 점검 조건">
+      <button
+        v-for="chip in chips"
+        :key="chip.key"
+        type="button"
+        class="cond-chip"
+        :class="{ missing: chip.missing, filled: !chip.missing }"
+        :aria-expanded="chip.action === 'upload' && chip.missing ? fileMenuOpen : undefined"
+        :title="chip.missing ? (chip.action === 'upload' ? '파일 올리기 또는 예시 고르기' : `누르면 '${chip.snippet}' 입력`) : chip.label"
+        @click="onClickChip(chip)"
+      >
+        <template v-if="!chip.missing">{{ chip.value }}</template>
+        <template v-else>{{ chip.value || chip.label }} <em>필요</em></template>
+      </button>
+    </div>
   </div>
 </template>

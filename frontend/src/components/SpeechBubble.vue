@@ -7,9 +7,10 @@ const props = defineProps({
   seq: { type: Number, default: 0 },
   reduced: Boolean,
   pos: { type: Object, default: () => ({ right: 0, top: 0 }) },
+  action: { type: Object, default: null },
 });
 
-const emit = defineEmits(['closed']);
+const emit = defineEmits(['closed', 'action']);
 
 const shownText = ref('');
 const visible = ref(false);
@@ -40,10 +41,15 @@ function onPointerDown(e) {
 
 // 끌어서 스크롤하거나 글자를 고른 클릭은 닫지 않는다 (spec v1.17: 움직임 없는 클릭만)
 function onClick(e) {
+  if (e.target?.closest?.('.bubble-link')) return;
   if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
   const sel = window.getSelection?.();
   if (sel && String(sel).trim()) return;
   closeBubble();
+}
+
+function onClickAction() {
+  if (props.action) emit('action', props.action);
 }
 
 function onGlobalKeyDown(e) {
@@ -122,6 +128,15 @@ watch(
     <img class="avatar" src="/brand/mascot.svg" alt="" draggable="false">
     <b>DR.PATCH</b>
     <div class="bubble-body"><RichText :text="shownText" /></div>
+    <p v-if="action" class="bubble-action">
+      {{ action.prefix || '' }}<button
+        type="button"
+        class="bubble-link"
+        @click.stop="onClickAction"
+        @keydown.enter.stop.prevent="onClickAction"
+        @keydown.space.stop.prevent="onClickAction"
+      >{{ action.label }}</button>{{ action.suffix || '' }}
+    </p>
   </div>
   <div class="sr-only" aria-live="polite">{{ text ? `닥터 패치: ${text}` : '' }}</div>
 </template>
