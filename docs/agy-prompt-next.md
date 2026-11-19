@@ -1,7 +1,7 @@
-# agy(제미나이)에게 넘기는 작업 묶음 — spec v1.20 (2026-11-19)
+# agy(제미나이)에게 넘기는 작업 묶음 — spec v1.21 (2026-11-19)
 
 > 모델: **구현은 Hydrogen**.
-> 진행: **I14 → I15 → I16 → I17** 차례로 (I14·I15 끝남). I17은 I16과 같은 파일(App.vue·ConditionChips·ChatBar)을 고치므로 I16 합친 뒤. I16(예시 10개)은 I15의 새 알약을 쓰고, I14·I16은 둘 다 `App.vue`·`style.css`를 고치므로 한 번에 하나씩.
+> 진행: I14~I17 끝남. 다음은 **I18(백엔드 요일 규칙) → I19(화면 칩·표시)** 차례로. I19는 I18이 main에 합쳐진 뒤 (final.conditions에 weekdays가 있어야 함). I16(예시 10개)은 I15의 새 알약을 쓰고, I14·I16은 둘 다 `App.vue`·`style.css`를 고치므로 한 번에 하나씩.
 > **다음 작업은 앞 작업이 main에 합쳐진 뒤 main에서 브랜치를 딴다.**
 > 각 작업이 끝나면 Claude Code가 diff·테스트·실제 화면을 확인하고 main에 합친다.
 > (I10~I13은 끝나서 main에 있다.)
@@ -18,7 +18,7 @@
 ```
 sudo-patch 저장소 작업이다. 시작 전에 꼭 읽어:
 - AGENTS.md (프로젝트 규칙), docs/HANDOFF.md, git log -5
-- docs/spec.md v1.20 — 특히 "v1.20 고칠 것"(I~K), "v1.19 고칠 것·더할 것"(E~H), "v1.18 … D. 예시 시뮬레이션", "화면 (DR.PATCH 진료실)", "말투"
+- docs/spec.md v1.21 — 특히 "v1.21 요일 규칙과 조건 표현 넓히기"(M·N), "판단 규칙 › 회차 나누기", "심화: 캘린더 연동", "v1.18 … D. 예시 시뮬레이션", "화면 (DR.PATCH 진료실)", "말투"
 - docs/design.md (4-1 알약, 4-6 UI 배치, 5 말투, 7 꼭 지킬 것, 8 Blender)
 
 지켜야 할 것:
@@ -33,7 +33,7 @@ sudo-patch 저장소 작업이다. 시작 전에 꼭 읽어:
 9. 실제 로고(회사·Python·Ubuntu·패키지 로고)와 빨간 십자가는 쓰지 않는다.
 
 끝나면:
-- 확인: `.venv/bin/python -m pytest -q` (268개 이상 통과 — `pytest`만 치면 app 모듈을 못 찾으니 꼭 이 명령으로), 화면을 바꿨으면 `cd frontend && npm run build` (경고 없이)
+- 확인: `.venv/bin/python -m pytest -q` (271개 이상 통과 — `pytest`만 치면 app 모듈을 못 찾으니 꼭 이 명령으로), 화면을 바꿨으면 `cd frontend && npm run build` (경고 없이)
 - 커밋 메시지는 한국어, 작업 단위로
 - docs/HANDOFF.md "지금 하던 것"에 한 줄
 - 마지막 보고: 바꾼 파일, 확인한 방법(화면은 캡처 — 1280과 375 둘 다), 못 한 것, 질문
@@ -152,4 +152,42 @@ docs/spec.md "v1.20 … I·J·K"를 구현해줘. (L은 Claude Code가 한다 �
    - 보내기 → 기록 열림·보낸 말·보는 중 → 답, 말풍선 짧음, 블리스터 안 가림
    - 입력창에 "Ubuntu 22.04, Python 3.10" 입력만 → 두 칩 `OS ○`·`Python ○` → 보내기 → 값 칩("Ubuntu 22.04"·"Python 3.10")
    - Esc로 기록 닫기, 다시 보내면 열림
+```
+
+### I18 · 요일 규칙 (백엔드) + 조건 표현 표
+브랜치 `agy/be-03-weekdays` · 파일: `app/agent/state.py`, `app/agent/brain.py`(Analysis 스키마·설명만), `app/agent/graph.py`(merge_conditions·회차·캘린더 맞추기 호출), `app/agent/planner/rounds.py`, `app/agent/planner/calendar_fit.py`, `app/agent/render.py`, `app/db/schema.sql`, `app/db/repo.py`, 새 `app/agent/schedule_text.py`(표시 함수), `tests/`(새 `test_weekdays.py`, `test_condition_phrases.py`), 새 `scripts/probe_conditions.py`
+```
+docs/spec.md "v1.21 … M·N"을 구현해줘. 화면(frontend/)은 건드리지 않는다 (I19).
+
+1. Conditions에 weekdays: list[int] | None (0=월…6=일), weekly_count: int | None, week_interval: int | None(1·2) 추가.
+   Analysis에 weekdays, weekly_count, interval_unsupported(bool, 기본 False) 추가. 필드 설명에 예:
+   "매주 화·목"→[1,3], "평일"→[0,1,2,3,4], "주말"→[5,6], "월수금"→[0,2,4], "주 2회"→weekly_count 2(weekdays null),
+   "매달 첫째 주 화요일"처럼 몇째 주 규칙은 interval_days에 넣지 말고 interval_unsupported=true.
+2. merge_conditions: spec M의 우선순위 규칙 그대로 (이번 메시지의 것이 이김, 요일과 같이 온 7·14는 week_interval 1·2로).
+   missing_inputs: interval_days 칸은 interval_days 또는 weekdays가 있으면 채워진 것.
+   weekly_count만 있고 weekdays가 없으면 되묻기 문장(코드)이 "주 N회라면 무슨 요일로 할까요? (예: 화·금)".
+   interval_unsupported면 "몇째 주 규칙은 아직 못 합니다. 매주·격주·요일로 말씀해 주시죠." (박사님 말투, 코드 문장).
+3. rounds.split_rounds: weekdays가 있으면 spec M 규칙으로 날짜 (첫 날짜가 그 요일 아니면 다음 맞는 요일부터, week_interval 2면 다음 주 건너뜀). 없으면 지금 그대로.
+4. calendar_fit.find_free_date(…, allowed_weekdays=None): 있으면 그 요일만 후보. 옮긴 결과 두 회차가 같은 날이면 뒤 회차를 다음 맞는 요일로.
+5. 표시 함수 app/agent/schedule_text.py: fmt_schedule(conditions) → spec M 표대로 (매일·격일·매주·격주·3주마다·매월·분기마다·N일마다·매주 화·목·평일·주말·격주 화·금·주 2회(요일 필요)). render.py conditions_header가 이걸 쓴다.
+6. DB: sessions에 weekdays TEXT("1,3"), weekly_count INTEGER, week_interval INTEGER. 옛 DB 자동 열 추가(지금 repo.py 방식). 읽을 때 "1,3" → [1,3].
+7. 테스트 (네트워크 없음)
+   - test_condition_phrases.py: spec N의 표현 표 — (입력 문장, 가짜 Analysis 값) → merge 결과·missing·표시 문자열. 실측 35개 + 요일 10개 이상(화·목, 화요일 목요일, 월수금, 평일, 주말, 격주 화·금, 매주 금요일, 주 2회, 주 3회 월수금, 매달 첫째 주 화요일).
+   - test_weekdays.py: 회차 날짜(첫 날짜가 맞는 요일/아닌 요일, 주 간격 2, 3회차 넘김), 캘린더 겹침 시 맞는 요일로 이동·없으면 그대로+conflicts·두 회차 같은 날 방지, 옛 DB 열 추가, 우선순위(요일 뒤 "3일마다" → weekdays 지움 등).
+8. scripts/probe_conditions.py (수동, 테스트 아님): test_condition_phrases.py의 표를 import해서 실제 GmsBrain.analyze에 넣고 기대와 다른 줄만 출력 (병렬 6개, 오늘 날짜 고정 인자). 결과를 보고에 붙인다 — 다른 줄이 있으면 brain.py 설명을 고쳐 다시 돌린다.
+9. scripts/run_agent.py로 실제 한 번: "Ubuntu 22.04, Python 3.11, 한 번에 2개, 다음 주 화요일부터 매주 화·목" → 회차 날짜가 화·목·화인지, 조건 한 줄이 "매주 화·목"인지. 그리고 "주 2회"만 → 요일 되묻기.
+```
+
+### I19 · 화면: 요일 표시·칩 미리보기 넓히기
+브랜치 `agy/fe-22-weekdays` (I18 합친 뒤) · 파일: `frontend/src/components/ConditionChips.vue`, `frontend/src/conditionPreview.js`, `tests/test_condition_preview_table.py`, (필요하면) `frontend/src/components/PlanCard.vue`·`CalendarSheet.vue`의 간격 표시
+```
+docs/spec.md "v1.21 … M(표시)·N(미리보기)"를 구현해줘. 백엔드는 건드리지 않는다.
+
+1. 간격 칩 표시: final.conditions의 interval_days·weekdays·week_interval·weekly_count로 spec M 표대로.
+   서버의 app/agent/schedule_text.py와 같은 결과가 나와야 한다 — 같은 예 표를 tests에 두고 (파이썬 함수 결과) == (JS 함수 결과를 주석 표로) 맞춘다. JS 테스트 도구는 없으니 지금 conditionPreview 방식(패턴 문자열 비교·예문 표)처럼.
+   weekly_count만 있고 요일이 없으면 간격 칩은 "필요" 상태 + 글자 "주 2회 · 요일 필요".
+2. 칩 미리보기(conditionPreview.js): spec N 목록의 표현 모두. 예문 표(입력 → 기대 칸)를 tests/test_condition_preview_table.py에 더하고 JS 패턴 문자열 일치 검사 유지.
+   특히: 매일, 격일, 이틀에 한 번, 사흘마다, 3주 간격, 2주에 한 번, 한 달에 한 번, 분기마다, 주 2회, 평일, 주말, 매주 화·목, 화요일 목요일, 월수금 / 다음 주 월요일, 이번 주 금요일, 25일, 다음 달 3일 / 다섯 개, 최대 4개, 10개 이하 / jammy, noble, 우분투 22 / py311, 파이썬3.11.
+   "12월 첫째 주", "매달 첫째 주 화요일"은 ○를 띄우지 않는다 (서버가 못 정하는 표현).
+3. 확인 (375·1280 캡처, 실제 GMS 한 번): 입력창에 "매주 화·목" → 간격 ○ → 보내기 → 칩 "매주 화·목", 계획 회차 날짜가 화·목. "주 2회" → 칩 "주 2회 · 요일 필요" + 박사님 요일 되묻기.
 ```
