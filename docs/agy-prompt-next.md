@@ -2,7 +2,7 @@
 
 > 모델: **리뷰는 Neon**(Carbon 대신), **구현은 Hydrogen**, **조사는 Flash**.
 > Neon은 아직 써 보지 않은 모델이라, 리뷰 결과에는 반드시 근거(파일:줄)를 붙이게 하고 Claude Code가 하나씩 맞는지 확인한다.
-> 진행: **1(리뷰) → 2(구현) → 3(조사)**. 1과 3은 서로 상관없어서 동시에 돌려도 된다.
+> 진행: **1(리뷰) → 2(구현)**. 3(조사 S7)은 폐기.
 > 2의 각 작업은 1의 리뷰 결과가 나온 뒤 시작한다. Claude Code가 리뷰 지적 중 그 작업에 해당하는 것을 골라 프롬프트 끝에 덧붙인다.
 
 ## 사람이 하는 순서 (작업마다)
@@ -135,23 +135,10 @@ docs/review-frontend.md에 표로:
 
 ---
 
-## 3. 조사 (Flash) — 코드는 건드리지 않는다
+## 3. 조사 (Flash) — 폐기
 
-### S7 · Google Calendar 연동 준비 조사
-브랜치 `agy/research-gcal` (docs/research/google-calendar.md 한 파일만)
-```
-이 서비스의 캘린더 구현체를 Google Calendar로도 만들 수 있게(app/calendar/backend.py의 CalendarBackend: list_events, add_event, delete_event)
-공식 문서만 보고 준비 절차를 정리해줘. 코드는 건드리지 마.
-
-docs/research/google-calendar.md에:
-1. 사용자가 Google Cloud Console에서 해야 할 일 (프로젝트, API 켜기, OAuth 동의 화면, 클라이언트 종류: 로컬에서 도는 앱에 맞는 것)
-2. 필요한 최소 권한(scope) — 일정 읽기·쓰기만
-3. 토큰을 어디에 어떻게 보관하는지 (.env와 파일, 저장소에 올리면 안 되는 것)
-4. 우리 함수 3개에 대응하는 API (일정 목록·추가·삭제, 바쁜 시간 조회가 있으면 그것도)
-5. 호출 한도·요금
-6. 필요한 파이썬 라이브러리 (설치는 하지 말고 이름과 이유만 — 새 라이브러리는 승인이 필요)
-각 항목에 출처 URL과 확인 날짜. 공식 문서에 없는 내용은 "명시 없음".
-```
+### ~~S7 · Google Calendar 연동 준비 조사~~ — 2026-11-19 사용자 결정으로 폐기
+캘린더는 지금의 SQLite 구현체(app/calendar/backend.py)로 마무리한다. Google Calendar 연동은 하지 않는다.
 
 ---
 

@@ -88,30 +88,21 @@ async function onDropFile(e) {
   await handleUploadFile(file);
 }
 
+// 대화 기록에 답을 넣는 곳은 onChatTurn 한 곳뿐 (보내기·다시 시도·진료 시작 모두 거기로 온다)
 async function onSendChat(message) {
   chatMessages.value.push({ role: 'user', text: message });
-  const finalEvent = await sceneRef.value?.sendChatMessage(message);
-  if (finalEvent?.answer) {
-    chatMessages.value.push({ role: 'assistant', text: finalEvent.answer });
-  }
+  await sceneRef.value?.sendChatMessage(message);
 }
 
 async function onRetryChat() {
-  const msg = retryMessage.value;
-  if (!msg) return;
-  const finalEvent = await sceneRef.value?.sendChatMessage(msg);
-  if (finalEvent?.answer) {
-    chatMessages.value.push({ role: 'assistant', text: finalEvent.answer });
-  }
+  if (retryMessage.value) await sceneRef.value?.sendChatMessage(retryMessage.value);
 }
 
 function onChatTurn({ msg, finalEvent }) {
-  if (!chatMessages.value.some((m) => m.role === 'user' && m.text === msg)) {
-    chatMessages.value.push({ role: 'user', text: msg });
-  }
-  if (finalEvent?.answer && chatMessages.value[chatMessages.value.length - 1]?.text !== finalEvent.answer) {
-    chatMessages.value.push({ role: 'assistant', text: finalEvent.answer });
-  }
+  // 진료 시작 버튼처럼 입력창을 거치지 않은 말은 여기서 넣는다 (다시 시도는 이미 들어 있음)
+  const lastUser = [...chatMessages.value].reverse().find((m) => m.role === 'user');
+  if (lastUser?.text !== msg) chatMessages.value.push({ role: 'user', text: msg });
+  if (finalEvent?.answer) chatMessages.value.push({ role: 'assistant', text: finalEvent.answer });
 }
 
 function reloadPage() {

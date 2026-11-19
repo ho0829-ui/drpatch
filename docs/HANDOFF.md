@@ -1,6 +1,12 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-19] I3~I6 검증 → main 합침(ff, 319478c). 범위 OK(frontend만, 새 라이브러리 없음), 빌드 경고 없음, 255 통과
+  - 브라우저 확인: 로딩 진행률, I5(11/21 일정 → 1회차 11/22, "원래 11/21"·옮김 안내, 확인 후 일정 삭제), I4(413 문구, API 키 없는 서버 → "설정 필요", 계획 중 서버 끔 → "연결 끊김"+[다시 시도] → 다시 켜고 누르니 계획 완료), 모바일 375 배치
+  - 고침: 답이 대화 기록에 두 번 들어가던 것(onChatTurn 한 곳에서만 넣음)
+  - 판단: three 본체 523KB(gzip 133KB)는 한 덩어리라 못 나눔 → chunkSizeWarningLimit 550 유지(설정에 이유 주석)
+  - 못 본 것: 숨긴 탭 첫 로딩(이 창에서는 재현 안 됨, visibilitychange 대응은 들어감), 실제 터치(롱프레스·두 손가락)는 휴대폰에서 직접
+  - S7(Google Calendar 조사) 폐기 — 사용자 결정. 캘린더는 SQLite 구현체로 마무리
 - [agy/fe-08-loading ~ agy/fe-11-touch] I3~I6 완료: I3(청크 분리·로딩 진행률·visibilitychange·GPU 해제·언마운트 가드), I4(API 키 누락·연결 끊김 재시도·413·try/finally), I5(이동/충돌/미확인 경고·달력 aria-label·범례), I6(모바일 터치·0.5초 롱프레스·visualViewport·floatChips 5개 상한)
 - [Claude Code 2026-11-19] R2(review-frontend) 검증 → 14건 판정(맞음 9·일부 2·틀림 1·문제없음 1·낮음 1). 고침: 매 프레임 이름표·말풍선 갱신 줄임(정지 시 DOM 변경 0), 말풍선 ResizeObserver, 블리스터·알약 치울 때 GPU 해제(공유 재질 제외), 닫힌 종이 inert·초점 복원. I3·I4·I5·I6 프롬프트에 덧붙임. 다음: I3~I6(Hydrogen), S7(Flash)
 - [agy/review-frontend] R2 완료: `docs/review-frontend.md` 작성 (`frontend/src` 자원 정리·매 프레임 낭비·오류·누수·접근성·명세·보안 리뷰 및 I3~I6 반영 항목 정리)
