@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/be-01-os] I7 완료: OS 입력(macOS·Windows 정규화·코드네임·버전만 되묻기), `get_eol` `isMaintained` 미발표 지원 처리, `eol_macos_15`/`eol_windows_11-24h2-w` fixture 및 테스트 5건 추가(260 통과)
 - [Claude Code 2026-11-19] spec v1.17 — 직접 써 보며 나온 문제를 명세로: OS 입력(macOS·Windows, 버전만 되묻기), 고정 문구도 박사님 말투, 약병 알약 24알 상한, 말풍선 눌러 닫기, 왼쪽 위 로고. agy 작업 문서 `docs/agy-prompt-next.md`(I7 OS → I8 말투, I9 화면). 코드는 안 고침
   - 재현(임시 DB, 실제 GMS): 130개 freeze 업로드 → "Python 3.11…" → OS 물음 → "로컬 맥북" → os=macos·버전 없음 → 같은 문장 또 물음. endoflife: macos 15 → NO_EOL_DATE(eolFrom null·isMaintained true), windows 11 → PRODUCT_NOT_FOUND(실제 cycle `11-24h2-w` 꼴)
   - 로고 "작게 검게 변함"은 1024px 창에서 재현 못 함 → I9에서 재현부터. 따로 본 것: 계획 답에 "Ubuntu 20.04 → 미상으로 올립니다" 문장(명세에 안 넣음, 확인 필요)

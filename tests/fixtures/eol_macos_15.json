@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.2.1",
+  "generated_at": "2026-11-18T09:37:30+00:00",
+  "result": {
+    "name": "15",
+    "codename": "Sequoia",
+    "label": "macOS 15 (Sequoia)",
+    "releaseDate": "2024-09-16",
+    "isLts": false,
+    "ltsFrom": null,
+    "isEol": false,
+    "eolFrom": null,
+    "isMaintained": true,
+    "latest": {
+      "name": "15.8.3",
+      "date": "2026-11-09",
+      "link": "https://developer.apple.com/documentation/macos-release-notes/macos-15-release-notes"
+    },
+    "custom": null
+  }
+}

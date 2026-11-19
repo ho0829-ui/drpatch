@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.2.1",
+  "generated_at": "2026-11-18T09:37:30+00:00",
+  "result": {
+    "name": "11-24h2-w",
+    "codename": null,
+    "label": "11 24H2 (W)",
+    "releaseDate": "2024-10-01",
+    "isLts": false,
+    "ltsFrom": null,
+    "isEoas": true,
+    "eoasFrom": "2026-10-13",
+    "isEol": true,
+    "eolFrom": "2026-10-13",
+    "isEoes": null,
+    "eoesFrom": null,
+    "isMaintained": false,
+    "latest": {
+      "name": "10.0.26100",
+      "date": null,
+      "link": "https://learn.microsoft.com/windows/release-health/windows11-release-information"
+    },
+    "custom": null
+  }
+}

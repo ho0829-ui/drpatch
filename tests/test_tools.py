@@ -117,9 +117,31 @@ def test_eol_not_found(use, registry, name):
 
 def test_eol_without_eol_date(use, registry):
     status, body = fixture("eol_ubuntu_20.04")
-    body = {"result": {**body["result"], "eolFrom": None}}
+    body = {"result": {**body["result"], "eolFrom": None, "isMaintained": False}}
     use(lambda m, url, b: (status, body))
     assert registry.call("get_eol", {"product": "ubuntu", "cycle": "20.04"})["error"]["code"] == NO_EOL_DATE
+
+
+def test_eol_macos_maintained_without_eol_date(use, registry):
+    """spec v1.17: macOS 15처럼 eolFrom=null, isMaintained=true면 실패가 아니라 지원 중(미발표)."""
+    use(lambda m, url, b: fixture("eol_macos_15"))
+    res = registry.call("get_eol", {"product": "macos", "cycle": "15"})
+    assert res["ok"] is True
+    data = res["data"]
+    assert data["eol_date"] is None
+    assert data["is_eol"] is False
+    assert data["note"] == "지원 중 (종료일 미발표)"
+
+
+def test_eol_windows_11_24h2(use, registry):
+    """spec v1.17: Windows cycle '11-24h2-w' 실제 저장본 응답."""
+    use(lambda m, url, b: fixture("eol_windows_11-24h2-w"))
+    res = registry.call("get_eol", {"product": "windows", "cycle": "11-24h2-w"})
+    assert res["ok"] is True
+    data = res["data"]
+    assert data["eol_date"] == "2026-10-13"
+    assert data["is_eol"] is True
+    assert data["queried_cycle"] == "11-24h2-w"
 
 
 # ── get_vulns ────────────────────────────────────────────

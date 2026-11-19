@@ -393,3 +393,67 @@ def test_priority_fallback_text_without_llm(transport):
     analysis = Analysis(intent="plan", intent_reason="뭐부터", os_name="ubuntu", os_version="20.04", python_version="3.8")
     out = run_agent("…", EXAMPLE_FILE, FakeBrain(analysis, fail=["write_response"]), today=TODAY)
     assert "위험한 순서" in out["answer"] and "django 2.2.0 → 5.2.19" in out["answer"]
+
+
+def test_v117_macos_followup_asks_only_version():
+    """spec v1.17 재현: OS 물음 → '로컬 맥북' → 두 번째는 macOS 버전만 묻고 같은 문장이 반복되지 않는다."""
+    pkgs = [{"name": "requests", "version": "2.19.0"}]
+    cond = Conditions(packages=pkgs)
+
+    brain1 = FakeBrain(
+        analysis=Analysis(
+            intent="plan", intent_reason="계획",
+            python_version="3.11", capacity=5, first_date="2026-11-25", interval_days=7,
+        )
+    )
+    out1 = run_agent("Python 3.11이고 한 번에 5개까지, 11/25부터 매주", cond, brain1, today=TODAY)
+    assert out1["missing"] == ["os"]
+    assert out1["tool_calls"] == 0
+    assert "Ubuntu" in out1["answer"] and "macOS" in out1["answer"] and "Windows" in out1["answer"]
+
+    brain2 = FakeBrain(
+        analysis=Analysis(intent="plan", intent_reason="OS 응답", os_name="맥북", os_version=None)
+    )
+    out2 = run_agent("로컬 맥북을 백엔드 서버로 쓰고 있어요", out1["conditions"], brain2, today=TODAY)
+    assert out2["conditions"].os_name == "macos"
+    assert out2["conditions"].os_version is None
+    assert out2["missing"] == ["os"]
+    assert out2["tool_calls"] == 0
+    assert "macOS 버전" in out2["answer"]
+    assert out2["answer"] != out1["answer"]
+
+
+def test_v117_os_normalization_and_windows_feature_update():
+    """spec v1.17: OS 이름·코드네임·Windows cycle 정규화, 주 버전만 있으면 되묻기."""
+    from app.agent.state import ask_message, normalize_os_name, normalize_os_version
+
+    assert normalize_os_name("맥북") == "macos"
+    assert normalize_os_name("OS X") == "macos"
+    assert normalize_os_name("윈도우") == "windows"
+    assert normalize_os_version("macos", "세쿼이아") == "15"
+    assert normalize_os_version("macos", "타호") == "26"
+    assert normalize_os_version("macos", "15.3.1") == "15"
+    assert normalize_os_version("macos", "모르는코드네임") is None
+    assert normalize_os_version("windows", "11 24H2") == "11-24h2-w"
+    assert normalize_os_version("windows", "11 24H2 Enterprise") == "11-24h2-e"
+    assert normalize_os_version("windows", "11") is None  # 기능 업데이트 없음 → 되묻기
+
+    win_msg = ask_message(["os"], Conditions(os_name="windows"))
+    assert "Windows" in win_msg and "24H2" in win_msg
+
+
+def test_v117_maintained_macos_not_added_and_null_eol_sorts_safely():
+    """spec v1.17: 지원 중(eol_date=None, is_eol=False) OS는 계획 항목이 아니며, eol_date=None 정렬도 안전."""
+    from app.agent.planner.items import Item, build_items
+    from app.agent.planner.priority import sort_items
+
+    res = build_items(
+        [], "3.11", {"eol_date": "2027-10-31", "is_eol": False}, None,
+        "macOS", "15", {"eol_date": None, "is_eol": False, "note": "지원 중 (종료일 미발표)"},
+    )
+    assert res.items == []
+    ordered = sort_items([
+        Item("package", "a", "1.0", "2.0", "HIGH", None, "이유"),
+        Item("package", "b", "1.0", "2.0", "HIGH", date(2026, 12, 1), "이유"),
+    ], TODAY)
+    assert [i.name for i in ordered] == ["b", "a"]
