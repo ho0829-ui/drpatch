@@ -1,6 +1,10 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-19] README 첫 판(sudo-quest 형식) + docs/media(main.gif 1.4MB, 스크린샷 4장) — scripts/capture/readme_media.mjs로 다시 만듦(헤드리스 Chrome CDP + ffmpeg, 새 라이브러리 없음, 서버 8010 필요)
+  - 고침: 곡반 OK 이름표 테두리 밖으로(tray.glb), 야간 근무표 끔(커튼에 가려짐 — 자리 정하면 SHOW_ROSTER), 낮은 품질 MSAA 끔·그림자 3프레임마다, ?debug=1 프레임 표시
+  - 측정(Mac 헤드리스): 낮 16.7ms·밤 22.8ms, draw call ~205, 삼각형 ~440k → Windows 프레임 드랍 원인 후보는 삼각형 수(모델 분할 수 줄이기)·밤 조명. Windows 실측은 ?debug=1 값을 받아서
+  - 남은 것: README에 필수/심화 비교 표, 튜토리얼 GIF 더(진료 예약·야간), 모바일·PC 최적화
 - [agy 2026-11-19] PC·모바일 3D 프레임 및 UI 최적화: `GTAOPass`/`EffectComposer`를 `?hq=1` 전용으로 전환(120프레임 뒤 자동 활성화 함정 제거), 그림자 맵 3072→2048(모바일·`?lq=1` 1024 + `PCFShadowMap`), 90프레임 평균 24ms 초과 시 실시간 품질 강등 워치독, 하단 도크 영역 알약 이름표 비침 차단, 모바일 처방 완료 시 대화 기록 자동 접기 + 달력 범례 정리 후 push, 294 통과·빌드 경고 0
 - [agy 2026-11-19] GitHub 저장소·Pages 경로를 `/drpatch/`(`https://ho0829-ui.github.io/drpatch/`)로 변경(`.github/workflows/pages.yml`, `docs/deploy.md`, `docs/spec.md`, `frontend/src/paths.js`) 및 GitHub Pages(GitHub Actions)·`API_BASE_URL` 설정 후 push, 294 통과
 - [Claude Code 2026-11-19] 배포 구조를 sudo-quest와 같게 (spec v1.25): 화면 GitHub Pages(.github/workflows/pages.yml), API만 Funnel. paths.js(asset/apiUrl), CORS(ALLOWED_ORIGINS + 사설망), vite base. 294 통과
