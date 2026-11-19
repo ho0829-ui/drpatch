@@ -333,8 +333,26 @@ dd { margin: 0; }
   border: 1px solid #D7EAE5; border-left: 5px solid var(--tag); border-radius: 14px; padding: 12px 12px 12px 14px; background: #FAFEFD;
   display: flex; flex-direction: column; gap: 8px;
 }
-.plan-tag { margin: 0; display: inline-flex; align-items: center; gap: 6px; font: 700 11px var(--sans); color: var(--tag); }
-.plan-tag i { width: 8px; height: 8px; border-radius: 3px; background: var(--tag); }
+.legend-swatch { background: conic-gradient(#2F80A8 0 25%, #8E5BB5 0 50%, #00897B 0 75%, #C0567E 0); }
+/* 고른 날 패널 */
+.cal-day-panel { margin-top: 12px; padding: 12px; border-radius: 12px; background: #F4FBF9; border: 1px solid #DCEFEA; }
+.day-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.day-row { display: flex; align-items: center; gap: 8px; font-size: 12.5px; min-width: 0; }
+.day-row-btn { width: 100%; border: 0; background: transparent; padding: 0; cursor: pointer; text-align: left; color: var(--color-ink); }
+.day-row-btn:hover .day-title { text-decoration: underline; }
+.day-row > .dot-event { width: 8px; height: 8px; border-radius: 50%; flex: none; margin: 0 4px; }
+.day-time { font: 500 11.5px var(--mono); color: #5B7375; flex: none; min-width: 74px; }
+.day-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.day-form { flex-direction: column; align-items: stretch; gap: 8px; margin: 12px 0 0; }
+.day-form input[type="text"] { font: 400 13px var(--sans); padding: 8px 10px; }
+.day-form-times { display: flex; gap: 12px; flex-wrap: wrap; }
+.day-form-times label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #5B7375; }
+.day-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.cal-hint { margin: 0; font-size: 11.5px; color: #7D9496; }
+.day-jump { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 0; cursor: pointer; text-align: left; color: var(--color-ink); font-size: 12.5px; }
+.day-jump b { font: 700 12px var(--mono); flex: none; }
+.day-jump:hover .day-title { text-decoration: underline; }
+.cal-section > h3 { margin-bottom: 8px; }
 .plan-card.highlighted { border-color: var(--color-deep); border-left-color: var(--tag); box-shadow: 0 0 0 2px rgba(31,111,107,.14); }
 .plan-card.done { opacity: 0.72; background: #F5F8F8; }
 .plan-card-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }

@@ -32,9 +32,12 @@ const newEnd = ref('');
 
 const monthLabel = computed(() => `${viewYear.value}년 ${viewMonth.value + 1}월`);
 
-// 점검(= 세션, 파일을 올린 한 번)마다 색 하나. 위험도 색(빨강·주황·노랑·초록)과 헷갈리지 않는 색만 쓴다.
-const SESSION_COLORS = ['#2F80A8', '#7A5CC2', '#00897B', '#5C6BC0', '#8D6E63', '#AD5A9E'];
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+// 점검(= 세션, 파일을 올린 한 번)마다 색 하나 — 글자 없이 색으로만 구분 (사용자 요청 2026-11-19).
+// 동시에 10개까지 서로 다른 색. 위험도 색(빨강·주황·노랑)과 겹치지 않게 고름. 11개째부터는 다시 돈다.
+const SESSION_COLORS = [
+  '#2F80A8', '#8E5BB5', '#00897B', '#C0567E', '#5C6BC0',
+  '#8D6E63', '#4E8F3A', '#1F4E79', '#607D8B', '#7B6F2A',
+];
 
 const sessionTags = computed(() => {
   const first = new Map(); // session_id → 가장 먼저 만든 계획 시각
@@ -46,17 +49,18 @@ const sessionTags = computed(() => {
   const ordered = [...first.entries()].sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0));
   const tags = new Map();
   ordered.forEach(([sid], i) => {
-    const letter = LETTERS[i % LETTERS.length];
     tags.set(sid, {
-      letter,
+      idx: i,
       color: SESSION_COLORS[i % SESSION_COLORS.length],
-      label: sid === current ? `점검 ${letter} · 지금 차트` : `점검 ${letter}`,
+      current: sid === current,
+      // 화면 글자로는 안 쓰고 읽어 주기(aria)에만
+      label: `점검 ${i + 1}${sid === current ? ' (지금 차트)' : ''}`,
     });
   });
   return tags;
 });
 
-const tagOf = (p) => sessionTags.value.get(p.session_id) || { letter: '?', color: SESSION_COLORS[0], label: '점검' };
+const tagOf = (p) => sessionTags.value.get(p.session_id) || { idx: 0, color: SESSION_COLORS[0], current: false, label: '점검' };
 
 const monthRange = computed(() => {
   const y = viewYear.value;
@@ -88,7 +92,7 @@ const calendarCells = computed(() => {
       continue;
     }
     const dayPlans = plans.value.filter((p) => p.date === iso);
-    const dayEvents = events.value.filter((e) => e.date === iso);
+    const dayEvents = userEvents.value.filter((e) => e.date === iso);
     const parts = [`${d.getMonth() + 1}월 ${d.getDate()}일`];
     for (const p of dayPlans) parts.push(`${tagOf(p).label} ${p.round_no}회차${p.status === 'done' ? ' 끝남' : ''}`);
     if (dayEvents.length) parts.push(`내 일정 ${dayEvents.length}개`);
@@ -106,15 +110,32 @@ const calendarCells = computed(() => {
   return cells;
 });
 
-// 범례: 지금 보이는 계획에 나온 점검만
-const legendTags = computed(() => {
-  const seen = new Map();
-  for (const p of plans.value) {
-    const t = tagOf(p);
-    if (!seen.has(t.letter)) seen.set(t.letter, t);
-  }
-  return [...seen.values()].sort((a, b) => a.letter.localeCompare(b.letter));
-});
+
+const userEvents = computed(() => events.value.filter((e) => e.source !== 'sudo-patch'));
+
+const WEEK_KO = ['일', '월', '화', '수', '목', '금', '토'];
+function shortDate(iso) {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return iso || '';
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return `${Number(m[2])}/${Number(m[3])}(${WEEK_KO[d.getDay()]})`;
+}
+
+// 고른 날: 그 날의 회차와 내 일정을 한눈에, 여기서 바로 일정 추가
+const selectedLabel = computed(() => shortDate(selectedDate.value));
+const selectedPlans = computed(() => plans.value.filter((p) => p.date === selectedDate.value));
+const selectedEvents = computed(() =>
+  userEvents.value
+    .filter((e) => e.date === selectedDate.value)
+    .sort((a, b) => String(a.start || '').localeCompare(String(b.start || ''))),
+);
+const monthUserEvents = computed(() =>
+  [...userEvents.value].sort((a, b) => `${a.date} ${a.start || ''}`.localeCompare(`${b.date} ${b.start || ''}`)),
+);
+
+function scrollToPlan(p) {
+  document.getElementById(`plan-card-${p.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 
 async function loadPlans() {
   const reqId = ++plansReqId;
@@ -156,14 +177,16 @@ function shiftMonth(delta) {
   viewMonth.value = d.getMonth();
 }
 
-async function selectDay(iso) {
+function selectDay(iso) {
+  if (selectedDate.value !== iso) eventFormOpen.value = false;
   selectedDate.value = iso;
   newDate.value = iso;
-  const target = plans.value.find((p) => p.date === iso);
-  if (target) {
-    await nextTick();
-    document.getElementById(`plan-card-${target.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
+}
+
+function openAddForm() {
+  newDate.value = selectedDate.value;
+  eventFormOpen.value = true;
+  nextTick(() => document.getElementById('cal-new-title')?.focus());
 }
 
 async function toggleDone(plan) {
@@ -315,10 +338,10 @@ onMounted(() => {
         <button type="button" class="cal-btn" aria-label="다음 달" @click="shiftMonth(1)">▶</button>
       </div>
 
-      <div class="cal-legend" aria-hidden="true">
-        <span v-for="t in legendTags" :key="t.letter"><i class="legend-swatch" :style="{ background: t.color }"></i>{{ t.label }}</span>
+      <p class="cal-legend" aria-hidden="true">
+        <span><i class="legend-swatch"></i>숫자 = 회차 (색은 점검마다 다름)</span>
         <span><i class="dot-event"></i>내 일정</span>
-      </div>
+      </p>
 
       <div class="cal-grid">
         <span v-for="d in ['일', '월', '화', '수', '목', '금', '토']" :key="d" class="cal-dow">{{ d }}</span>
@@ -348,30 +371,61 @@ onMounted(() => {
           </button>
         </template>
       </div>
+
+      <!-- 고른 날: 회차·내 일정을 보고 바로 일정 넣기 -->
+      <section class="cal-day-panel" aria-live="polite">
+        <div class="cal-head-row">
+          <h3>{{ selectedLabel }}</h3>
+          <button v-if="!eventFormOpen" type="button" class="cal-btn nowrap" @click="openAddForm">＋ 이 날 일정 넣기</button>
+        </div>
+
+        <ul v-if="selectedPlans.length || selectedEvents.length" class="day-list">
+          <li v-for="p in selectedPlans" :key="`p${p.id}`">
+            <button type="button" class="day-row day-row-btn" :aria-label="`${tagOf(p).label} ${p.round_no}회차 카드로`" @click="scrollToPlan(p)">
+              <span class="round-pill" :class="{ done: p.status === 'done' }" :style="{ '--tag': tagOf(p).color }">{{ p.round_no }}</span>
+              <span class="day-time">{{ p.window_start ? `${p.window_start}–${p.window_end || ''}` : '종일' }}</span>
+              <span class="day-title">패치 {{ p.round_no }}회차 · {{ (p.items || []).map((it) => it.name).slice(0, 3).join(', ') }}<template v-if="(p.items || []).length > 3"> 외 {{ p.items.length - 3 }}</template></span>
+            </button>
+          </li>
+          <li v-for="ev in selectedEvents" :key="`e${ev.id}`" class="day-row">
+            <i class="dot-event" aria-hidden="true"></i>
+            <span class="day-time">{{ ev.start ? `${ev.start}–${ev.end || ''}` : '종일' }}</span>
+            <span class="day-title">{{ ev.title }}</span>
+            <button type="button" class="cal-btn danger nowrap" :aria-label="`${ev.title} 지우기`" @click="removeEvent(ev.id)">삭제</button>
+          </li>
+        </ul>
+        <p v-else-if="!eventFormOpen" class="cal-muted">이 날은 비어 있어요. 배포·회의처럼 패치를 피해야 할 일정을 넣어 두면 박사님이 회차를 옮겨 드려요.</p>
+
+        <form v-if="eventFormOpen" class="cal-form day-form" @submit.prevent="addEvent">
+          <input id="cal-new-title" v-model="newTitle" type="text" placeholder="일정 제목 (예: 정기 배포)" required aria-label="일정 제목">
+          <div class="day-form-times">
+            <label>시작 <input v-model="newStart" type="time" aria-label="시작 시각"></label>
+            <label>끝 <input v-model="newEnd" type="time" aria-label="종료 시각"></label>
+          </div>
+          <p class="cal-hint">시각을 비우면 하루 종일로 봐요.</p>
+          <div class="day-form-actions">
+            <button type="button" class="cal-btn nowrap" @click="eventFormOpen = false">취소</button>
+            <button type="submit" class="cal-btn primary nowrap">{{ selectedLabel }}에 넣기</button>
+          </div>
+        </form>
+      </section>
     </div>
 
     <div class="cal-section">
-      <div class="cal-head-row">
-        <h3>내 일정 ({{ events.length }})</h3>
-        <button type="button" class="cal-btn nowrap" @click="eventFormOpen = !eventFormOpen">
-          {{ eventFormOpen ? '접기' : '일정 추가' }}
-        </button>
-      </div>
+      <h3>이번 달 내 일정 ({{ monthUserEvents.length }})</h3>
       <div v-if="eventsError" class="cal-err" role="alert">
         <span class="cal-err-text">{{ eventsError }}</span>
         <button type="button" class="cal-btn nowrap" @click="loadEvents">다시 불러오기</button>
       </div>
       <p v-else-if="eventsLoading && !events.length" class="cal-muted">달력을 불러오는 중…</p>
-      <form v-if="eventFormOpen" class="cal-form" @submit.prevent="addEvent">
-        <input v-model="newTitle" type="text" placeholder="일정 제목" required aria-label="일정 제목">
-        <input v-model="newDate" type="date" required aria-label="일정 날짜">
-        <input v-model="newStart" type="time" aria-label="시작 시각">
-        <input v-model="newEnd" type="time" aria-label="종료 시각">
-        <button type="submit" class="cal-btn primary nowrap">저장</button>
-      </form>
-      <ul v-if="events.length" class="cal-list">
-        <li v-for="ev in events" :key="ev.id" class="cal-item-row">
-          <span>{{ ev.date }} <template v-if="ev.start">{{ ev.start }}–{{ ev.end }} </template>· {{ ev.title }}</span>
+      <p v-else-if="!monthUserEvents.length" class="cal-muted">아직 없어요. 달력에서 날짜를 누르고 "이 날 일정 넣기"로 넣을 수 있어요.</p>
+      <ul v-else class="cal-list">
+        <li v-for="ev in monthUserEvents" :key="ev.id" class="cal-item-row">
+          <button type="button" class="day-jump" @click="selectDay(ev.date)">
+            <b>{{ shortDate(ev.date) }}</b>
+            <span class="day-time">{{ ev.start ? `${ev.start}–${ev.end || ''}` : '종일' }}</span>
+            <span class="day-title">{{ ev.title }}</span>
+          </button>
           <button type="button" class="cal-btn danger nowrap" @click="removeEvent(ev.id)">삭제</button>
         </li>
       </ul>

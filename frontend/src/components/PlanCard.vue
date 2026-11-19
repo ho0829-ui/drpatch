@@ -105,8 +105,8 @@ const sevColor = (sev) => SEV[sevKey(sev)][0];
     class="plan-card"
     :class="{ done: isDone, highlighted }"
     :style="tag ? { '--tag': tag.color } : undefined"
+    :aria-label="tag ? `${tag.label} ${plan.round_no}회차` : undefined"
   >
-    <p v-if="tag" class="plan-tag"><i aria-hidden="true"></i>{{ tag.label }}</p>
     <header class="plan-card-head">
       <div class="plan-card-title">
         <b>{{ dateLabel }}</b>
