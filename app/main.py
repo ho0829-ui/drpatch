@@ -22,6 +22,7 @@ from app.api import calendar, chat, logs, plans, upload
 from app.db import repo
 from app.events.bus import EventBus
 from app.events.logger import LoggingAgent
+from app.public import PublicGuard, load_public_settings
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DIST_DIR = ROOT_DIR / "frontend" / "dist"
@@ -48,6 +49,7 @@ def make_brain():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    app.state.public = PublicGuard(load_public_settings())  # 공개 모드 (spec v1.24), 기본은 꺼짐
     app.state.db_path = repo.db_path()
     app.state.bus = EventBus()
     app.state.logger = None
@@ -82,8 +84,9 @@ app.include_router(calendar.router)
 
 @app.get("/health")
 def health() -> dict:
-    """서버가 켜져 있는지만 확인한다."""
-    return {"ok": True}
+    """서버가 켜져 있는지, 공개 모드인지 (화면이 "모든 계획 보기"를 숨길지 정함)."""
+    guard = getattr(app.state, "public", None)
+    return {"ok": True, "public": bool(guard and guard.enabled)}
 
 
 # 화면(web/)은 API 라우터 뒤에 붙인다 → /plans 등 API 경로가 먼저 잡힌다

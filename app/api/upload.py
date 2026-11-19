@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from app.agent.session import new_session_id, save_upload
 from app.api.schemas import UploadOut
 from app.parsing.requirements import parse_bytes
+from app.public import guard
 
 router = APIRouter(tags=["upload"])
 MAX_BYTES = 1_000_000
@@ -15,6 +16,7 @@ MAX_BYTES = 1_000_000
 
 @router.post("/upload", response_model=UploadOut)
 async def upload(request: Request, session_id: str | None = None):
+    guard(request).check_upload(request)
     raw = await request.body()
     if not raw:
         raise HTTPException(status_code=400, detail="허허, 빈 차트네요. pip freeze로 만든 requirements.txt를 올려 주시죠.")

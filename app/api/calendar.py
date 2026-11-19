@@ -5,17 +5,23 @@ from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException, Request
 
 from app.api.schemas import CalendarEventIn
+from app.calendar.backend import scoped
+from app.public import owner_of
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 OFF = "캘린더를 쓰지 않도록 설정돼 있어요 (.env CALENDAR_BACKEND)."
 DEFAULT_DAYS = 62
 
 
+NO_SESSION = "허허, 먼저 파일을 올리거나 예시를 골라 주시죠. 그래야 일정을 차트에 붙일 수 있습니다."
+
+
 def _calendar(request: Request):
+    """공개 모드면 요청한 세션의 일정만 다루는 캘린더 (spec v1.24). 로컬은 전체."""
     calendar = request.app.state.calendar
     if calendar is None:
         raise HTTPException(status_code=404, detail=OFF)
-    return calendar
+    return scoped(calendar, owner_of(request))
 
 
 @router.get("/events")
@@ -29,6 +35,8 @@ def list_events(request: Request, date_from: date | None = None, date_to: date |
 
 @router.post("/events", status_code=201)
 def add_event(body: CalendarEventIn, request: Request) -> dict:
+    if owner_of(request) == "":
+        raise HTTPException(status_code=400, detail=NO_SESSION)
     return _calendar(request).add_event(body.title, body.date.isoformat(), body.start, body.end)
 
 

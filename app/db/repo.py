@@ -40,6 +40,7 @@ ADDED_COLUMNS = {
         "week_interval INTEGER",
     ],
     "plans": ["status TEXT NOT NULL DEFAULT 'planned'", "done_at TEXT"],
+    "calendar_events": ["owner TEXT"],
 }
 
 

@@ -15,6 +15,13 @@ const selectedDate = ref(todayIso);
 const events = ref([]);
 const plans = ref([]);
 const showAllSessions = ref(!api.getSession());
+const isPublic = ref(false); // 공개 모드면 서버가 내 계획만 주므로 "모든 계획 보기"를 숨긴다
+api.serverInfo().then((info) => {
+  if (info.public) {
+    isPublic.value = true;
+    showAllSessions.value = false;
+  }
+});
 const eventFormOpen = ref(false);
 const plansError = ref('');
 const eventsError = ref('');
@@ -279,7 +286,7 @@ onMounted(() => {
     <p class="eyebrow">진료 예약 · 점검 일정</p>
     <div class="cal-head-row">
       <h2 id="sheet-title">다가오는 점검</h2>
-      <label class="cal-scope-toggle">
+      <label v-if="!isPublic" class="cal-scope-toggle">
         <input v-model="showAllSessions" type="checkbox">
         모든 계획 보기
       </label>

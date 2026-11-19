@@ -59,7 +59,8 @@ CREATE TABLE IF NOT EXISTS calendar_events (
     end_time    TEXT,
     source      TEXT NOT NULL DEFAULT 'user',
     plan_id     INTEGER,
-    created_at  TEXT NOT NULL
+    created_at  TEXT NOT NULL,
+    owner       TEXT              -- 공개 모드에서 일정 주인(세션). 로컬은 NULL (spec v1.24)
 );
 
 CREATE INDEX IF NOT EXISTS idx_calendar_date ON calendar_events (date);

@@ -19,12 +19,29 @@ export function setSession(id) {
   }
 }
 
+// 공개 모드(spec v1.24)에서 서버가 "내 데이터만" 거르는 열쇠. 로컬에서는 서버가 무시한다.
+function sessionHeaders(extra = {}) {
+  const sid = getSession();
+  return sid ? { ...extra, 'X-Session-Id': sid } : extra;
+}
+
+let serverInfoPromise = null;
+/** GET /health → { ok, public } 한 번만 묻고 기억 (공개 모드면 "모든 계획 보기"를 숨긴다) */
+export function serverInfo() {
+  if (!serverInfoPromise) {
+    serverInfoPromise = fetch('/health')
+      .then((r) => (r.ok ? r.json() : { ok: false, public: false }))
+      .catch(() => ({ ok: false, public: false }));
+  }
+  return serverInfoPromise;
+}
+
 async function requestJson(method, url, body) {
   let res;
   try {
     res = await fetch(url, {
       method,
-      headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
+      headers: sessionHeaders(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
@@ -93,7 +110,7 @@ export async function chat(sessionId, message, onEvent) {
   try {
     res = await fetch('/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: sessionHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ session_id: sid, message }),
     });
   } catch {

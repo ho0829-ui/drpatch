@@ -1,6 +1,11 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-19] 배포 준비 (spec v1.24 공개 모드, docs/deploy.md, scripts/serve.sh). 290 통과·빌드 경고 0
+  - 공개 모드(PUBLIC_MODE=1): X-Session-Id로 계획·로그·캘린더 일정을 내 것만(남의 것 404), 캘린더 owner 칸, 겹침도 같은 세션끼리, /chat IP 시간당 20·하루 300, /upload IP 시간당 60(429), data/public.db, /health에 public → 화면이 "모든 계획 보기" 숨김
+  - scripts/serve.sh [--public]: 가상환경·빌드·서버 한 번에 (로컬 8000 / 공개 8010)
+  - 확인: tests/test_public_mode.py 9개, 공개 서버 8010 실제 실행 — 헤더 없으면 빈 목록, 내 일정만 보임, 실제 GMS 계획에서 내 11/27 일정으로 1회차가 11/28로 이동. 테스트 public.db는 지움
+  - 남은 것(사용자): `tailscale funnel --bg 8010`으로 공개 → 밖에서 확인, X-Forwarded-For 붙는지 확인. 지금 Funnel은 꺼져 있음(serve config 없음)
 - [Claude Code 2026-11-19] 야간 당직 다듬기(사용자 피드백): 대사 자연스럽게, 밤엔 가운 → 줄무늬 잠옷(셰이더 줄무늬), 수면 모자 1.16배·정수리에 얹어 머리에 박혀 보이던 것 고침. 8001에서 확인
 - [Claude Code 2026-11-19] 야간 당직 진료실 (spec v1.23, Claude Code 직접). 281 통과·빌드 경고 0
   - night.py → night.glb(수면 모자·근무표, 104KB), scene/night.js(낮↔밤 조명·밤하늘 그림·모니터·소품), 16/16 순간 열림 + 칩이 낮/밤 토글, 기억(drpatch-night)
@@ -115,6 +120,7 @@
 
 ## 다음에 할 것
 - agy 작업 묶음 I14~I19 모두 끝남
+- 다음: 공개(사용자가 Funnel 켜기) → 제출 산출물·README(sudo-quest README 참고, GIF) → 셀프 체크리스트(사용자)
 - 사용자 결정 남음: web/ 삭제 여부, README·셀프 체크리스트
 - 저장소 정리: 구 화면 `web/` 삭제 여부 결정, `main`에 합쳐진 `agy/*` 로컬 브랜치 정리, `git push`
 - 최종 제출 마무리: 셀프 체크리스트 점검, `README.md` 최종 작성

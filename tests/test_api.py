@@ -194,7 +194,7 @@ def test_screen_is_served_from_same_server(client):
     for path in assets:
         assert client.get(path).status_code == 200, path
     assert client.get("/plans").headers["content-type"].startswith("application/json")  # API가 먼저
-    assert client.get("/health").json() == {"ok": True}
+    assert client.get("/health").json() == {"ok": True, "public": False}
 
 
 def test_confirm_only_named_round(client):

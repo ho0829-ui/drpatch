@@ -187,7 +187,7 @@ def test_app_starts_logger_and_stops_cleanly(tmp_path, monkeypatch):
 
     monkeypatch.setenv("DB_PATH", str(tmp_path / "app.db"))
     with TestClient(app) as client:
-        assert client.get("/health").json() == {"ok": True}
+        assert client.get("/health").json() == {"ok": True, "public": False}
         assert app.state.logger is not None
         app.state.bus.publish("boot", "test", {"ok": True})
     with repo.connect(str(tmp_path / "app.db")) as conn:

@@ -19,6 +19,8 @@ from app.api.deps import save_confirmed_plan
 from app.api.schemas import ChatIn
 from app.db import repo
 from app.events.bus import Event
+from app.calendar.backend import scoped
+from app.public import guard
 from app.tools.default import build_registry
 
 router = APIRouter(tags=["chat"])
@@ -54,17 +56,25 @@ def _final(session_id: str, out: dict | None, answer: str | None = None, confirm
 
 def register_on_calendar(app, session_id: str, plans: list[dict]) -> None:
     """확정한 회차를 캘린더에 등록한다 (F3023, Tool 경유 → 로그에 남음). 실패해도 확정은 그대로."""
-    if app.state.calendar is None:
+    calendar = calendar_for(app, session_id)
+    if calendar is None:
         return
-    runner = ToolRunner(build_registry(app.state.calendar, app.state.db_path), app.state.bus.emitter(session_id))
+    runner = ToolRunner(build_registry(calendar, app.state.db_path), app.state.bus.emitter(session_id))
     for plan in plans:
         result = runner.call("add_calendar_event", {"plan_id": plan["id"]})
         plan["calendar_event"] = result["data"] if result["ok"] else None
 
 
+def calendar_for(app, session_id: str):
+    """공개 모드면 그 세션의 일정만 다루는 캘린더 (spec v1.24)."""
+    public = getattr(app.state, "public", None)
+    return scoped(app.state.calendar, session_id if public and public.enabled else None)
+
+
 @router.post("/chat")
 def chat(body: ChatIn, request: Request):
     app = request.app
+    guard(request).check_chat(request)  # 공개 모드: IP·하루 상한 (넘으면 429)
     session_id = body.session_id or new_session_id()
     brain = app.state.brain
     if brain is None:  # API 키 누락 (F3019 안내)
@@ -79,7 +89,7 @@ def chat(body: ChatIn, request: Request):
     def work() -> None:
         try:
             box["out"] = chat_turn(session_id, body.message, brain, bus=bus, db_path=app.state.db_path,
-                                   calendar=app.state.calendar)
+                                   calendar=calendar_for(app, session_id))
         except Exception as e:
             box["error"] = type(e).__name__
             bus.publish(session_id, "error", {"step": "chat", "kind": type(e).__name__})
@@ -109,7 +119,8 @@ def chat(body: ChatIn, request: Request):
             if out["intent"] == "confirm" and out["last_plan"]:
                 conn = repo.connect(app.state.db_path)
                 try:
-                    confirmed = save_confirmed_plan(conn, session_id, out["last_plan"], out.get("confirm_rounds"))
+                    confirmed = save_confirmed_plan(conn, session_id, out["last_plan"], out.get("confirm_rounds"),
+                                                    same_session=guard(request).enabled)
                 finally:
                     conn.close()
                 register_on_calendar(app, session_id, confirmed)
