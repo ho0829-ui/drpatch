@@ -1,6 +1,10 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-19] I15 검증 → main 합침(ff, d7b4d4f). 범위 OK, 268 통과·빌드 경고 0
+  - 미리보기 20종 확인, 실제 GMS로 새 패키지 12개 계획 → 블리스터 3판·곡반에서 기존 알약과 크기·높이 맞음
+  - pills.glb 874KB → 2.1MB (models 전체 15MB)
+  - 다듬을 후보(선택): scipy 물결이 SP 글자와 겹침, uvicorn 뿔이 잘 안 보임, fastapi 번개가 "/ x"처럼 읽힘
 - [agy/fe-19-pills] I15 완료: Blender `pills.py`에 새 특별 알약 10종 추가(기존 10종 유지, 총 20종·일반 기호 각인·`pills.glb` 854KB→2.0MB·미리보기 `pills.png`), `demo.js` `POPULAR` 10개 추가, 268 통과·빌드 경고 0
 - [Claude Code 2026-11-19] I14 검증 → main 합침(ff, f223581). 범위 OK, 268 통과·빌드 경고 0
   - 375: 종이 점선 없음(`.paper::after` none), 11→1월 넘겨도 오류 없음
