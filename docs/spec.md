@@ -557,7 +557,7 @@ I15 검증에서 나온 것: scipy 물결이 SP 글자와 겹침, uvicorn 뿔이
 
 ## v1.25 Pages + Funnel (2026-11-19, 사용자 확인 "GitHub로 배포하고 API만 Tailscale")
 v1.24는 화면·API를 모두 Mac에서 Funnel로 냈는데, 밖에서 열면 화면(3D 모델 17MB)을 받는 데 너무 오래 걸렸다(사용자 보고). sudo-quest처럼 나눈다.
-- **화면:** GitHub Actions(`.github/workflows/pages.yml`)가 `main` push마다 백엔드 테스트 → 화면 빌드(`VITE_BASE=/sudo-patch/`, `VITE_API_BASE=저장소 변수 API_BASE_URL`) → Pages 배포. 주소 https://ho0829-ui.github.io/sudo-patch/
+- **화면:** GitHub Actions(`.github/workflows/pages.yml`)가 `main` push마다 백엔드 테스트 → 화면 빌드(`VITE_BASE=/drpatch/`, `VITE_API_BASE=저장소 변수 API_BASE_URL`) → Pages 배포. 주소 https://ho0829-ui.github.io/drpatch/
 - **API:** 이 Mac `scripts/serve.sh --public`(8010) + `tailscale funnel --bg 8010` → https://macmini.taile20f54.ts.net
 - **화면 코드:** 정적 파일은 `asset()`(BASE_URL 붙임), API는 `apiUrl()`(VITE_API_BASE 붙임, 비면 같은 주소) — `frontend/src/paths.js`. 로컬은 지금과 같다.
 - **CORS:** `ALLOWED_ORIGINS`(기본 `https://ho0829-ui.github.io`)만, 메서드 GET·POST·PUT·DELETE, 머리말 Content-Type·X-Session-Id. Chrome 사설망 사전 확인(Private Network Access)도 허용 출처에만 (Starlette `allow_private_network`).

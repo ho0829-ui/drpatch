@@ -51,11 +51,11 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: 화면 빌드 (Pages 경로 /sudo-patch/)
+      - name: 화면 빌드 (Pages 경로 /drpatch/)
         working-directory: frontend
         run: npm run build
         env:
-          VITE_BASE: /sudo-patch/
+          VITE_BASE: /drpatch/
           VITE_API_BASE: ${{ vars.API_BASE_URL }}
 
       - name: 빌드 결과물 올리기

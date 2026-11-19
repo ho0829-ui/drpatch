@@ -3,7 +3,7 @@
 sudo-quest 때와 같은 방식이다.
 
 ```
-방문자 ─https─> https://ho0829-ui.github.io/sudo-patch/      화면 (GitHub Pages: 3D 모델 17MB·JS·CSS)
+방문자 ─https─> https://ho0829-ui.github.io/drpatch/      화면 (GitHub Pages: 3D 모델 17MB·JS·CSS)
                     │  API 호출만 (작은 JSON·대화 스트림)
                     └─https─> https://macmini.taile20f54.ts.net   Tailscale Funnel (443)
                                    └─> http://127.0.0.1:8010       scripts/serve.sh --public (공개 모드, data/public.db)
@@ -20,7 +20,7 @@ sudo-quest 때와 같은 방식이다.
 | 밖으로 열기 / 닫기 | `tailscale funnel --bg 8010` / `tailscale funnel reset` |
 | 상태 | `tailscale funnel status` · `curl -s https://macmini.taile20f54.ts.net/health` → `{"ok":true,"public":true}` |
 | 화면 배포 | `main`에 push → GitHub Actions `pages` (테스트 → 빌드 → Pages) |
-| 화면 주소 | https://ho0829-ui.github.io/sudo-patch/ |
+| 화면 주소 | https://ho0829-ui.github.io/drpatch/ |
 
 ## 처음 한 번 (사용자)
 

@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy 2026-11-19] GitHub 저장소·Pages 경로를 `/drpatch/`(`https://ho0829-ui.github.io/drpatch/`)로 변경(`.github/workflows/pages.yml`, `docs/deploy.md`, `docs/spec.md`, `frontend/src/paths.js`) 및 GitHub Pages(GitHub Actions)·`API_BASE_URL` 설정 후 push, 294 통과
 - [Claude Code 2026-11-19] 배포 구조를 sudo-quest와 같게 (spec v1.25): 화면 GitHub Pages(.github/workflows/pages.yml), API만 Funnel. paths.js(asset/apiUrl), CORS(ALLOWED_ORIGINS + 사설망), vite base. 294 통과
   - 로컬 Pages 흉내(8090 화면 + 8011 API)로 업로드·계획·캘린더·대화 스트림 확인
   - 사용자가 할 것: Settings→Pages Source=GitHub Actions, 변수 API_BASE_URL=https://macmini.taile20f54.ts.net, push, 8010 서버 다시 켜기(CORS 코드 반영). 모바일 속도는 README·PC 배포 뒤에
