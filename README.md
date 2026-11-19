@@ -36,19 +36,17 @@ DR.PATCH(저장소 이름 sudo-patch)는 `pip freeze`로 만든 requirements.txt
 
 ## 어떻게 만들었나
 
-```
-화면 (Vue 3 + Three.js, frontend/)          ──/upload·/chat(ndjson 스트림)·/plans·/logs·/calendar──>  FastAPI (app/)
-  진료실 3D · 말풍선 · 조건 칩 · 종이(시트)                                                          │
-                                                                                     LangGraph 메인 Agent (app/agent/)
-                                         analyze ─ plan_tools ─ call_tools ─ judge ─ (replan) ─ build ─ respond
-                                            LLM          LLM        코드         코드      LLM        코드      LLM
-                                                                        │ 이벤트 큐 (기다리지 않음)
-                                                                        └─> 로깅 Agent (별도 스레드) → SQLite events
-```
+![화면 → API 서버 → 메인 Agent(LLM이 판단, 코드가 계산) → 실제 데이터 API, 기록은 SQLite](docs/media/how-it-works.svg)
 
-- **LLM은 Tool의 종류와 순서만 계획**하고, 패키지마다 Tool을 반복 호출하는 건 코드가 펼칩니다. 버전 비교·`requires_python` 판정·우선순위·회차 나누기·날짜 계산은 모두 코드입니다 ([설계](docs/architecture.md)).
-- **Tool** (`app/tools/`): `get_eol`, `get_vulns`, `get_package_versions`, `list_calendar_events`, `add_calendar_event`. 모두 예외 대신 `{ok:false, error:{code, message}}`를 돌려주고, 실패는 "확인 못 함"으로 이어집니다 ([명세의 Tool 절](docs/spec.md)).
-- **말투:** 능청스러운 노박사. 능청은 표현에만, 숫자·버전·날짜·심각도는 받은 값 그대로.
+**핵심 원칙: LLM은 "말을 이해하고 고르는 일"만, 숫자는 코드가.** 그림에서 주황은 LLM, 초록은 코드입니다.
+
+1. **무엇을 원하나** (LLM) — "우분투 22, 파이썬 3.10, 매주 화·목"에서 의도와 조건을 읽습니다. 빠진 조건은 코드가 정해진 문장으로 되묻습니다.
+2. **무엇을 조회할까** (LLM) — 어떤 Tool을 어떤 순서로 부를지**만** 정합니다. 패키지 30개면 30번 반복하는 건 코드가 펼칩니다.
+3. **조회** (코드 → Tool) — endoflife.date · OSV.dev · PyPI를 부릅니다. Tool은 실패해도 예외 대신 `{ok:false}`를 돌려주고, 그 값은 "확인 못 함"으로 남습니다.
+4. **판정·처방** (코드) — 목표 버전(취약점 없고 지금 Python에서 설치되는 가장 새 버전), 우선순위, 회차·날짜, 캘린더 겹침을 계산합니다. 호환이 막히면 **재계획**: LLM은 "Python을 올릴까, 보류할까"만 고르고 다시 계산은 코드가 합니다(최대 3번).
+5. **설명** (LLM) — 계산된 결과를 박사님 말투로 풀어 씁니다. 숫자·버전·날짜는 받은 값 그대로.
+
+- **실행 기록:** 각 단계가 이벤트를 큐에 넣고 메인 Agent는 기다리지 않습니다. 로깅 Agent(별도 스레드)가 받아 SQLite에 저장하고, 화면은 같은 이벤트를 실시간으로 받아 수액 방울·단계 칩·이름표로 보여 줍니다. → [Agent 설계](docs/architecture.md)
 - **3D 소품**은 Blender 스크립트(`design/blender/`)로 만든 glb입니다. 실제 회사·패키지 로고는 쓰지 않고 대표색·이니셜·일반 기호로만 구분합니다.
 
 ## 검증과 한계
