@@ -1,6 +1,10 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-19] spec v1.20 + agy I17(`docs/agy-prompt-next.md`, I16 합친 뒤) + 알약 다듬기(L) 직접 함
+  - 사용자 보고 → 재현(375, 실제 GMS): 보내도 대화 기록은 닫힌 채 숫자만 바뀜, 처방 답 말풍선이 위 절반을 덮어 블리스터 3판 가림, 입력창에 OS를 써도 칩은 "OS 필요", 모바일 칩 줄 `justify-content: flex-start`라 왼쪽에 붙음
+  - 정한 것(I17): 보내면 대화 기록 열기 + "보는 중" 한 줄, 긴 답은 기록으로·말풍선은 첫 문장만, 칩 세 상태(받음 / 입력창에 있음 / 필요 — 입력창은 화면 미리보기 정규식, 서버 값 대신 안 함), 칩 줄 safe center
+  - 알약(L): 번개·뿔을 다각형 기둥(prism)으로, 뿔은 캡슐 길이 방향, 연질캡슐 글자 왼쪽·기호 오른쪽(물결이 겉면 따라감), 새 10종만 분할 수 낮춤 → pills.glb 2.1MB → 1.6MB. common.torus에 segs 인자(기본값 그대로). 화면에서 오류 없이 로드 확인
 - [Claude Code 2026-11-19] I15 검증 → main 합침(ff, d7b4d4f). 범위 OK, 268 통과·빌드 경고 0
   - 미리보기 20종 확인, 실제 GMS로 새 패키지 12개 계획 → 블리스터 3판·곡반에서 기존 알약과 크기·높이 맞음
   - pills.glb 874KB → 2.1MB (models 전체 15MB)
@@ -76,7 +80,7 @@
   - 기준선 태그 v1-submit은 캘린더 전 상태
 
 ## 다음에 할 것
-- agy I14(`agy/fe-18-sheet-fixes`) → I15(`agy/fe-19-pills`) → I16(`agy/fe-20-examples`) — 앞 작업 합친 뒤 main에서 브랜치, 끝나면 Claude Code가 확인·합침
+- agy I16(`agy/fe-20-examples`) → I17(`agy/fe-21-chat-flow`) — 앞 작업 합친 뒤 main에서 브랜치, 끝나면 Claude Code가 확인·합침 (I14·I15 끝남)
 - 저장소 정리: 구 화면 `web/` 삭제 여부 결정, `main`에 합쳐진 `agy/*` 로컬 브랜치 정리, `git push`
 - 최종 제출 마무리: 셀프 체크리스트 점검, `README.md` 최종 작성
 - (선택) R2 잔여 소규모 항목: `logs`·`chatMessages` 배열 상한 설정 (`clinicController.js`, `App.vue`)
