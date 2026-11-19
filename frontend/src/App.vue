@@ -64,6 +64,26 @@ function closeSheet() {
   sceneRef.value?.unpopPill();
 }
 
+function onInspectPlanItem({ item, plan }) {
+  activeSheet.value = {
+    kind: 'item',
+    item: {
+      name: item.name,
+      cur: item.current_version || '미상',
+      tgt: item.target_version || null,
+      sev: item.severity || 'unknown',
+      round: plan?.round_no || null,
+      status: 'patch',
+      reason: item.reason || '',
+      flags: item.flags || [],
+      eol_date: item.eol_date || null,
+      done_at: item.done_at || plan?.done_at || null,
+    },
+    plan: currentPlan.value,
+    color: '#3E9E98',
+  };
+}
+
 function triggerUpload() {
   fileInputRef.value?.click();
 }
@@ -241,5 +261,10 @@ function reloadPage() {
     @logs="activeSheet = { kind: 'log', color: '#3E9E98' }"
   />
 
-  <PaperSheet :sheet="activeSheet" @close="closeSheet" />
+  <PaperSheet
+    :sheet="activeSheet"
+    @close="closeSheet"
+    @inspect-item="onInspectPlanItem"
+    @plan-done-change="sceneRef?.markRoundDone($event.roundNo, $event.done)"
+  />
 </template>

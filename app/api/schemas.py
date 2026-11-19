@@ -1,7 +1,7 @@
 """API 요청·응답 형식 (F3017). 화면에는 짧은 안내만 보낸다 (NF3002)."""
 
 from datetime import date as Date
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
@@ -44,7 +44,7 @@ class PlanIn(BaseModel):
 
 
 class PlanUpdate(BaseModel):
-    """계획의 핵심 값(날짜·시각·항목) 수정. 넘긴 것만 바꾼다 (F3016)."""
+    """계획의 핵심 값(날짜·시각·항목·상태) 수정. 넘긴 것만 바꾼다 (F3016, v1.18)."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -52,6 +52,8 @@ class PlanUpdate(BaseModel):
     window_start: Time | None = None
     window_end: Time | None = None
     items: list[dict[str, Any]] | None = None
+    status: Literal["planned", "done"] | None = None
+    done_at: str | None = None
 
 
 class PlanOut(BaseModel):
@@ -62,6 +64,8 @@ class PlanOut(BaseModel):
     window_start: str | None
     window_end: str | None
     items: list[dict[str, Any]]
+    status: str = "planned"
+    done_at: str | None = None
     created_at: str
     updated_at: str
     overlaps: list[dict] = Field(default_factory=list, description="같은 날 시간이 겹치는 다른 계획 (저장은 됨)")

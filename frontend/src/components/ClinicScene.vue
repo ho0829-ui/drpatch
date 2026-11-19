@@ -99,6 +99,7 @@ defineExpose({
   runVisit: () => controller?.runVisit(),
   confirmPlan: () => controller?.confirmPlan(),
   unpopPill: () => controller?.unpopPill(),
+  markRoundDone: (roundNo, done) => controller?.markRoundDone(roundNo, done),
 });
 </script>
 

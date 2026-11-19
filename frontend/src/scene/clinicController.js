@@ -829,12 +829,18 @@ export async function createClinicController(canvas, callbacks) {
     freeze: (on) => (window.__freeze = on),
   };
 
+  function markRoundDone(roundNo, done) {
+    const pack = blisterApi.getPacks().find((pk) => pk.round.round_no === roundNo);
+    pack?.redrawLabel({ done: !!done });
+  }
+
   return {
     loadPackages,
     sendChatMessage,
     runVisit,
     confirmPlan,
     unpopPill,
+    markRoundDone,
     destroy() {
       cancelAnimationFrame(rafId);
       cancelLongPress();

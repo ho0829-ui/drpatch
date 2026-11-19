@@ -210,3 +210,83 @@ def test_confirm_only_named_round(client):
 def test_fact_question_has_no_missing_list(client):
     final = chat(client, "Ubuntu 20.04 언제까지?", None, FakeBrain(Analysis(intent="fact", intent_reason="질문")))[-1]
     assert final["missing"] == []
+
+
+def test_plan_done_undo_and_early_done(client):
+    """spec v1.18 C: 날짜 전 미리 끝냄, 되돌리기."""
+    created = client.post(
+        "/plans",
+        json={"round_no": 1, "date": "2099-12-31", "window_start": "22:00", "window_end": "24:00",
+              "items": [{"name": "django", "current_version": "2.2.0", "target_version": "5.2.19"}]},
+    ).json()
+    assert created["status"] == "planned" and created["done_at"] is None
+
+    done = client.put(f"/plans/{created['id']}", json={"status": "done"}).json()
+    assert done["status"] == "done" and done["done_at"] is not None
+    assert done["items"][0]["done_at"] is not None
+
+    undone = client.put(f"/plans/{created['id']}", json={"status": "planned"}).json()
+    assert undone["status"] == "planned" and undone["done_at"] is None
+    assert undone["items"][0]["done_at"] is None
+
+
+def test_plan_items_all_checked_marks_done_and_uncheck_reverts(client):
+    """spec v1.18 C: 항목을 모두 체크하면 status=done, 하나라도 풀면 planned."""
+    p = client.post(
+        "/plans",
+        json={"round_no": 1, "date": "2026-11-25",
+              "items": [{"name": "a"}, {"name": "b"}]},
+    ).json()
+    one = client.put(
+        f"/plans/{p['id']}",
+        json={"items": [{"name": "a", "done_at": "2026-11-20T10:00:00+00:00"}, {"name": "b"}]},
+    ).json()
+    assert one["status"] == "planned"
+
+    both = client.put(
+        f"/plans/{p['id']}",
+        json={"items": [{"name": "a", "done_at": "2026-11-20T10:00:00+00:00"},
+                        {"name": "b", "done_at": "2026-11-20T10:05:00+00:00"}]},
+    ).json()
+    assert both["status"] == "done" and both["done_at"] is not None
+
+    reverted = client.put(
+        f"/plans/{p['id']}",
+        json={"items": [{"name": "a", "done_at": "2026-11-20T10:00:00+00:00"}, {"name": "b", "done_at": None}]},
+    ).json()
+    assert reverted["status"] == "planned" and reverted["done_at"] is None
+
+
+def test_done_plan_excluded_from_overlaps(client):
+    """spec v1.18 C: 끝난 계획은 겹침 판단에서 빠진다."""
+    p1 = client.post("/plans", json={"round_no": 1, "date": "2026-11-25", "window_start": "22:00", "window_end": "24:00"}).json()
+    p2 = client.post("/plans", json={"round_no": 2, "date": "2026-11-25", "window_start": "23:00", "window_end": "24:00"}).json()
+    assert len(p2["overlaps"]) == 1
+
+    done1 = client.put(f"/plans/{p1['id']}", json={"status": "done"}).json()
+    assert done1["overlaps"] == []
+    p2_after = client.get(f"/plans/{p2['id']}").json()
+    assert p2_after["overlaps"] == []
+
+
+def test_old_db_plans_table_gets_status_and_done_at(tmp_path):
+    """spec v1.18 C: 옛 DB 파일에도 plans.status·done_at 열이 자동으로 추가된다."""
+    import sqlite3
+    from app.db import repo
+
+    db_file = str(tmp_path / "old.db")
+    with sqlite3.connect(db_file) as conn:
+        conn.execute(
+            "CREATE TABLE plans (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL, "
+            "round_no INTEGER NOT NULL, date TEXT NOT NULL, window_start TEXT, window_end TEXT, "
+            "items_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
+        )
+        conn.execute(
+            "INSERT INTO plans (session_id, round_no, date, items_json, created_at, updated_at) "
+            "VALUES ('s1', 1, '2026-11-25', '[]', '2026-11-18', '2026-11-18')"
+        )
+        conn.commit()
+    repo.init_db(db_file)
+    with repo.connect(db_file) as conn:
+        p = repo.get_plan(conn, 1)
+    assert p["status"] == "planned" and p["done_at"] is None

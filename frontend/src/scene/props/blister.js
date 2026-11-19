@@ -49,6 +49,7 @@ export function setupBlisters(world, M, addPick, removePick) {
         winText,
         stamped: false,
         reserved: false,
+        done: false,
       };
 
       const labelMesh = end.getObjectByName('Label');
@@ -78,7 +79,25 @@ export function setupBlisters(world, M, addPick, removePick) {
           c.fillText(state.winText, w / 2, state.movedFrom ? 378 : 350);
         }
 
-        if (state.stamped) {
+        if (state.done) {
+          c.save();
+          c.translate(w / 2, 448);
+          c.strokeStyle = COLOR.teal;
+          c.fillStyle = 'rgba(62, 158, 152, 0.16)';
+          c.lineWidth = 7;
+          c.beginPath();
+          c.arc(0, 0, 48, 0, Math.PI * 2);
+          c.fill();
+          c.stroke();
+          c.lineWidth = 2.5;
+          c.beginPath();
+          c.arc(0, 0, 39, 0, Math.PI * 2);
+          c.stroke();
+          c.fillStyle = COLOR.mint;
+          c.font = FONT(700, 38);
+          c.fillText('끝', 0, 14);
+          c.restore();
+        } else if (state.stamped) {
           c.save();
           c.translate(w / 2, 452);
           c.rotate(-0.25);
