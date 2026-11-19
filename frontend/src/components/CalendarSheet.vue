@@ -346,7 +346,7 @@ onMounted(() => {
       </div>
 
       <p class="cal-legend" aria-hidden="true">
-        <span><i class="legend-swatch"></i>숫자 = 회차 (색은 점검마다 다름)</span>
+        <span><b class="round-pill">1</b>각 점검 회차</span>
         <span><i class="dot-event"></i>내 일정</span>
       </p>
 
