@@ -39,7 +39,7 @@ from app.tools.default import build_registry
 
 PLAN_TOOLS = ["get_eol", "get_vulns", "get_package_versions"]  # 계획 수립에 셋 다 필요
 LLM_FAILED = "LLM 응답을 받지 못해 기본값을 썼어요"
-TOOLS_DOWN = "외부 정보(지원 종료일·취약점·버전)를 가져오지 못했어요. 네트워크 상태를 확인하고 잠시 후 다시 시도해 주세요."
+TOOLS_DOWN = "허허, 외부 진료 기록을 못 가져왔네요. 네트워크를 확인하고 잠시 후 다시 해 보시죠."
 
 
 def _has_vulns(result: dict | None) -> bool:
@@ -113,7 +113,7 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
             a = brain.analyze(state["message"], state["conditions"], state["today"], state.get("last_turn"))
         except Exception as e:  # LLM이 죽어도 서비스는 안내로 끝낸다 (NF3003)
             emit("error", {"step": "analyze", "kind": type(e).__name__})
-            return {"intent": "error", "answer": "지금은 AI 응답을 받지 못했어요. 잠시 후 다시 시도해 주세요."}
+            return {"intent": "error", "answer": "허허, 잠깐 기계가 말을 안 듣네요. 잠시 후 다시 해 보시죠."}
         conditions = merge_conditions(state["conditions"], a)
         emit("llm_decision", {"decision": "intent", "intent": a.intent, "reason": a.intent_reason})
         return {"intent": a.intent, "intent_reason": a.intent_reason, "conditions": conditions,
@@ -313,15 +313,15 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         try:
             return {"answer": brain.answer_fact(state["message"], runner, state["conditions"])}
         except Exception:
-            return {"answer": "지금은 답을 만들지 못했어요. 잠시 후 다시 시도해 주세요."}
+            return {"answer": "허허, 잠깐 답을 정리하지 못했네요. 잠시 후 다시 해 보시죠."}
 
     def other(state: AgentState) -> dict:
         if state["intent"] == "confirm":
-            return {"answer": "제안한 계획을 확정할게요."}  # 저장은 API가 한다 (Tool 아님)
+            return {"answer": "도장 찍습니다. 확정이에요."}  # 저장은 API가 한다 (Tool 아님)
         try:
             return {"answer": brain.chat(state["message"])}
         except Exception:
-            return {"answer": "패치 계획을 세우려면 requirements.txt와 OS·Python 버전을 알려 주세요."}
+            return {"answer": "차트를 보려면 requirements.txt와 OS·Python 버전을 알려 주시죠."}
 
     # ── 연결 ────────────────────────────────────────────
     g = StateGraph(AgentState)

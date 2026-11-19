@@ -23,8 +23,8 @@ from app.tools.default import build_registry
 
 router = APIRouter(tags=["chat"])
 
-KEY_MISSING = "서버 설정(API 키)을 확인해 주세요. 지금은 대화를 처리할 수 없어요."
-FAILED = "처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요."
+KEY_MISSING = "허허, 서버 설정(API 키)을 확인해 주시죠. 지금은 진료를 볼 수 없습니다."
+FAILED = "허허, 잠깐 기계가 말을 안 듣네요. 잠시 후 다시 해 보시죠."
 POLL_SECONDS = 0.1
 
 

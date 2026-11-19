@@ -61,18 +61,18 @@ async function handleUploadFile(file) {
     currentPackages.value = res.packages || [];
     sceneRef.value?.loadPackages(currentPackages.value);
     const excluded = res.excluded || [];
-    const lines = [`${file.name} (${currentPackages.value.length}개 패키지) 접수됐습니다.`];
+    const lines = [`흠, 어디 보자… ${file.name} ${currentPackages.value.length}줄. 접수됐습니다.`];
     if (excluded.length) {
-      lines.push(`**접수하지 않은 줄 ${excluded.length}개**`);
+      lines.push(`**차트에서 뺀 줄 ${excluded.length}개**`);
       for (const ex of excluded.slice(0, 8)) lines.push(`- ${ex.line_no}번째 줄 ${ex.text} — ${ex.reason}`);
       if (excluded.length > 8) lines.push(`- 그 밖 ${excluded.length - 8}개`);
     }
     chatMessages.value.push({ role: 'assistant', text: lines.join('\n') });
     if (excluded.length && currentPackages.value.length) {
-      bubbleText.value = `${currentPackages.value.length}개 패키지 접수했어요. **${excluded.length}줄은 접수하지 않았어요** — 대화 기록에 이유를 적어 뒀습니다.`;
+      bubbleText.value = `흠, ${currentPackages.value.length}줄 접수됐습니다. **${excluded.length}줄은 차트에서 뺐어요** — 대화 기록에 적어 뒀습니다.`;
     }
   } catch (err) {
-    bubbleText.value = err.message || '파일을 올리지 못했어요.';
+    bubbleText.value = err.message || '허허, 파일을 받지 못했네요. 다시 올려 보시죠.';
   }
 }
 

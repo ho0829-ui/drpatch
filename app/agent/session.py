@@ -16,7 +16,7 @@ from app.db import repo
 from app.events.bus import EventBus
 
 
-NO_PLAN_TO_CONFIRM = "확정할 계획이 아직 없어요. 먼저 requirements.txt와 OS·Python 버전으로 계획을 세워 주세요."
+NO_PLAN_TO_CONFIRM = "도장은 처방이 나온 뒤에 찍습니다. 먼저 requirements.txt와 OS·Python 버전으로 계획부터 보시죠."
 
 
 def new_session_id() -> str:

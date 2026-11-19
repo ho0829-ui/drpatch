@@ -247,11 +247,11 @@ export async function createClinicController(canvas, callbacks) {
     if (currentPackages.length) {
       setState('ready');
       onStatus('접수 완료', 0);
-      onSay(`requirements.txt ${currentPackages.length}개 패키지 접수됐습니다. 진료를 시작하거나 조건을 말씀해 주세요.`);
+      onSay(`흠, 어디 보자… requirements.txt ${currentPackages.length}줄. 접수됐습니다.`);
     } else {
       setState('idle');
       onStatus('대기 중', -1);
-      onSay('어서 오세요. requirements.txt를 올려 주세요.');
+      onSay('어서 오세요. 오늘은 어디가 불편한 서버인가요? requirements.txt부터 올려 주시죠.');
     }
   }
 
@@ -404,7 +404,7 @@ export async function createClinicController(canvas, callbacks) {
           logEvent('calendar_check', ev.status || '');
         } else if (ev.type === 'error') {
           logEvent('error', `${ev.step || ''} ${ev.kind || ''}`.trim());
-          onSay('처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
+          onSay('허허, 잠깐 기계가 말을 안 듣네요. 잠시 후 다시 해 보시죠.');
         }
       });
 
@@ -458,7 +458,7 @@ export async function createClinicController(canvas, callbacks) {
         onStatus('연결 끊김', -1);
         onRetryChange?.(message);
       } else {
-        onSay(err?.message || '처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
+        onSay(err?.message || '허허, 잠깐 기계가 말을 안 듣네요. 잠시 후 다시 해 보시죠.');
       }
       nextState = prevState === 'running' || prevState === 'confirming'
         ? (currentPackages.length ? 'ready' : 'idle')
@@ -471,7 +471,7 @@ export async function createClinicController(canvas, callbacks) {
 
   async function runVisit() {
     if (!currentPackages.length) {
-      onSay('먼저 requirements.txt를 올려 주세요.');
+      onSay('어디 보자… requirements.txt부터 올려 주시죠.');
       onUploadRequest?.();
       return;
     }
@@ -594,7 +594,7 @@ export async function createClinicController(canvas, callbacks) {
     if (d.kind === 'pill') {
       const p = d.pill;
       if (state === 'running' || state === 'confirming') {
-        onSay('진료 중엔 잠깐만요. 금방 끝납니다.');
+        onSay('검사 중엔 잠깐만요. 금방 끝납니다.');
         return;
       }
       if (popped && popped !== p) {
@@ -627,7 +627,7 @@ export async function createClinicController(canvas, callbacks) {
       } else if (currentPlan) {
         onOpenSheet({ kind: 'jar', plan: currentPlan, color: COLOR.ink });
       } else {
-        onSay(`접수된 패키지 ${currentPackages.length}개입니다. 진료를 시작해 보세요.`);
+        onSay(`접수된 패키지 ${currentPackages.length}개입니다. 진료 시작을 누르시죠.`);
       }
     } else if (d.kind === 'stamp') {
       if (state === 'planned') confirmPlan();
@@ -695,7 +695,7 @@ export async function createClinicController(canvas, callbacks) {
     }
     return false;
   }
-  onSay('어서 오세요. requirements.txt를 올려 주세요.');
+  onSay('어서 오세요. 오늘은 어디가 불편한 서버인가요? requirements.txt부터 올려 주시죠.');
 
   function frame(now) {
     const t = now / 1000;

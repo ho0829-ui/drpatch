@@ -94,7 +94,7 @@ def tool_inputs_missing(missing: list[str]) -> bool:
 def schedule_ask_message(missing: list[str]) -> str:
     labels = dict(REQUIRED)
     lines = "\n".join(f"- {labels[key]}" for key in missing if key in SCHEDULE_KEYS)
-    return f"회차로 나눈 일정을 만들려면 아래 내용을 알려 주세요.\n{lines}"
+    return f"흠, 회차 일정을 잡으려면 몇 가지가 더 필요합니다.\n{lines}"
 
 
 def _os_missing_label(os_name: str | None) -> str:
@@ -110,16 +110,22 @@ def _os_missing_label(os_name: str | None) -> str:
 
 
 def ask_message(missing: list[str], conditions: Conditions | None = None) -> str:
-    """빠진 것만 묻는 고정 문장 (spec v1.9·v1.17: 되묻기는 코드가, OS 이름을 알면 버전만)."""
+    """빠진 것만 묻는 고정 문장 (spec v1.9·v1.17: 되묻기는 코드가, 박사님 말투)."""
     labels = dict(REQUIRED)
     os_name = conditions.os_name if conditions else None
     if missing == ["os"] and os_name:
-        return f"{_os_missing_label(os_name)}만 알려 주세요."
+        if os_name == "macos":
+            return "맥이시군요. 버전만 알려 주시죠 (예: macOS 15 — 이 Mac에 관하여에서 확인)."
+        if os_name == "windows":
+            return "윈도우시군요. 버전과 기능 업데이트만 알려 주시죠 (예: Windows 11 24H2 — 설정 > 시스템 > 정보)."
+        if os_name == "ubuntu":
+            return "우분투시군요. 버전만 알려 주시죠 (예: Ubuntu 20.04)."
+        return f"{os_name}이시군요. 버전만 알려 주시죠."
     lines = "\n".join(
         f"- {_os_missing_label(os_name) if key == 'os' else labels[key]}"
         for key in missing
     )
-    return f"계획을 세우려면 아래 내용이 더 필요해요.\n{lines}"
+    return f"흠, 차트를 채우려면 몇 가지가 더 필요합니다.\n{lines}"
 
 
 def normalize_os_name(name: str | None) -> str | None:
