@@ -36,9 +36,10 @@ const currentPlan = ref(null);
 const currentPackages = ref([]);
 const chatMessages = ref([]);
 const dragging = ref(false);
+const uploading = ref(false);
 const retryMessage = ref(null);
 
-const isBusy = computed(() => state.value === 'running' || state.value === 'confirming');
+const isBusy = computed(() => uploading.value || state.value === 'running' || state.value === 'confirming');
 const tickerLines = computed(() => logs.value.slice(-4).reverse());
 
 function sayBubble(text) {
@@ -65,7 +66,9 @@ function triggerUpload() {
 }
 
 async function handleUploadFile(file) {
-  if (!file) return;
+  if (!file || uploading.value) return;
+  uploading.value = true;
+  status.value = { text: '접수 중…', stage: 0 };
   try {
     const res = await api.upload(file);
     currentPackages.value = res.packages || [];
@@ -82,7 +85,10 @@ async function handleUploadFile(file) {
       sayBubble(`흠, ${currentPackages.value.length}줄 접수됐습니다. **${excluded.length}줄은 차트에서 뺐어요** — 대화 기록에 적어 뒀습니다.`);
     }
   } catch (err) {
+    status.value = { text: currentPackages.value.length ? '접수 완료' : '대기 중', stage: currentPackages.value.length ? 0 : -1 };
     sayBubble(err.message || '허허, 파일을 받지 못했네요. 다시 올려 보시죠.');
+  } finally {
+    uploading.value = false;
   }
 }
 
@@ -116,7 +122,11 @@ function onChatTurn({ msg, finalEvent }) {
 }
 
 function reloadPage() {
+  if (!confirm('파일과 조건, 대화를 모두 지우고 처음부터 할까요?')) return;
   api.setSession(null);
+  try {
+    sessionStorage.setItem('drpatch.restarted', '1');
+  } catch { /* 무시 */ }
   location.reload();
 }
 </script>
@@ -190,7 +200,7 @@ function reloadPage() {
       @upload="triggerUpload"
     >
       <Controls
-        :state="state"
+        :state="uploading ? 'running' : state"
         :can-retry="!!retryMessage"
         @start="sceneRef?.runVisit()"
         @confirm="sceneRef?.confirmPlan()"
