@@ -31,7 +31,14 @@ def connect(path: str | None = None) -> sqlite3.Connection:
 
 # 나중에 추가한 칸: 예전에 만든 DB 파일에도 붙인다 (CREATE TABLE IF NOT EXISTS는 칸을 추가하지 않음)
 ADDED_COLUMNS = {
-    "sessions": ["last_message TEXT", "last_answer TEXT", "last_plan_json TEXT"],
+    "sessions": [
+        "last_message TEXT",
+        "last_answer TEXT",
+        "last_plan_json TEXT",
+        "weekdays TEXT",
+        "weekly_count INTEGER",
+        "week_interval INTEGER",
+    ],
     "plans": ["status TEXT NOT NULL DEFAULT 'planned'", "done_at TEXT"],
 }
 
@@ -54,8 +61,24 @@ def _now() -> str:
 CONDITION_COLUMNS = {  # Conditions 필드 → 표 칸
     "os_name": "os", "os_version": "os_version", "python_version": "python_version", "capacity": "capacity_n",
     "first_date": "first_date", "window_start": "window_start", "window_end": "window_end",
-    "interval_days": "interval_days",
+    "interval_days": "interval_days", "weekdays": "weekdays", "weekly_count": "weekly_count",
+    "week_interval": "week_interval",
 }
+
+
+def _decode_weekdays(raw: str | None) -> list[int] | None:
+    if not raw:
+        return None
+    nums = [int(p) for p in raw.split(",") if p.strip().isdigit()]
+    return nums or None
+
+
+def _encode_weekdays(raw) -> str | None:
+    if not raw:
+        return None
+    if isinstance(raw, str):
+        return raw or None
+    return ",".join(str(int(d)) for d in raw)
 
 
 def get_session(conn: sqlite3.Connection, session_id: str) -> dict | None:
@@ -64,6 +87,7 @@ def get_session(conn: sqlite3.Connection, session_id: str) -> dict | None:
     if row is None:
         return None
     conditions = {field: row[column] for field, column in CONDITION_COLUMNS.items()}
+    conditions["weekdays"] = _decode_weekdays(conditions["weekdays"])
     conditions["packages"] = json.loads(row["packages_json"])
     conditions["excluded"] = json.loads(row["excluded_json"])
     return {
@@ -77,6 +101,7 @@ def get_session(conn: sqlite3.Connection, session_id: str) -> dict | None:
 def save_session(conn: sqlite3.Connection, session_id: str, conditions: dict, **last) -> None:
     """조건을 통째로 저장한다. last_message·last_answer·last_plan은 넘긴 것만 바꾼다."""
     values = {column: conditions.get(field) for field, column in CONDITION_COLUMNS.items()}
+    values["weekdays"] = _encode_weekdays(values["weekdays"])
     values["packages_json"] = json.dumps(conditions.get("packages", []), ensure_ascii=False)
     values["excluded_json"] = json.dumps(conditions.get("excluded", []), ensure_ascii=False)
     for key in ("last_message", "last_answer"):

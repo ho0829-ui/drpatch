@@ -41,19 +41,61 @@ def _mark_after_eol(item: Item, when: date) -> Item:
     return item
 
 
+def next_matching_date(start: date, weekdays: list[int], week_interval: int = 1, anchor_monday: date | None = None) -> date:
+    """start 이상에서 weekdays에 속하고 week_interval 주기에 맞는 가장 가까운 날짜."""
+    allowed = set(weekdays)
+    step = 2 if week_interval == 2 else 1
+    d = start
+    while True:
+        if d.weekday() in allowed:
+            if anchor_monday is None or step == 1:
+                return d
+            monday = d - timedelta(days=d.weekday())
+            if ((monday - anchor_monday).days // 7) % step == 0:
+                return d
+        d += timedelta(days=1)
+
+
+def _round_dates(
+    first_date: date,
+    count: int,
+    interval_days: int | None,
+    weekdays: list[int] | None = None,
+    week_interval: int = 1,
+) -> list[date]:
+    if weekdays:
+        first_hit = next_matching_date(first_date, weekdays)
+        anchor_monday = first_hit - timedelta(days=first_hit.weekday())
+        dates = [first_hit]
+        cur = first_hit
+        while len(dates) < count:
+            cur = next_matching_date(cur + timedelta(days=1), weekdays, week_interval, anchor_monday)
+            dates.append(cur)
+        return dates
+    step = interval_days or 1
+    return [first_date + timedelta(days=step * i) for i in range(count)]
+
+
 def split_rounds(
-    items: list[Item], capacity: int, first_date: date, interval_days: int, max_rounds: int = MAX_ROUNDS
+    items: list[Item],
+    capacity: int,
+    first_date: date,
+    interval_days: int | None,
+    max_rounds: int = MAX_ROUNDS,
+    weekdays: list[int] | None = None,
+    week_interval: int = 1,
 ) -> RoundsResult:
     if capacity < 1:
         raise ValueError("capacity(N)는 1 이상이어야 합니다")  # 입력 검사는 앞 단계에서. 여기 오면 코드 실수
     result = RoundsResult()
     remaining = list(items)
     upgrade_round: int | None = None
+    dates = _round_dates(first_date, max_rounds, interval_days, weekdays=weekdays, week_interval=week_interval)
 
     for round_no in range(1, max_rounds + 1):
         if not remaining:
             break
-        when = first_date + timedelta(days=interval_days * (round_no - 1))
+        when = dates[round_no - 1]
         chosen: list[Item] = []
         for item in remaining:
             if len(chosen) == capacity:

@@ -36,10 +36,30 @@ class Analysis(BaseModel):
     )
     python_version: str | None = Field(None, description="Python 버전. 예: 3.8. 없으면 null")
     capacity: int | None = Field(None, description="'이번에 5개까지' → 5. 없으면 null")
-    first_date: str | None = Field(None, description="첫 점검 날짜 YYYY-MM-DD. 연도가 없으면 오늘 이후 가장 가까운 날. 없으면 null")
+    first_date: str | None = Field(
+        None,
+        description="첫 점검 날짜 YYYY-MM-DD. 연도가 없으면 오늘 이후 가장 가까운 날. '12월 첫째 주'처럼 날짜가 하나로 정해지지 않으면 null. 없으면 null",
+    )
     window_start: str | None = Field(None, description="시작 시각 HH:MM. '22~24시'면 22:00. 없으면 null")
     window_end: str | None = Field(None, description="끝 시각 HH:MM. '22~24시'면 24:00. 없으면 null")
-    interval_days: int | None = Field(None, description="매주=7, 격주=14, 매월=30, 'N일마다'=N. 없으면 null")
+    interval_days: int | None = Field(
+        None,
+        description="매일=1, 격일·이틀에 한 번=2, 사흘마다=3, 매주·주 1회=7, 격주·2주에 한 번=14, 3주마다=21, 매월·한 달에 한 번=30, 분기마다=90, 'N일마다'=N. "
+        "'매달 첫째 주 화요일'처럼 몇째 주 규칙은 여기 넣지 말고 null(대신 interval_unsupported=true). 없으면 null",
+    )
+    weekdays: list[int] | None = Field(
+        None,
+        description="요일 반복(0=월, 1=화, 2=수, 3=목, 4=금, 5=토, 6=일). '매주 화·목'→[1,3], '평일'→[0,1,2,3,4], '주말'→[5,6], '월수금'→[0,2,4], '매주 금요일'→[4]. "
+        "'주 2회'처럼 요일 없이 횟수만 있으면 null. 없으면 null",
+    )
+    weekly_count: int | None = Field(
+        None,
+        description="'주 2회'·'일주일에 두 번'처럼 주당 횟수만 말하고 요일이 없을 때 그 숫자(예: 2). 없으면 null",
+    )
+    interval_unsupported: bool = Field(
+        False,
+        description="'매달 첫째 주 화요일'처럼 몇째 주 규칙이면 true(이때 interval_days와 weekdays는 null). 그 밖은 false",
+    )
     confirm_rounds: list[int] | None = Field(
         None, description="확정 요청에서 회차를 말했으면 그 번호들. '1회차 확정해줘' → [1]. 회차를 말하지 않았으면 null(전체)")
 

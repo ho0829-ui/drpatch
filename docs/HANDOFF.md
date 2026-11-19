@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/be-03-weekdays] I18 완료: 요일 반복 규칙(`weekdays`/`weekly_count`/`week_interval`·`interval_unsupported`), `schedule_text.fmt_schedule`, 회차 날짜·캘린더 허용 요일 이동·회차 중복 밀림, `sessions` DB 자동 컬럼 추가, `test_weekdays.py`·`test_condition_phrases.py`·`scripts/probe_conditions.py` 실측 확인, 279 통과
 - [Claude Code 2026-11-19] spec v1.21 요일 규칙(M)·조건 표현 표(N) + agy I18(백엔드)·I19(화면). 코드는 안 고침
   - 실측(실제 GMS analyze 35개): 매일·격일·사흘·3주·분기·다음 주 월요일·모레·다섯 개·밤 10시~자정·jammy·py311은 서버가 알아들음. 주 2회·평일·매주 화·목은 못 알아들음, "매달 첫째 주 화요일"은 30일로 틀리게
   - 사용자가 "격일·매일 안 됨"으로 본 건 칩 미리보기(매주·격주·매달·N일마다만 앎)와 표시("1일마다") 탓

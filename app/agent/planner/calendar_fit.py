@@ -24,11 +24,23 @@ def conflicts_on(day: date, start: str | None, end: str | None, events: list[dic
     return found
 
 
-def find_free_date(day: date, start: str | None, end: str | None, events: list[dict],
-                   search_days: int = SEARCH_DAYS) -> date | None:
-    """day가 비어 있으면 day, 아니면 search_days 안의 가장 가까운 빈 날. 없으면 None."""
+def find_free_date(
+    day: date,
+    start: str | None,
+    end: str | None,
+    events: list[dict],
+    search_days: int = SEARCH_DAYS,
+    allowed_weekdays: list[int] | None = None,
+) -> date | None:
+    """day가 비어 있으면 day, 아니면 search_days 안의 가장 가까운 빈 날. 없으면 None.
+
+    allowed_weekdays(0=월…6=일)가 주어지면 그 요일 중에서만 고른다 (spec v1.21 M).
+    """
+    allowed = set(allowed_weekdays) if allowed_weekdays else None
     for offset in range(search_days + 1):
         candidate = day + timedelta(days=offset)
+        if allowed is not None and candidate.weekday() not in allowed:
+            continue
         if not conflicts_on(candidate, start, end, events):
             return candidate
     return None

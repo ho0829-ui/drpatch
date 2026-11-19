@@ -4,9 +4,9 @@ from app.agent.os_display import os_display_name, os_display_version
 from app.agent.planner.items import Item, ItemsResult
 from app.agent.planner.python_upgrade import UpgradePlan
 from app.agent.planner.rounds import RoundsResult
+from app.agent.schedule_text import WEEKDAYS_KO, fmt_schedule
 
 SEVERITY_KO = {"CRITICAL": "CRITICAL", "HIGH": "HIGH", "MODERATE": "MODERATE", "LOW": "LOW", "UNKNOWN": "심각도 미상"}
-WEEKDAYS_KO = "월화수목금토일"
 
 
 def _fmt_window(start: str | None, end: str | None) -> str:
@@ -17,14 +17,8 @@ def _fmt_window(start: str | None, end: str | None) -> str:
     return f" ({start}–{end})"
 
 
-def _fmt_interval(days: int | None) -> str:
-    if not days:
-        return ""
-    return {7: "매주", 14: "격주", 30: "매월"}.get(days, f"{days}일마다")
-
-
 def conditions_header(c) -> str:
-    """알아들은 조건을 코드가 한 줄로 요약한다 (spec v1.18 B). LLM이 쓰지 않는다."""
+    """알아들은 조건을 코드가 한 줄로 요약한다 (spec v1.18 B · v1.21 M). LLM이 쓰지 않는다."""
     parts = []
     os_name = os_display_name(getattr(c, "os_name", None))
     os_ver = os_display_version(getattr(c, "os_name", None), getattr(c, "os_version", None))
@@ -37,7 +31,7 @@ def conditions_header(c) -> str:
     if getattr(c, "capacity", None):
         parts.append(f"한 번에 {c.capacity}개")
     first = getattr(c, "first_date", None)
-    interval = _fmt_interval(getattr(c, "interval_days", None))
+    interval = fmt_schedule(c)
     win = _fmt_window(getattr(c, "window_start", None), getattr(c, "window_end", None))
     if first:
         date_str = f"{first.month}/{first.day}({WEEKDAYS_KO[first.weekday()]})"

@@ -20,6 +20,16 @@ class Conditions(BaseModel):
     window_start: str | None = None  # "22:00"
     window_end: str | None = None
     interval_days: int | None = None
+    weekdays: list[int] | None = None  # 0=월 … 6=일 (정렬·중복 없음)
+    weekly_count: int | None = None  # "주 2회"처럼 요일 없이 횟수만 받았을 때
+    week_interval: int | None = None  # 요일 반복의 주 간격 (1=매주, 2=격주)
+
+
+def normalize_weekdays(raw: list[int] | None) -> list[int] | None:
+    if not raw:
+        return None
+    cleaned = sorted({int(d) for d in raw if isinstance(d, int) and not isinstance(d, bool) and 0 <= d <= 6})
+    return cleaned or None
 
 
 # 계획에 꼭 필요한 값과 되물을 때 쓰는 이름 (spec "빠진 입력")
@@ -51,6 +61,13 @@ OS_NAME_ALIASES = {
     "ubuntu": "ubuntu",
 }
 
+UBUNTU_CODENAMES = {
+    "bionic": "18.04",
+    "focal": "20.04",
+    "jammy": "22.04",
+    "noble": "24.04",
+}
+
 MACOS_CODENAMES = {
     "타호": "26",
     "tahoe": "26",
@@ -78,12 +95,13 @@ def missing_inputs(c: Conditions) -> list[str]:
         "python_version": c.python_version,
         "capacity": c.capacity,
         "first_date": c.first_date,
-        "interval_days": c.interval_days,
+        "interval_days": bool(c.interval_days or c.weekdays),
     }
     return [key for key, _ in REQUIRED if not values[key]]
 
 
 SCHEDULE_KEYS = ("capacity", "first_date", "interval_days")  # 회차로 나눌 때만 필요한 값
+UNSUPPORTED_INTERVAL_MSG = "몇째 주 규칙은 아직 못 합니다. 매주·격주·요일로 말씀해 주시죠."
 
 
 def tool_inputs_missing(missing: list[str]) -> bool:
@@ -91,9 +109,30 @@ def tool_inputs_missing(missing: list[str]) -> bool:
     return any(key not in SCHEDULE_KEYS for key in missing)
 
 
-def schedule_ask_message(missing: list[str]) -> str:
+def _interval_missing_label(conditions: Conditions | None, interval_unsupported: bool = False) -> str:
+    if interval_unsupported:
+        return UNSUPPORTED_INTERVAL_MSG
+    if conditions and conditions.weekly_count and not conditions.weekdays:
+        return f"주 {conditions.weekly_count}회라면 무슨 요일로 할까요? (예: 화·금)"
+    return dict(REQUIRED)["interval_days"]
+
+
+def schedule_ask_message(
+    missing: list[str],
+    conditions: Conditions | None = None,
+    interval_unsupported: bool = False,
+) -> str:
+    sched = [key for key in missing if key in SCHEDULE_KEYS]
+    if sched == ["interval_days"]:
+        if interval_unsupported:
+            return UNSUPPORTED_INTERVAL_MSG
+        if conditions and conditions.weekly_count and not conditions.weekdays:
+            return f"주 {conditions.weekly_count}회라면 무슨 요일로 할까요? (예: 화·금)"
     labels = dict(REQUIRED)
-    lines = "\n".join(f"- {labels[key]}" for key in missing if key in SCHEDULE_KEYS)
+    lines = "\n".join(
+        f"- {_interval_missing_label(conditions, interval_unsupported) if key == 'interval_days' else labels[key]}"
+        for key in sched
+    )
     return f"흠, 회차 일정을 잡으려면 몇 가지가 더 필요합니다.\n{lines}"
 
 
@@ -109,8 +148,12 @@ def _os_missing_label(os_name: str | None) -> str:
     return f"{os_name} 버전"
 
 
-def ask_message(missing: list[str], conditions: Conditions | None = None) -> str:
-    """빠진 것만 묻는 고정 문장 (spec v1.9·v1.17: 되묻기는 코드가, 박사님 말투)."""
+def ask_message(
+    missing: list[str],
+    conditions: Conditions | None = None,
+    interval_unsupported: bool = False,
+) -> str:
+    """빠진 것만 묻는 고정 문장 (spec v1.9·v1.17·v1.21: 되묻기는 코드가, 박사님 말투)."""
     labels = dict(REQUIRED)
     os_name = conditions.os_name if conditions else None
     if missing == ["os"] and os_name:
@@ -121,8 +164,13 @@ def ask_message(missing: list[str], conditions: Conditions | None = None) -> str
         if os_name == "ubuntu":
             return "우분투시군요. 버전만 알려 주시죠 (예: Ubuntu 20.04)."
         return f"{os_name} 쓰시는군요. 버전만 알려 주시죠."
+    if missing == ["interval_days"]:
+        if interval_unsupported:
+            return UNSUPPORTED_INTERVAL_MSG
+        if conditions and conditions.weekly_count and not conditions.weekdays:
+            return f"주 {conditions.weekly_count}회라면 무슨 요일로 할까요? (예: 화·금)"
     lines = "\n".join(
-        f"- {_os_missing_label(os_name) if key == 'os' else labels[key]}"
+        f"- {_os_missing_label(os_name) if key == 'os' else _interval_missing_label(conditions, interval_unsupported) if key == 'interval_days' else labels[key]}"
         for key in missing
     )
     return f"흠, 차트를 채우려면 몇 가지가 더 필요합니다.\n{lines}"
@@ -148,6 +196,8 @@ def normalize_os_version(os_name: str | None, version: str | None) -> str | None
 
     if os_name == "ubuntu":
         v = re.sub(r"^ubuntu\s+", "", v, flags=re.I)
+        if v.lower() in UBUNTU_CODENAMES:
+            return UBUNTU_CODENAMES[v.lower()]
         if re.fullmatch(r"\d{2}", v):
             return f"{v}.04"
         return v
@@ -194,6 +244,7 @@ class AgentState(TypedDict, total=False):
     intent_reason: str
     confirm_rounds: list[int] | None  # "1회차 확정해줘" → [1], 없으면 전체
     missing: list[str]
+    interval_unsupported: bool  # "매달 첫째 주 화요일" 등 미지원 규칙 여부 (spec v1.21 M)
     tool_plan: list[str]
     tool_plan_reason: str
     results: dict[str, Any]  # 조회 결과 (eol_os, eol_python, vulns{name}, versions{name})

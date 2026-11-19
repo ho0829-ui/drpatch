@@ -19,7 +19,7 @@ from app.agent.planner.items import PackageResult, build_items, top_severity
 from app.agent.planner.priority import sort_items
 from app.agent.planner.python_upgrade import UpgradePlan, candidate_versions, plan_python_upgrade
 from app.agent.planner.calendar_fit import SEARCH_DAYS, conflicts_on, find_free_date
-from app.agent.planner.rounds import RoundsResult, move_round, split_rounds
+from app.agent.planner.rounds import RoundsResult, move_round, next_matching_date, split_rounds
 from app.agent.planner.versions import is_newer, pick_latest
 from app.agent.render import conditions_header, fallback_text, plan_dict
 from app.agent.runner import Emit, ToolRunner, no_emit
@@ -31,6 +31,7 @@ from app.agent.state import (
     missing_inputs,
     normalize_os_name,
     normalize_os_version,
+    normalize_weekdays,
     schedule_ask_message,
     tool_inputs_missing,
     normalize_python,
@@ -93,8 +94,26 @@ def merge_conditions(prev: Conditions, analysis) -> Conditions:
     for key in ("window_start", "window_end"):
         if getattr(analysis, key):
             updates[key] = getattr(analysis, key)
-    if analysis.interval_days and analysis.interval_days > 0:
-        updates["interval_days"] = analysis.interval_days
+    new_weekdays = normalize_weekdays(getattr(analysis, "weekdays", None))
+    new_interval = analysis.interval_days if (analysis.interval_days and analysis.interval_days > 0) else None
+    raw_wc = getattr(analysis, "weekly_count", None)
+    new_weekly_count = raw_wc if (isinstance(raw_wc, int) and not isinstance(raw_wc, bool) and raw_wc > 0) else None
+
+    if new_weekdays:
+        updates["weekdays"] = new_weekdays
+        updates["interval_days"] = None
+        updates["weekly_count"] = None
+        updates["week_interval"] = 2 if new_interval == 14 else 1
+    elif new_interval:
+        updates["interval_days"] = new_interval
+        updates["weekdays"] = None
+        updates["week_interval"] = None
+        updates["weekly_count"] = None
+    elif new_weekly_count:
+        updates["weekly_count"] = new_weekly_count
+        updates["weekdays"] = None
+        updates["interval_days"] = None
+        updates["week_interval"] = None
     return prev.model_copy(update=updates)
 
 
@@ -116,13 +135,18 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
             emit("error", {"step": "analyze", "kind": type(e).__name__})
             return {"intent": "error", "answer": "허허, 잠깐 기계가 말을 안 듣네요. 잠시 후 다시 해 보시죠."}
         conditions = merge_conditions(state["conditions"], a)
+        unsupported = bool(getattr(a, "interval_unsupported", False))
+        missing = missing_inputs(conditions) if a.intent == "plan" else []  # 계획일 때만 (시나리오 점검)
+        if a.intent == "plan" and unsupported and "interval_days" not in missing:
+            missing = [*missing, "interval_days"]
         emit("llm_decision", {"decision": "intent", "intent": a.intent, "reason": a.intent_reason})
         return {"intent": a.intent, "intent_reason": a.intent_reason, "conditions": conditions,
-                "missing": missing_inputs(conditions) if a.intent == "plan" else [],  # 계획일 때만 (시나리오 점검)
+                "missing": missing,
+                "interval_unsupported": unsupported,
                 "confirm_rounds": a.confirm_rounds}
 
     def ask(state: AgentState) -> dict:
-        return {"answer": ask_message(state["missing"], state.get("conditions"))}
+        return {"answer": ask_message(state["missing"], state.get("conditions"), state.get("interval_unsupported", False))}
 
     def plan_tools(state: AgentState) -> dict:
         try:
@@ -249,7 +273,18 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         )
         ordered = sort_items(items.items, state["today"])
         schedule_missing = [k for k in state.get("missing", []) if k in SCHEDULE_KEYS]
-        rounds = RoundsResult() if schedule_missing else split_rounds(ordered, c.capacity, c.first_date, c.interval_days)
+        rounds = (
+            RoundsResult()
+            if schedule_missing
+            else split_rounds(
+                ordered,
+                c.capacity,
+                c.first_date,
+                c.interval_days,
+                weekdays=c.weekdays,
+                week_interval=c.week_interval or 1,
+            )
+        )
         emit("plan_built", {
             "rule": "등급(CRITICAL>HIGH>MODERATE>LOW>미상) → 지원 종료가 빠른 순, Python 업그레이드가 필요한 항목은 업그레이드 다음 회차",
             "order": [{"name": i.name, "severity": i.severity,
@@ -263,7 +298,7 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         # "무엇부터"의 순서: 위험한 순서이되, Python 업그레이드가 필요한 항목은 업그레이드 뒤로 (순서 제약 먼저)
         doing_order = [i for r in split_rounds(ordered, max(len(ordered), 1), state["today"], 1).rounds
                        for i in r.items] if ordered else []
-        calendar_check = fit_to_calendar(rounds.rounds, c.window_start, c.window_end)
+        calendar_check = fit_to_calendar(rounds.rounds, c.window_start, c.window_end, allowed_weekdays=c.weekdays)
         plan = plan_dict(items, rounds, state.get("upgrade"), doing_order)
         plan["calendar_check"] = calendar_check
         plan["schedule_missing"] = schedule_missing
@@ -277,26 +312,44 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         }
         return {"plan": plan}
 
-    def fit_to_calendar(rounds: list, start: str | None, end: str | None) -> str:
-        """회차마다 캘린더를 조회해 겹치면 다음 빈 날로 (F3023). 캘린더 Tool이 없으면 건너뜀."""
+    def fit_to_calendar(
+        rounds: list,
+        start: str | None,
+        end: str | None,
+        allowed_weekdays: list[int] | None = None,
+    ) -> str:
+        """회차마다 캘린더를 조회해 겹치면 다음 빈 날로 (F3023 · v1.21 M). 캘린더 Tool이 없으면 건너뜀."""
         if "list_calendar_events" not in runner.registry.names():
             return "사용 안 함"
         if not rounds:
             return "확인함"
         status = "확인함"
+        prev_date: date | None = None
         for r in rounds:
+            orig_date = r.date
+            # 앞 회차가 밀려 같은 날(또는 이전 날)이 되면 다음 맞는 날로 민다 (spec v1.21 M)
+            if prev_date is not None and r.date <= prev_date:
+                pushed = (
+                    next_matching_date(prev_date + timedelta(days=1), allowed_weekdays)
+                    if allowed_weekdays
+                    else prev_date + timedelta(days=1)
+                )
+                move_round(r, pushed)
             result = runner.call("list_calendar_events", {
                 "date_from": r.date.isoformat(),
                 "date_to": (r.date + timedelta(days=SEARCH_DAYS)).isoformat()})
             if not result["ok"]:
                 status = "확인 못 함"  # 날짜는 그대로 (지어내지 않음)
+                prev_date = r.date
                 continue
             events = result["data"]["events"]
-            free = find_free_date(r.date, start, end, events)
+            free = find_free_date(r.date, start, end, events, allowed_weekdays=allowed_weekdays)
             if free is None:
                 r.calendar_conflicts = [e["title"] for e in conflicts_on(r.date, start, end, events)]
             elif free != r.date:
                 move_round(r, free)
+                r.moved_from = orig_date
+            prev_date = r.date
         emit("calendar_check", {"status": status, "rounds": [
             {"round_no": r.round_no, "date": r.date.isoformat(),
              "moved_from": r.moved_from.isoformat() if r.moved_from else None,
@@ -312,7 +365,11 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         if header:
             answer = f"{header}\n\n{answer}"
         if state["plan"].get("schedule_missing"):  # 우선순위를 보여 준 뒤 일정만 되묻는다 (spec v1.14)
-            answer += "\n\n" + schedule_ask_message(state["plan"]["schedule_missing"])
+            answer += "\n\n" + schedule_ask_message(
+                state["plan"]["schedule_missing"],
+                state.get("conditions"),
+                state.get("interval_unsupported", False),
+            )
         return {"answer": answer}
 
     def fact(state: AgentState) -> dict:
