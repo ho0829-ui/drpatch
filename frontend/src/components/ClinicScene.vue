@@ -20,6 +20,7 @@ const emit = defineEmits([
   'upload-request',
   'plan-update',
   'chat-turn',
+  'retry-change',
 ]);
 
 const canvasRef = ref(null);
@@ -72,6 +73,7 @@ onMounted(async () => {
       onUploadRequest: () => emit('upload-request'),
       onPlanUpdate: (plan, packages) => emit('plan-update', { plan, packages }),
       onChatTurn: (msg, finalEvent) => emit('chat-turn', { msg, finalEvent }),
+      onRetryChange: (msg) => emit('retry-change', msg),
     });
     if (disposed) {
       ctrl.destroy();

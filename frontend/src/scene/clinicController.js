@@ -37,6 +37,7 @@ export async function createClinicController(canvas, callbacks) {
     onUploadRequest,
     onPlanUpdate,
     onChatTurn,
+    onRetryChange,
   } = callbacks;
 
   const manager = new THREE.LoadingManager();
@@ -351,7 +352,9 @@ export async function createClinicController(canvas, callbacks) {
   async function sendChatMessage(message) {
     if (state === 'running' || state === 'confirming') return null;
     const prevState = state;
+    let nextState = prevState;
     setState('running');
+    onRetryChange?.(null);
     onCloseSheetRequest();
     await unpopPill();
 
@@ -404,43 +407,66 @@ export async function createClinicController(canvas, callbacks) {
           onSay('처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
         }
       });
+
+      if (!finalEvent || typeof finalEvent !== 'object') {
+        const err = new Error('연결이 끊겼어요. 잠시 후 다시 시도해 주세요.');
+        err.retryable = true;
+        throw err;
+      }
+
+      onChatTurn?.(message, finalEvent);
+
+      if (finalEvent.plan) {
+        await applyPlan(finalEvent.plan);
+      }
+
+      if (finalEvent.confirmed?.length) {
+        const confirmedNos = new Set(finalEvent.confirmed.map((c) => c.round_no));
+        const confirmedPacks = blisterApi.getPacks().filter((pk) => confirmedNos.has(pk.round.round_no));
+        await stampPacks(confirmedPacks, (roundNo) => {
+          const conf = finalEvent.confirmed.find((c) => c.round_no === roundNo);
+          const pack = confirmedPacks.find((pk) => pk.round.round_no === roundNo);
+          // 확정되면 항상 도장. 캘린더에 들어갔을 때만 '예약됨', 아니면 'Rx 확정'
+          pack?.redrawLabel({ stamped: true, reserved: !!conf?.calendar_event });
+          logEvent('tool_result', `confirm ${roundNo}회차`);
+        });
+        docAct.wave();
+        onStatus('처방 확정', 3);
+        nextState = 'done';
+      } else if (finalEvent.plan?.rounds?.length) {
+        docAct.hop();
+        onStatus('처방 완료', 3);
+        nextState = 'planned';
+      } else if (finalEvent.intent === 'error') {
+        if (finalEvent.answer && /API\s*키|서버\s*설정/.test(finalEvent.answer)) {
+          onStatus('설정 필요', -1);
+        } else {
+          onStatus('오류', -1);
+        }
+        nextState = currentPackages.length ? 'ready' : 'idle';
+      } else {
+        nextState = currentPackages.length ? 'ready' : 'idle';
+      }
+
+      if (finalEvent.answer) {
+        onSay(finalEvent.answer);
+      }
+      return finalEvent;
     } catch (err) {
-      onSay(err.message || '요청을 처리하지 못했어요.');
-      setState(prevState);
+      if (err?.retryable) {
+        onSay('연결이 끊겼어요. 잠시 후 다시 시도해 주세요.');
+        onStatus('연결 끊김', -1);
+        onRetryChange?.(message);
+      } else {
+        onSay(err?.message || '처리 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.');
+      }
+      nextState = prevState === 'running' || prevState === 'confirming'
+        ? (currentPackages.length ? 'ready' : 'idle')
+        : prevState;
       return null;
+    } finally {
+      setState(nextState);
     }
-
-    onChatTurn?.(message, finalEvent);
-
-    if (finalEvent.plan) {
-      await applyPlan(finalEvent.plan);
-    }
-
-    if (finalEvent.confirmed?.length) {
-      const confirmedNos = new Set(finalEvent.confirmed.map((c) => c.round_no));
-      const confirmedPacks = blisterApi.getPacks().filter((pk) => confirmedNos.has(pk.round.round_no));
-      await stampPacks(confirmedPacks, (roundNo) => {
-        const conf = finalEvent.confirmed.find((c) => c.round_no === roundNo);
-        const pack = confirmedPacks.find((pk) => pk.round.round_no === roundNo);
-        // 확정되면 항상 도장. 캘린더에 들어갔을 때만 '예약됨', 아니면 'Rx 확정'
-        pack?.redrawLabel({ stamped: true, reserved: !!conf?.calendar_event });
-        logEvent('tool_result', `confirm ${roundNo}회차`);
-      });
-      docAct.wave();
-      onStatus('처방 확정', 3);
-      setState('done');
-    } else if (finalEvent.plan?.rounds?.length) {
-      docAct.hop();
-      onStatus('처방 완료', 3);
-      setState('planned');
-    } else {
-      setState(currentPackages.length ? 'ready' : 'idle');
-    }
-
-    if (finalEvent.answer) {
-      onSay(finalEvent.answer);
-    }
-    return finalEvent;
   }
 
   async function runVisit() {

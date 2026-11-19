@@ -40,21 +40,30 @@ async function requestJson(method, url, body) {
 /** POST /upload (본문 = 파일 그대로, 1MB 제한) → { session_id, packages, excluded, saved } */
 export async function upload(file, sessionId = getSession()) {
   if (file && typeof file.size === 'number' && file.size > MAX_UPLOAD_BYTES) {
-    throw new Error('파일 크기는 1MB 이하여야 해요.');
+    throw new Error('파일이 너무 커요 (1MB까지)');
   }
   const url = '/upload' + (sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : '');
   let res;
   try {
     res = await fetch(url, { method: 'POST', body: file });
   } catch {
-    throw new Error('서버에 연결하지 못했어요.');
+    throw new Error('연결이 끊겼어요. 잠시 후 다시 시도해 주세요.');
+  }
+  if (res.status === 413) {
+    throw new Error('파일이 너무 커요 (1MB까지)');
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(typeof data.detail === 'string' ? data.detail : '파일을 올리지 못했어요.');
+    throw new Error('파일을 올리지 못했어요.');
   }
   setSession(data.session_id);
   return data;
+}
+
+function makeRetryError(msg = '연결이 끊겼어요. 잠시 후 다시 시도해 주세요.') {
+  const err = new Error(msg);
+  err.retryable = true;
+  return err;
 }
 
 /**
@@ -71,11 +80,12 @@ export async function chat(sessionId, message, onEvent) {
       body: JSON.stringify({ session_id: sid, message }),
     });
   } catch {
-    throw new Error('서버에 연결하지 못했어요.');
+    throw makeRetryError();
   }
   if (!res.ok || !res.body) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(typeof data.detail === 'string' ? data.detail : '메시지를 보내지 못했어요.');
+    const msg = typeof data.detail === 'string' ? data.detail : '메시지를 보내지 못했어요.';
+    throw res.status >= 500 ? makeRetryError() : new Error(msg);
   }
 
   const reader = res.body.getReader();
@@ -107,11 +117,11 @@ export async function chat(sessionId, message, onEvent) {
     buffer += decoder.decode();
     if (buffer.trim()) handleLine(buffer);
   } catch {
-    throw new Error('연결이 끊겼어요. 잠시 후 다시 시도해 주세요.');
+    throw makeRetryError();
   }
 
   if (!final) {
-    throw new Error('연결이 끊겼어요. 답을 끝까지 받지 못했어요.');
+    throw makeRetryError();
   }
   return final;
 }

@@ -35,6 +35,7 @@ const currentPlan = ref(null);
 const currentPackages = ref([]);
 const chatMessages = ref([]);
 const dragging = ref(false);
+const retryMessage = ref(null);
 
 const isBusy = computed(() => state.value === 'running' || state.value === 'confirming');
 const tickerLines = computed(() => logs.value.slice(-4).reverse());
@@ -95,6 +96,15 @@ async function onSendChat(message) {
   }
 }
 
+async function onRetryChat() {
+  const msg = retryMessage.value;
+  if (!msg) return;
+  const finalEvent = await sceneRef.value?.sendChatMessage(msg);
+  if (finalEvent?.answer) {
+    chatMessages.value.push({ role: 'assistant', text: finalEvent.answer });
+  }
+}
+
 function onChatTurn({ msg, finalEvent }) {
   if (!chatMessages.value.some((m) => m.role === 'user' && m.text === msg)) {
     chatMessages.value.push({ role: 'user', text: msg });
@@ -143,6 +153,7 @@ function reloadPage() {
       @upload-request="triggerUpload"
       @plan-update="currentPlan = $event.plan; currentPackages = $event.packages"
       @chat-turn="onChatTurn"
+      @retry-change="retryMessage = $event"
     />
 
     <div v-if="dragging" class="drop-overlay">
@@ -178,8 +189,10 @@ function reloadPage() {
     >
       <Controls
         :state="state"
+        :can-retry="!!retryMessage"
         @start="sceneRef?.runVisit()"
         @confirm="sceneRef?.confirmPlan()"
+        @retry="onRetryChat"
         @calendar="activeSheet = { kind: 'calendar', color: '#3E9E98' }"
         @logs="activeSheet = { kind: 'log', color: '#3E9E98' }"
       />
