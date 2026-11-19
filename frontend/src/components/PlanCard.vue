@@ -5,6 +5,7 @@ import { SEV, sevKey } from '../demo.js';
 const props = defineProps({
   plan: { type: Object, required: true },
   highlighted: Boolean,
+  tag: { type: Object, default: null }, // { letter, color, label } — 점검(세션)마다 색
 });
 
 const emit = defineEmits(['toggle-done', 'toggle-item', 'save-edit', 'delete', 'inspect-item']);
@@ -103,7 +104,9 @@ const sevColor = (sev) => SEV[sevKey(sev)][0];
     :id="`plan-card-${plan.id}`"
     class="plan-card"
     :class="{ done: isDone, highlighted }"
+    :style="tag ? { '--tag': tag.color } : undefined"
   >
+    <p v-if="tag" class="plan-tag"><i aria-hidden="true"></i>{{ tag.label }}</p>
     <header class="plan-card-head">
       <div class="plan-card-title">
         <b>{{ dateLabel }}</b>

@@ -30,8 +30,33 @@ const newDate = ref(selectedDate.value);
 const newStart = ref('');
 const newEnd = ref('');
 
-const ROUND_CIRCLES = ['①', '②', '③', '④', '⑤'];
 const monthLabel = computed(() => `${viewYear.value}년 ${viewMonth.value + 1}월`);
+
+// 점검(= 세션, 파일을 올린 한 번)마다 색 하나. 위험도 색(빨강·주황·노랑·초록)과 헷갈리지 않는 색만 쓴다.
+const SESSION_COLORS = ['#2F80A8', '#7A5CC2', '#00897B', '#5C6BC0', '#8D6E63', '#AD5A9E'];
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+const sessionTags = computed(() => {
+  const first = new Map(); // session_id → 가장 먼저 만든 계획 시각
+  for (const p of plans.value) {
+    const t = p.created_at || p.date || '';
+    if (!first.has(p.session_id) || t < first.get(p.session_id)) first.set(p.session_id, t);
+  }
+  const current = api.getSession();
+  const ordered = [...first.entries()].sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0));
+  const tags = new Map();
+  ordered.forEach(([sid], i) => {
+    const letter = LETTERS[i % LETTERS.length];
+    tags.set(sid, {
+      letter,
+      color: SESSION_COLORS[i % SESSION_COLORS.length],
+      label: sid === current ? `점검 ${letter} · 지금 차트` : `점검 ${letter}`,
+    });
+  });
+  return tags;
+});
+
+const tagOf = (p) => sessionTags.value.get(p.session_id) || { letter: '?', color: SESSION_COLORS[0], label: '점검' };
 
 const monthRange = computed(() => {
   const y = viewYear.value;
@@ -49,29 +74,46 @@ const monthRange = computed(() => {
 const upcomingPlans = computed(() => plans.value.filter((p) => p.status !== 'done'));
 const donePlans = computed(() => plans.value.filter((p) => p.status === 'done'));
 
+// 달력은 늘 6주(42칸)로 그린다 — 달마다 줄 수가 달라 종이 높이가 바뀌지 않게. 앞뒤 달 날짜는 흐리게만.
 const calendarCells = computed(() => {
-  const { firstDow, daysInMonth } = monthRange.value;
-  const y = viewYear.value;
-  const m = pad(viewMonth.value + 1);
+  const { firstDow } = monthRange.value;
+  const start = new Date(viewYear.value, viewMonth.value, 1 - firstDow);
   const cells = [];
-  for (let i = 0; i < firstDow; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) {
-    const iso = `${y}-${m}-${pad(d)}`;
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const iso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const inMonth = d.getMonth() === viewMonth.value;
+    if (!inMonth) {
+      cells.push({ day: d.getDate(), iso, outside: true });
+      continue;
+    }
     const dayPlans = plans.value.filter((p) => p.date === iso);
     const dayEvents = events.value.filter((e) => e.date === iso);
-    const parts = [`${viewMonth.value + 1}월 ${d}일`];
-    if (dayPlans.length) parts.push(`패치 계획 ${dayPlans.length}개`);
+    const parts = [`${d.getMonth() + 1}월 ${d.getDate()}일`];
+    for (const p of dayPlans) parts.push(`${tagOf(p).label} ${p.round_no}회차${p.status === 'done' ? ' 끝남' : ''}`);
     if (dayEvents.length) parts.push(`내 일정 ${dayEvents.length}개`);
     cells.push({
-      day: d,
+      day: d.getDate(),
       iso,
+      outside: false,
       plans: dayPlans,
       hasEvent: dayEvents.length > 0,
       isPast: iso < todayIso,
+      isToday: iso === todayIso,
       ariaLabel: parts.join(', '),
     });
   }
   return cells;
+});
+
+// 범례: 지금 보이는 계획에 나온 점검만
+const legendTags = computed(() => {
+  const seen = new Map();
+  for (const p of plans.value) {
+    const t = tagOf(p);
+    if (!seen.has(t.letter)) seen.set(t.letter, t);
+  }
+  return [...seen.values()].sort((a, b) => a.letter.localeCompare(b.letter));
 });
 
 async function loadPlans() {
@@ -220,13 +262,13 @@ onMounted(() => {
       </label>
     </div>
 
-    <div v-if="actionError" class="cal-err">
-      <span>{{ actionError }}</span>
+    <div v-if="actionError" class="cal-err" role="alert">
+      <span class="cal-err-text">{{ actionError }}</span>
       <button type="button" class="cal-btn nowrap" @click="actionError = ''">닫기</button>
     </div>
 
-    <div v-if="plansError" class="cal-err">
-      <span>{{ plansError }}</span>
+    <div v-if="plansError" class="cal-err" role="alert">
+      <span class="cal-err-text">{{ plansError }}</span>
       <button type="button" class="cal-btn nowrap" @click="loadPlans">다시 불러오기</button>
     </div>
 
@@ -237,6 +279,7 @@ onMounted(() => {
           v-for="p in upcomingPlans"
           :key="p.id"
           :plan="p"
+          :tag="tagOf(p)"
           :highlighted="p.date === selectedDate"
           @toggle-done="toggleDone"
           @toggle-item="toggleItem"
@@ -253,6 +296,7 @@ onMounted(() => {
             v-for="p in donePlans"
             :key="p.id"
             :plan="p"
+            :tag="tagOf(p)"
             :highlighted="p.date === selectedDate"
             @toggle-done="toggleDone"
             @toggle-item="toggleItem"
@@ -272,31 +316,33 @@ onMounted(() => {
       </div>
 
       <div class="cal-legend" aria-hidden="true">
-        <span><b class="round-pill">①</b> 패치 회차</span>
-        <span><i class="dot-event"></i> 내 일정</span>
+        <span v-for="t in legendTags" :key="t.letter"><i class="legend-swatch" :style="{ background: t.color }"></i>{{ t.label }}</span>
+        <span><i class="dot-event"></i>내 일정</span>
       </div>
 
       <div class="cal-grid">
         <span v-for="d in ['일', '월', '화', '수', '목', '금', '토']" :key="d" class="cal-dow">{{ d }}</span>
-        <template v-for="(cell, idx) in calendarCells" :key="idx">
-          <span v-if="!cell" class="cal-blank"></span>
+        <template v-for="cell in calendarCells" :key="cell.iso">
+          <span v-if="cell.outside" class="cal-day outside" aria-hidden="true">{{ cell.day }}</span>
           <button
             v-else
             type="button"
             class="cal-day"
-            :class="{ selected: cell.iso === selectedDate, muted: cell.isPast }"
+            :class="{ selected: cell.iso === selectedDate, muted: cell.isPast, today: cell.isToday }"
             :aria-label="cell.ariaLabel"
             :aria-pressed="cell.iso === selectedDate"
             @click="selectDay(cell.iso)"
           >
-            <span>{{ cell.day }}</span>
+            <span class="cal-num">{{ cell.day }}</span>
             <span class="cal-badges" aria-hidden="true">
               <span
                 v-for="p in cell.plans.slice(0, 2)"
                 :key="p.id"
                 class="round-pill"
                 :class="{ done: p.status === 'done' }"
-              >{{ ROUND_CIRCLES[(p.round_no || 1) - 1] || p.round_no }}</span>
+                :style="{ '--tag': tagOf(p).color }"
+              >{{ p.round_no }}</span>
+              <span v-if="cell.plans.length > 2" class="round-more">+{{ cell.plans.length - 2 }}</span>
               <i v-if="cell.hasEvent" class="dot-event"></i>
             </span>
           </button>
@@ -311,8 +357,8 @@ onMounted(() => {
           {{ eventFormOpen ? '접기' : '일정 추가' }}
         </button>
       </div>
-      <div v-if="eventsError" class="cal-err">
-        <span>{{ eventsError }}</span>
+      <div v-if="eventsError" class="cal-err" role="alert">
+        <span class="cal-err-text">{{ eventsError }}</span>
         <button type="button" class="cal-btn nowrap" @click="loadEvents">다시 불러오기</button>
       </div>
       <p v-else-if="eventsLoading && !events.length" class="cal-muted">달력을 불러오는 중…</p>
