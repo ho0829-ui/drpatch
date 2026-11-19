@@ -53,10 +53,15 @@ async function focusTargetCard() {
   if (!props.focusId) return;
   await nextTick();
   const el = document.getElementById(`ex-card-${props.focusId}`);
-  if (el) {
+  if (!el) return;
+  // 종이(PaperSheet)가 열릴 때 닫기 버튼으로 초점을 옮기므로, 그 뒤에(두 프레임 + 펼침 전환 뒤) 카드로 가져온다
+  const take = () => {
+    if (!el.isConnected || document.activeElement === el) return;
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     el.focus({ preventScroll: true });
-  }
+  };
+  requestAnimationFrame(() => requestAnimationFrame(take));
+  setTimeout(take, 650);
 }
 
 async function load() {
@@ -68,12 +73,13 @@ async function load() {
     if (!res.ok) throw new Error('예시 목록을 불러오지 못했어요.');
     const data = await res.json();
     examples.value = Array.isArray(data) ? data : [];
-    await focusTargetCard();
   } catch {
     error.value = '허허, 예시 차트 목록을 못 꺼냈네요. 다시 눌러 보시죠.';
   } finally {
     loading.value = false;
   }
+  // 목록은 loading이 끝나야 그려지므로 그 뒤에 카드 초점
+  if (!error.value) await focusTargetCard();
 }
 
 function onClickCard(ex) {

@@ -56,13 +56,20 @@ function sayBubble(text, action = null) {
   bubbleSeq.value++;
 }
 
+// 다음 환자 링크: onChatTurn이 먼저 오고 답 말풍선(say)이 뒤에 오므로, 여기 담아 뒀다가 그 말풍선에 붙인다
+let pendingBubbleAction = null;
+
 function onSceneSay(text) {
   const isGreeting =
     currentPackages.value.length === 0 &&
     (String(text).startsWith('어서 오세요') || String(text).startsWith('새 차트입니다'));
-  const action = isGreeting
-    ? { prefix: '파일이 없으시면 ', label: '예시 차트', suffix: '부터 보시죠.', kind: 'examples', focusId: '' }
-    : null;
+  let action = null;
+  if (isGreeting) {
+    action = { prefix: '파일이 없으시면 ', label: '예시 차트', suffix: '부터 보시죠.', kind: 'examples', focusId: '' };
+  } else if (pendingBubbleAction) {
+    action = pendingBubbleAction;
+  }
+  pendingBubbleAction = null;
   sayBubble(text, action);
 }
 
@@ -189,8 +196,12 @@ async function ensureSeedEvent(se) {
   } catch { /* 캘린더 추가 실패해도 예시 진행 */ }
 }
 
+// 예시 시작은 한 번에 하나만 (일정 넣기 → 업로드 사이에 두 번 눌리면 예시 일정이 두 개 생길 수 있음)
+let selectingExample = false;
+
 async function onSelectExample(ex) {
-  if (!ex?.file || isBusy.value) return;
+  if (!ex?.file || isBusy.value || selectingExample) return;
+  selectingExample = true;
   closeSheet();
   try {
     if (ex.addSeedEvent && ex.seed_event) {
@@ -207,6 +218,8 @@ async function onSelectExample(ex) {
     sayBubble('예시 차트를 꺼냈습니다. 조건은 입력창에 적어 뒀으니 보내기만 누르시죠.');
   } catch {
     sayBubble('허허, 예시 파일을 못 꺼냈네요. 다시 골라 보시죠.');
+  } finally {
+    selectingExample = false;
   }
 }
 
@@ -314,9 +327,12 @@ function onChatTurn({ msg, finalEvent }) {
     if (nextEx) {
       const nextLine = `다음 환자도 보시겠어요? — ${nextEx.title}`;
       chatMessages.value.push({ role: 'assistant', text: nextLine });
-      bubbleAction.value = { prefix: '', label: nextLine, suffix: '', kind: 'examples', focusId: nextEx.id };
+      const nextAction = { prefix: '', label: nextLine, suffix: '', kind: 'examples', focusId: nextEx.id };
+      pendingBubbleAction = nextAction;
+      bubbleAction.value = nextAction; // 답 말풍선이 오지 않는 경우에도 지금 말풍선에 남게
     }
   }
+  if (!finalEvent?.answer) pendingBubbleAction = null;
 }
 
 function reloadPage() {
