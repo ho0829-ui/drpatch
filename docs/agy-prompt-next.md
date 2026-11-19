@@ -1,10 +1,10 @@
-# agy(제미나이)에게 넘기는 작업 묶음 — spec v1.18 (2026-11-19)
+# agy(제미나이)에게 넘기는 작업 묶음 — spec v1.19 (2026-11-19)
 
 > 모델: **구현은 Hydrogen**.
-> 진행: **I10 → I11 → I12 → I13** 차례로. I10·I11·I13은 `App.vue`·`clinicController.js`·`ChatBar.vue`를 같이 고치고, I12도 처방전·도장을 건드리므로 한 번에 하나씩.
-> **다음 작업은 앞 작업이 main에 합쳐진 뒤 main에서 브랜치를 딴다.** (지난번처럼 합치기 전에 시작하면 충돌이 난다.)
-> 작업 전에 `agy/fe-13-brand-tip`(로고 툴팁)이 아직 main에 안 합쳐져 있다 → Claude Code 확인부터.
+> 진행: **I14 → I15 → I16** 차례로. I16(예시 10개)은 I15의 새 알약을 쓰고, I14·I16은 둘 다 `App.vue`·`style.css`를 고치므로 한 번에 하나씩.
+> **다음 작업은 앞 작업이 main에 합쳐진 뒤 main에서 브랜치를 딴다.**
 > 각 작업이 끝나면 Claude Code가 diff·테스트·실제 화면을 확인하고 main에 합친다.
+> (I10~I13은 끝나서 main에 있다.)
 
 ## 사람이 하는 순서 (작업마다)
 1. 같은 폴더에서 터미널을 하나 더 열고 `agy` 실행 → Hydrogen 선택
@@ -18,89 +18,108 @@
 ```
 sudo-patch 저장소 작업이다. 시작 전에 꼭 읽어:
 - AGENTS.md (프로젝트 규칙), docs/HANDOFF.md, git log -5
-- docs/spec.md v1.18 — 특히 "v1.18 고칠 것·더할 것"(A~D), "화면 (DR.PATCH 진료실)", "말투"
-- docs/design.md (4-6 UI 배치, 5 말투, 7 꼭 지킬 것)
+- docs/spec.md v1.19 — 특히 "v1.19 고칠 것·더할 것"(E~H), "v1.18 … D. 예시 시뮬레이션", "화면 (DR.PATCH 진료실)", "말투"
+- docs/design.md (4-1 알약, 4-6 UI 배치, 5 말투, 7 꼭 지킬 것, 8 Blender)
 
 지켜야 할 것:
 1. main에서 이 작업 전용 브랜치를 새로 만들어 작업한다 (이름은 작업 안내에). main에 직접 커밋하지 않는다. --yolo 금지.
 2. 작업 안내에 적힌 파일 말고는 건드리지 않는다. 기존 API 응답 형식은 필드를 더하는 것만 된다 (빼거나 이름 바꾸기 금지).
 3. 값을 지어내지 않는다. 확인 못 한 값은 "미상" / "확인 못 함". 화면 오류는 짧은 안내만. 새 문장은 박사님 말투(spec "말투 맞추기").
 4. 테스트는 네트워크를 쓰지 않는다. 외부 응답은 tests/fixtures/ 저장본으로.
-5. 3D 모델(*.glb)은 손으로 고치지 않는다. 새 라이브러리를 설치하지 않는다. 필요하면 멈추고 질문에 적는다.
+5. 3D 모델(*.glb)은 손으로 고치지 않는다 — Blender 스크립트로 다시 만드는 것만 된다. 새 라이브러리를 설치하지 않는다. 필요하면 멈추고 질문에 적는다.
 6. docs/course/는 읽지도 인용하지도 않는다. .env와 API 키 값은 열거나 출력하지 않는다.
 7. 확실하지 않은 건 "확인 필요"라고 쓴다. 추측으로 채우지 않는다.
-8. 포트 8000에 이미 서버가 떠 있으면 끄지 말고 다른 포트(예: 8001)로 띄워 확인한다.
+8. 포트 8000에 이미 서버가 떠 있으면 끄지 말고 다른 포트(예: 8001)로 띄워 확인한다. 화면을 바꿨으면 `cd frontend && npm run build` 뒤 그 서버로 본다 (dist가 옛 빌드면 바뀐 게 안 보인다).
+9. 실제 로고(회사·Python·Ubuntu·패키지 로고)와 빨간 십자가는 쓰지 않는다.
 
 끝나면:
-- 확인: `.venv/bin/python -m pytest -q` (261개 이상 통과), 화면을 바꿨으면 `cd frontend && npm run build` (경고 없이)
+- 확인: `.venv/bin/python -m pytest -q` (268개 이상 통과 — `pytest`만 치면 app 모듈을 못 찾으니 꼭 이 명령으로), 화면을 바꿨으면 `cd frontend && npm run build` (경고 없이)
 - 커밋 메시지는 한국어, 작업 단위로
 - docs/HANDOFF.md "지금 하던 것"에 한 줄
-- 마지막 보고: 바꾼 파일, 확인한 방법(화면은 캡처), 못 한 것, 질문
+- 마지막 보고: 바꾼 파일, 확인한 방법(화면은 캡처 — 1280과 375 둘 다), 못 한 것, 질문
 ```
 
 ---
 
-### I10 · "처음부터" 뒤 재점검 버그
-브랜치 `agy/fe-14-restart` · 파일: `frontend/src/scene/clinicController.js`, `frontend/src/App.vue`, `frontend/src/components/TopTools.vue`, `frontend/src/components/ChatBar.vue`, `frontend/src/api.js`
+### I14 · 종이 점선·달 넘길 때 안내·끌어 놓기 화면
+브랜치 `agy/fe-18-sheet-fixes` · 파일: `frontend/src/style.css`, `frontend/src/components/CalendarSheet.vue`, `frontend/src/App.vue`
 ```
-docs/spec.md "v1.18 … A"를 고쳐줘.
+docs/spec.md "v1.19 … E"를 고쳐줘. 세 가지 모두 작은 수정이다.
 
-1. 재현부터: 업로드 → 조건 말하기 → 처방 완료 → "처음부터" → 같은 파일 업로드 → "진료 시작".
-   지금은 박사님이 조건을 되묻는데 상단 상태 칩이 "접수"에 멈춰 진행 중처럼 보인다. 재현 결과를 보고에 적는다.
-2. final을 받으면 진행 중 단계가 남지 않게 한다. missing이 있으면 상태 칩 "정보 필요"(진행 표시 없음).
-3. "처음부터"는 확인을 받고(파일·조건·대화가 지워진다고 말함), 새로 시작한 뒤 박사님이 "새 차트입니다. 파일부터 올려 주시죠."라고 말한다.
-4. 업로드 중에는 보내기·진료 시작을 막고 "접수 중…"을 보인다. 대화는 업로드가 준 세션으로만 보낸다.
-   업로드 응답을 일부러 늦춘 상태(예: 개발자 도구 네트워크 느리게)에서 보내기를 눌러도 같은 세션으로 가는지 확인하고, 방법을 보고에 적는다.
-5. 1을 다시 해서: 상태가 "정보 필요"로 바뀌고 → 조건을 다시 말하면 계획이 나오고 → 알약이 블리스터로 가는지 캡처.
-```
+1. 종이 가운데 점선
+   - 원인은 확정: style.css `.paper::after`(top: 50% 점선)가 스크롤되는 내용 위를 가로지른다.
+   - 이 규칙을 지운다. 다른 종이(처방전·진료 기록·예시)에도 같은 선이 없어졌는지 375px에서 캡처.
 
-### I11 · 조건 칩 줄과 알아들은 조건 한 줄
-브랜치 `agy/fs-15-conditions` (I10 합친 뒤) · 파일: `frontend/src/components/ChatBar.vue`, 새 `frontend/src/components/ConditionChips.vue`, `frontend/src/App.vue`, `frontend/src/style.css`, `app/agent/graph.py`(respond), `app/agent/render.py`, `tests/`
-```
-docs/spec.md "v1.18 … B"를 구현해줘.
+2. 달 넘길 때 엉뚱한 안내
+   - 먼저 재현: 진료 예약 → ▶ 여러 번 → ◀ 여러 번. 계획이 있는 세션·없는 세션, "모든 계획 보기" 켬/끔 모두.
+     재현되면 정확한 문장, 어디에 떴는지(말풍선/종이), 어떤 요청이 실패했는지(네트워크 탭)를 보고에 적는다. 안 되면 "재현 못 함"과 해 본 방법.
+   - 재현 여부와 상관없이 고친다:
+     a. 달을 바꾸면 그 달의 내 일정(`api.calendar.list`)만 다시 부른다. 계획 목록(`api.plans.list`)은 종이를 열 때, "모든 계획 보기"를 바꿀 때, 끝냄·수정·삭제 뒤에만.
+     b. 달력/계획 불러오기 실패는 서버 안내를 그대로 쓰지 말고 "허허, 달력을 불러오지 못했네요." / "허허, 점검 목록을 불러오지 못했네요." + [다시 불러오기]. 어떤 것이 실패했는지 구분된다.
+     c. 지금 `api.calendar.list(...).catch(() => [])`가 실패를 숨겨 "내 일정 (0)"으로 보이는 것도 b처럼 안내한다.
+   - 빠르게 ▶를 연달아 누르면 늦게 온 옛 달 응답이 새 달을 덮지 않게 한다 (요청 번호로 마지막 것만 반영).
 
-1. 입력창 바로 위에 조건 칩 줄: 파일 · OS · Python · 한 번에 N개 · 첫 날짜 · 간격 · (시각).
-   값은 업로드 응답과 /chat final의 conditions에서만 채운다. 빠진 것은 "필요"로 강조. 모바일은 가로 스크롤.
-2. 빠진 칩을 누르면 입력창에 예시 조각을 넣는다(보내지 않음). 칩 이름은 되묻기 문장의 이름과 같게.
-3. 계획 답 맨 앞에 코드가 만든 한 줄: "차트: Ubuntu 22.04 · Python 3.11 · 한 번에 5개 · 11/25(화)부터 매주 (22–24시)".
-   OS 이름은 app/agent/os_display.py를 쓴다. LLM이 쓰지 않는다. 테스트로 문장 모양을 고정한다.
-4. "처음부터"·새로고침 뒤에도 칩이 지금 세션 값과 맞는지 확인한다 (세션을 다시 불러오는 API가 없으면 빈 칩으로 시작하고, 그 사실을 보고에 적는다).
-```
-
-### I12 · 진료 예약(캘린더) 손보기 + 끝냄 처리
-브랜치 `agy/fs-16-calendar` (I11 합친 뒤) · 파일: `app/db/repo.py`(+ 스키마), `app/api/plans.py`, `app/api/schemas.py`, `app/api/deps.py`, `frontend/src/components/CalendarSheet.vue`(나눠도 됨: 새 `PlanCard.vue` 등), `frontend/src/components/PaperSheet.vue`, `frontend/src/api.js`, `frontend/src/scene/props/blister.js`·`stamp.js`(끝 도장), `frontend/src/style.css`, `tests/`
-```
-docs/spec.md "v1.18 … C"를 구현해줘.
-
-백엔드 먼저(테스트와 함께):
-1. plans에 status(planned/done)·done_at. 옛 DB 파일은 열을 자동으로 더한다(sessions가 하는 방식 그대로).
-2. items_json 항목에 done_at. PUT /plans/{id}가 status와 항목 done_at을 받는다. 항목을 모두 체크하면 status=done, 하나라도 풀면 planned.
-3. 날짜 전에 끝내도 된다(미리 끝냄). 끝난 계획은 겹침 판단에서 뺀다. GET /plans?session_id=는 이미 있으니 그대로.
-4. 테스트: 끝냄·되돌리기, 항목 전부 체크 → 끝남, 미리 끝냄, 겹침에서 빠짐, 옛 DB 열 추가.
-
-화면:
-5. 주 화면은 "다가오는 점검" 카드(날짜순, 카드 하나 = 회차 하나): 머리에 날짜(요일)·시각·회차·D-day·상태 배지(예정/오늘/지남/끝남),
-   몸에 항목 이름과 현재 → 목표(위험도 점, 5개까지 + 외 n개). 카드 안 항목 체크, 회차 "끝냄", 수정, 삭제(확인 받음).
-6. 달력 칸은 점 대신 회차 배지 + 내 일정 점. 날짜를 누르면 그 날 카드로. 지난·끝난 것은 흐리게. 끝난 회차는 "끝난 점검"으로 접힘.
-7. 버튼 글자가 꺾이지 않게(white-space: nowrap, 최소 폭). 좁은 폭(375)에서는 ⋯ 메뉴로 접는다.
-8. 기본은 지금 세션 계획만, "모든 계획 보기" 토글. 내 일정 입력은 "일정 추가"를 눌렀을 때 펼친다.
-9. 375px에서 진료 예약을 열면 "그 부탁은 처리하지 못했네요"가 뜨고 계획 0건이 보인 적이 있다(같은 서버 1280px은 14건) → 원인을 찾아 보고에 적고 고친다.
-10. 3D 블리스터 라벨에 "끝" 도장(확정 도장과 다른 모양·색). 처방전 종이에도 끝낸 날.
-캡처: 1280·375 각각 — 카드 목록, 달력, 끝냄 전후, 좁은 폭 버튼.
+3. 끌어 놓기 화면("여기에 requirements.txt를 놓아 주세요")
+   - 지금: `dragover`면 무엇이든 켜고, `dragleave.self`·drop에서만 끈다 → 3D 위에서 창 밖으로 나가거나 Esc로 끌기를 취소하면 화면 전체가 덮인 채 남는다. 먼저 이렇게 재현해서 보고에 적는다.
+   - 기능은 남기고 고친다:
+     a. `dataTransfer.types`에 'Files'가 있을 때만 켠다 (글자·그림 끌기는 무시).
+     b. dragenter/dragleave를 세어(카운터) 0이 되면 끈다. window의 dragleave(창 밖으로 나감: relatedTarget null), dragend, drop, blur에서도 끈다.
+     c. Esc, 안내 화면 클릭, 오른쪽 위 닫기(×, aria-label "닫기")로 닫힌다. 안내 화면은 `role="dialog"` 대신 시각 안내라 aria-live로 "파일을 놓으면 접수합니다" 한 번만.
+     d. 놓은 게 파일이 아니면 아무 일도 하지 않는다.
+   - 확인: 파일 끌어 놓기 업로드가 그대로 되는지, 위 재현 방법으로 더는 남지 않는지.
 ```
 
-### I13 · 예시 시뮬레이션
-브랜치 `agy/fe-17-examples` (I12 합친 뒤) · 파일: 새 `frontend/public/examples/`(index.json + 예시 파일), 새 `frontend/src/components/ExampleSheet.vue`, `frontend/src/components/ChatBar.vue`, `frontend/src/App.vue`, `frontend/src/components/PaperSheet.vue`(종이 종류 추가가 필요하면), `tests/`
+### I15 · 새 특별 알약 10종 (Blender)
+브랜치 `agy/fe-19-pills` (I14 합친 뒤) · 파일: `design/blender/pills.py`, `design/blender/common.py`(도형 함수가 필요할 때만, 기존 함수 동작은 바꾸지 않음), `frontend/public/models/pills.glb`(스크립트 출력), `design/blender/previews/`(미리보기), `frontend/src/demo.js`
 ```
-docs/spec.md "v1.18 … D"를 구현해줘.
+docs/spec.md "v1.19 … G"를 구현해줘.
 
-1. 하단 도크의 파일 첨부(📎) 옆에 "예시" 버튼 하나(위치는 나중에 옮길 수 있게 버튼 하나로). 모바일도 같은 자리.
-2. 누르면 종이에 예시 목록: 제목, 한 줄 설명, 패키지 수, OS·Python.
-3. 고르면 ① 예시 파일을 업로드와 같은 길로 올리고 ② 입력창에 조건 문장을 자동으로 채운다(보내지 않음) ③ 박사님 한마디.
-   첫 날짜는 고른 날 기준으로 계산(예: 다음 화요일). 결과는 실제 API로 조회 — 값을 저장해 두거나 지어내지 않는다.
-4. 예시 4개는 spec 표대로. "큰 freeze 파일"은 /Users/jaeho/Developer/sudo-quest/requirements.txt(130줄)를 복사해 쓴다.
-   설명에 "오래 걸림(50초 안팎)"을 적는다.
-5. 테스트(네트워크 없이, pytest): index.json의 예시 파일이 모두 있고 파싱되는지(오래된 우분투 예시는 제외 줄 1개),
-   조건 문장에 OS·Python·N·간격이 다 들어 있는지(정규식 수준).
-6. 예시 4개를 실제로 하나씩 돌려 계획이 나오는지 확인하고, 걸린 시간과 캡처를 보고에 붙인다.
+1. design/blender/pills.py를 먼저 읽고 기존 10종(POPULAR)과 모양 함수(capsule·caplet·tablet·softgel)를 그대로 둔다.
+2. 10종을 더한다: fastapi, pydantic, starlette, uvicorn, scipy, matplotlib, pillow, celery, cryptography, certifi.
+   - 모양과 기호는 spec G 표대로. 각인은 이니셜 두 글자(FA, PD처럼 — 기존 PD(pandas)와 겹치면 다른 두 글자로, 보고에 적기).
+   - 기호는 기본 도형(C.rbox·원기둥·원뿔·토러스 등)으로 알약 윗면에 1~5mm 띄워(z-fighting 방지, design.md 4-2) 새긴다. 실제 로고 모양·배치를 따라 그리지 않는다 (예: fastapi는 "원 안의 번개" 로고 구도 금지, 그냥 번개 하나).
+   - 기호 함수는 pills.py 안에 `symbol_<이름>(key, color, at)`처럼 작게. 이니셜과 기호가 겹치지 않게 자리 나눔.
+   - 색: 두 색. 기존 10종·위험도 고리 색(SEV)과 헷갈리지 않게. 고른 색을 표로 보고.
+   - 크기·축·원점·노드 이름 규칙은 기존과 같다 (`Pill_<소문자>`, 길이 약 1, X축으로 눕힘). 배치 간격(i*1.6)이 20개로 늘어 미리보기 카메라가 다 담도록 조정.
+3. 다시 만들기: `blender -b --factory-startup -P design/blender/pills.py` → pills.glb와 미리보기 png.
+4. frontend/src/demo.js POPULAR에 10개 이름 추가.
+5. 확인:
+   - 미리보기 png를 보고에 첨부 (20종 모두 보임).
+   - 화면: 새 패키지가 든 requirements(예: fastapi==0.65.1, pydantic==1.8.1, pillow==8.2.0, certifi==2020.12.5)를 올려 약병·이름표·블리스터·곡반에서 기존 알약과 크기·바닥 높이가 맞는지 1280 캡처.
+   - pills.glb 크기 전후, 빌드 경고 없음.
+```
+
+### I16 · 예시 시뮬레이션 10개 + 예시 입구
+브랜치 `agy/fe-20-examples` (I15 합친 뒤) · 파일: `frontend/public/examples/`(새 파일 6개 + `index.json`), `frontend/src/components/ExampleSheet.vue`, `frontend/src/components/ConditionChips.vue`, `frontend/src/components/SpeechBubble.vue`(누를 수 있는 링크가 필요할 때만), `frontend/src/App.vue`, `frontend/src/scene/clinicController.js`(첫 인사·다음 환자 한 줄), `frontend/src/api.js`(calendar.add는 이미 있음 — 바꿀 필요 없으면 안 건드림), `frontend/src/style.css`, `tests/test_examples.py`
+```
+docs/spec.md "v1.19 … F"와 "H"를 구현해줘.
+
+1. 예시 파일 6개 새로 (spec F 표 1·5·6·7·8·9번). 기존 4개 파일은 그대로.
+   - 버전은 직접 고르되, 실제 서버(8001)로 각 예시를 한 번 끝까지 돌려서 표의 "보여 주는 것"이 실제로 나오는지 확인한 뒤 확정한다.
+     나오지 않으면 버전을 바꿔 다시. 끝내 안 되면 그 예시는 "확인 필요"로 보고 (지어내서 설명을 맞추지 않는다).
+   - 1번 건강검진: 작성하는 날 실제 조회로 취약점 0건인 버전. 설명에 "날마다 달라질 수 있어요".
+   - 7번 지저분한 requirements: spec "requirements.txt 파싱 규칙" 표의 줄을 골고루 (조회 3~4줄, 제외 6줄 이상, 빈 줄·주석 줄). 각 줄의 기대 결과(조회/제외 이유)를 테스트에 적는다.
+   - 결과 보고에 예시마다: 패키지 수, 제외 줄 수, 회차 수, 재계획 여부, 걸린 시간(초)을 표로. (이 숫자는 보고용 — index.json·화면 설명에 쓰지 않는다.)
+2. index.json: 10개, 코스 순서(spec F의 #)대로. 필드 더하기: group, tags(2~3개), 9번만 seed_event {title: "[예시] 정기 배포", offset_days: 0, start: "21:00", end: "23:00"}.
+   - 조건 문장의 {date}는 지금처럼 다음 화요일. seed_event 날짜도 같은 날(offset_days 기준).
+3. ExampleSheet.vue
+   - 묶음 제목(처음이라면 / 흔한 증상 / 까다로운 경우) 아래 카드. 카드: 제목, 설명, tags 칩, 패키지 n개 · 제외 n줄, OS·Python.
+   - 해 본 예시에 "진료함" 표시 (localStorage `drpatch.examples.done`, try/catch — 없어도 동작).
+   - 9번 카드를 고르면 바로 올리지 않고 카드 안에 확인란 "내 일정에 '[예시] 정기 배포'(m/d 21~23시)도 넣기"(기본 켬) + [이 예시로 시작]. 켜져 있으면 api.calendar.add로 넣는다. 같은 날짜·같은 제목 일정이 이미 있으면 다시 넣지 않는다.
+   - 열 때 특정 예시 id를 받으면 그 카드로 스크롤·초점 (다음 환자에서 씀).
+4. 예시 입구 (spec H)
+   - 하단 도크 "예시" 버튼은 그대로.
+   - 첫 인사(파일이 없을 때만) 끝에 "파일이 없으시면 예시 차트부터 보시죠." — "예시 차트"를 누르거나 Enter로 예시 종이가 열린다. 말풍선 닫기 동작(누르면 닫힘)과 충돌하지 않게: 링크를 누르면 종이만 열리고, 링크 밖을 누르면 지금처럼 닫힘. RichText에 v-html을 쓰지 않는다.
+   - 조건 칩 "파일 필요"를 누르면 작은 선택 [파일 올리기] [예시 고르기] (Esc로 닫힘, 키보드로 고를 수 있음). 파일이 있으면 지금 동작 그대로.
+5. 다음 환자
+   - 예시로 올린 세션에서 처방(계획)이 나오면 박사님이 코스의 다음 예시를 한 줄로 권한다: "다음 환자도 보시겠어요? — <다음 예시 제목>". 대화 기록에도 남고, 누르면 예시 종이가 그 카드에 초점을 두고 열린다. 자동으로 올리지 않는다. 마지막(10번) 뒤에는 권하지 않는다.
+   - 예시가 아닌 사용자 파일이면 권하지 않는다.
+6. 테스트 tests/test_examples.py
+   - 10개, id 목록, 각 파일 파싱 결과가 package_count·excluded_count와 같음, 7번은 줄마다 기대 제외 이유, group·tags 필드, seed_event 모양(9번만), 조건 문장 정규식(지금 것 + Ubuntu 18.04·24.04, macOS 14 통과).
+7. 확인 (1280·375 캡처)
+   - 예시 종이 묶음·카드·진료함 표시
+   - 첫 인사 링크 → 예시 종이, "파일 필요" 칩 선택
+   - 9번: 일정 넣기 → 계획에서 1회차가 옮겨지고 "↻ 원래 m/d" → 확인 뒤 [예시] 일정 삭제
+   - 다음 환자 한 줄 → 다음 카드 초점
+   - 모바일에서 도크 버튼이 꺾이지 않는지
 ```
