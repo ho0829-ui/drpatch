@@ -12,6 +12,10 @@ const emit = defineEmits(['close']);
 const closeBtn = ref(null);
 
 const sevLabel = (sev) => SEV[sevKey(sev)][1];
+const shortDate = (iso) => {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${Number(m[2])}/${Number(m[3])}` : String(iso || '');
+};
 
 const roundInfo = computed(() => {
   if (props.sheet?.kind !== 'round') return null;
@@ -121,10 +125,19 @@ onBeforeUnmount(() => removeEventListener('keydown', onKeyDown));
         <h2 id="sheet-title">
           {{ roundInfo.date }}
           <small v-if="roundInfo.moved_from" style="font-size: 13px; color: #8A4600;">
-            (↻ {{ roundInfo.moved_from }})
+            (↻ 원래 {{ shortDate(roundInfo.moved_from) }})
           </small>
         </h2>
         <p class="round-meta">{{ windowText }} · {{ roundInfo.items.length }}정</p>
+        <p v-if="roundInfo.moved_from" class="cal-warn">
+          내 일정과 겹쳐 {{ shortDate(roundInfo.moved_from) }} → {{ shortDate(roundInfo.date) }}로 옮겼어요.
+        </p>
+        <p v-if="roundInfo.calendar_conflicts?.length" class="cal-err">
+          ⚠ 겹치는 일정: {{ roundInfo.calendar_conflicts.join(', ') }}
+        </p>
+        <p v-if="sheet.plan?.calendar_check === '확인 못 함'" class="cal-warn">
+          캘린더를 확인하지 못했어요.
+        </p>
         <ul class="list">
           <li v-for="it in roundInfo.items" :key="it.name">
             <span class="n">{{ it.name }}</span>

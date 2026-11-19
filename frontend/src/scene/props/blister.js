@@ -67,9 +67,9 @@ export function setupBlisters(world, M, addPick, removePick) {
         c.fillText(shortDate(state.date), w / 2, 295);
 
         if (state.movedFrom) {
-          c.font = FONT(600, 24, true);
+          c.font = FONT(600, 22, true);
           c.fillStyle = '#F5C518';
-          c.fillText(`↻ ${shortDate(state.movedFrom)}`, w / 2, 336);
+          c.fillText(`↻ 원래 ${shortDate(state.movedFrom)}`, w / 2, 336);
         }
 
         if (state.winText) {

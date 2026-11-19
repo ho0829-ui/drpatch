@@ -46,9 +46,18 @@ const calendarCells = computed(() => {
   for (let i = 0; i < firstDow; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) {
     const iso = `${y}-${m}-${String(d).padStart(2, '0')}`;
-    const hasPlan = plans.value.some((p) => p.date === iso);
-    const hasEvent = events.value.some((e) => e.date === iso);
-    cells.push({ day: d, iso, hasPlan, hasEvent });
+    const planCount = plans.value.filter((p) => p.date === iso).length;
+    const eventCount = events.value.filter((e) => e.date === iso).length;
+    const parts = [`${viewMonth.value + 1}월 ${d}일`];
+    if (planCount) parts.push(`패치 계획 ${planCount}개`);
+    if (eventCount) parts.push(`내 일정 ${eventCount}개`);
+    cells.push({
+      day: d,
+      iso,
+      hasPlan: planCount > 0,
+      hasEvent: eventCount > 0,
+      ariaLabel: parts.join(', '),
+    });
   }
   return cells;
 });
@@ -164,6 +173,11 @@ onMounted(loadAll);
       <button type="button" class="cal-btn" aria-label="다음 달" @click="shiftMonth(1)">▶</button>
     </div>
 
+    <div class="cal-legend" aria-hidden="true">
+      <span><i class="dot-plan"></i> 패치 계획</span>
+      <span><i class="dot-event"></i> 내 일정</span>
+    </div>
+
     <div class="cal-grid">
       <span v-for="d in ['일', '월', '화', '수', '목', '금', '토']" :key="d" class="cal-dow">{{ d }}</span>
       <template v-for="(cell, idx) in calendarCells" :key="idx">
@@ -173,10 +187,12 @@ onMounted(loadAll);
           type="button"
           class="cal-day"
           :class="{ selected: cell.iso === selectedDate }"
+          :aria-label="cell.ariaLabel"
+          :aria-pressed="cell.iso === selectedDate"
           @click="selectDay(cell.iso)"
         >
           <span>{{ cell.day }}</span>
-          <span class="cal-dots">
+          <span class="cal-dots" aria-hidden="true">
             <i v-if="cell.hasPlan" class="dot-plan" title="저장된 패치 계획"></i>
             <i v-if="cell.hasEvent" class="dot-event" title="내 일정"></i>
           </span>
