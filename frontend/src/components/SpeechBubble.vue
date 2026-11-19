@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import RichText from './RichText.vue';
 
 const props = defineProps({
@@ -16,6 +16,8 @@ let typingId = 0;
 const timers = [];
 const EDGE = 16;
 const TOP_SAFE = 76; // 상태 칩·로고 아래
+let size = { w: 300, h: 80 }; // 크기가 바뀔 때만 잰다 (위치가 바뀔 때마다 재면 매 프레임 레이아웃 계산)
+let ro = null;
 
 function clearTimers() {
   while (timers.length) clearTimeout(timers.pop());
@@ -23,9 +25,7 @@ function clearTimers() {
 
 // 박사님 머리 옆에 두되, 화면 밖(왼쪽·위)으로 나가지 않게 붙잡는다
 function clamp() {
-  const box = el.value;
-  const w = box ? box.offsetWidth : 300;
-  const h = box ? box.offsetHeight : 80;
+  const { w, h } = size;
   const maxRight = Math.max(EDGE, innerWidth - w - EDGE - 24); // 왼쪽 아바타 여유
   place.value = {
     right: Math.min(Math.max(EDGE, props.pos.right), maxRight),
@@ -34,6 +34,18 @@ function clamp() {
 }
 
 watch(() => [props.pos.right, props.pos.top], clamp);
+onMounted(() => {
+  ro = new ResizeObserver(() => {
+    if (!el.value) return;
+    size = { w: el.value.offsetWidth, h: el.value.offsetHeight };
+    clamp();
+  });
+  if (el.value) ro.observe(el.value);
+});
+onBeforeUnmount(() => {
+  clearTimers();
+  ro?.disconnect();
+});
 
 watch(
   () => props.text,

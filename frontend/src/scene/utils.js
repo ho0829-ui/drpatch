@@ -134,3 +134,10 @@ export function createTweener(isReduced) {
 
   return { tween, stepTweens, sleep };
 }
+
+// 다시 만들 물체를 치울 때: mergeStatic가 만든 각자의 geometry와, 넘겨준 자기 몫의 재질·텍스처만 해제한다.
+// (원본 모델과 공유하는 재질은 해제하지 않는다 — 다음 물체가 그대로 쓴다)
+export function disposeOwned(root, own = []) {
+  root.traverse((o) => o.isMesh && o.geometry?.dispose());
+  for (const r of own) r?.dispose?.();
+}

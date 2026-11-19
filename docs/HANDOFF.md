@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-19] R2(review-frontend) 검증 → 14건 판정(맞음 9·일부 2·틀림 1·문제없음 1·낮음 1). 고침: 매 프레임 이름표·말풍선 갱신 줄임(정지 시 DOM 변경 0), 말풍선 ResizeObserver, 블리스터·알약 치울 때 GPU 해제(공유 재질 제외), 닫힌 종이 inert·초점 복원. I3·I4·I5·I6 프롬프트에 덧붙임. 다음: I3~I6(Hydrogen), S7(Flash)
 - [agy/review-frontend] R2 완료: `docs/review-frontend.md` 작성 (`frontend/src` 자원 정리·매 프레임 낭비·오류·누수·접근성·명세·보안 리뷰 및 I3~I6 반영 항목 정리)
 - [Claude Code 2026-11-19] R1(review-final) 검증 → 5건 모두 맞음. 1·2·3·5 직접 고침(제외 목록 표시, 캘린더 없을 때도 도장, 로그 건수·LLM 판단 표시, 조회 칩 중립), 4는 I5에, 숨긴 탭 첫 로딩 문제는 I3에 덧붙임. 실제 GMS로 업로드→계획→확정 확인, 255 통과. 다음: R2(Neon)·S7(Flash)
 - [agy/review-final] R1 완료: `docs/review-final.md` 작성 (명세 v1.16 완료 기준·화면·말투 ↔ 코드·테스트 대조 및 제출 전 필수 수정 5건 정리)

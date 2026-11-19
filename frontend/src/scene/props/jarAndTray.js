@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { LAYOUT, POPULAR } from '../../demo.js';
-import { ease, mergeStatic, prep } from '../utils.js';
+import { disposeOwned, ease, mergeStatic, prep } from '../utils.js';
 
 const JAR_SCALE = 0.72;
 const TRAY_SPOTS = [
@@ -35,6 +35,7 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
     for (const p of pills) {
       removePick?.(p.root);
       world.remove(p.root);
+      disposeOwned(p.root);
     }
     pills = [];
     trayUsed = 0;

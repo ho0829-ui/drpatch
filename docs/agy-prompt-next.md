@@ -89,6 +89,10 @@ docs/review-frontend.md에 표로:
 
 [R1 검증에서 덧붙임] 탭이 숨겨진(백그라운드) 상태로 처음 열면 3D 장면이 안 그려진 채 남는 경우가 있었다(새로고침하면 정상, 콘솔 오류 없음).
 로딩이 끝났는데 숨겨진 상태였다면, 다시 보일 때(visibilitychange) 크기 재계산과 한 프레임 렌더를 해서 장면이 나오게 한다. 재현 방법을 보고에 적는다.
+[R2에서 덧붙임 — docs/review-frontend.md "Claude Code 판정" 참고]
+- 모델 실패 → 목록 화면으로 갈 때 ClinicScene이 내려간다. 그때 engine.dispose()가 장면 안 geometry·material·texture·scene.environment까지 해제하게 한다.
+  단 원본 모델(M.*)과 clone(true)로 공유하는 것을 두 번 해제해도 괜찮은지 확인하고, 한 번만 해제되게 Set으로 모은다.
+- ClinicScene.vue: 로딩(await createClinicController) 중에 내려가면 끝난 뒤 바로 destroy() (disposed 플래그).
 ```
 
 ### I4 · 오류 화면: API 키 없음 · 서버 끊김 · 업로드 실패
@@ -99,6 +103,9 @@ docs/review-frontend.md에 표로:
 - 서버 끊김·스트림 중단(fetch 실패, 줄이 끝나기 전에 끊김): 말풍선 "연결이 끊겼어요. 잠시 후 다시 시도해 주세요." + 도크에 [다시 시도] (마지막 메시지를 다시 보냄). 상태가 'running'에 갇히지 않게.
 - 업로드 실패: 413(1MB 초과) "파일이 너무 커요 (1MB까지)", 그 밖 "파일을 올리지 못했어요".
 완료 기준: .env의 GMS_KEY를 잠시 비우고 서버를 켜서 확인, 진행 중에 서버를 끄고 확인(방법을 보고에), npm run build, pytest.
+[R2에서 덧붙임]
+- clinicController.js sendChatMessage: api.chat 뒤의 applyPlan()·stampPacks()가 try 밖이라 예외가 나면 'running'에 갇힌다 → 함수 전체 try/finally로 상태 복구.
+- 스트림이 final 없이 끝나면 finalEvent가 비어 finalEvent.plan에서 TypeError가 난다 → "연결이 끊겼어요" 경로로 보낸다.
 ```
 
 ### I5 · 캘린더 때문에 옮긴 회차 표시
@@ -109,6 +116,7 @@ docs/review-frontend.md에 표로:
 - calendar_conflicts가 있으면: 회차 종이에 "겹치는 일정: …" 경고 (옮기지 못한 경우).
 - plan.calendar_check가 "확인 못 함"이면 회차 종이에 "캘린더를 확인하지 못했어요".
 - [R1 지적 4] 지금 PaperSheet.vue의 회차 종이(112~134줄 근처)에 위 두 경고가 하나도 없다. 그 자리에 넣는다.
+- [R2] CalendarSheet.vue 날짜 칸: 계획(청록 점)·일정(코랄 점)을 색으로만 구분한다 → 날짜 버튼 aria-label에 "11월 21일, 패치 계획 1개, 내 일정 1개"처럼, 달력 위에 색+글자 범례.
 확인 방법: POST /calendar/events {"title":"서버실 점검","date":"2026-11-21","start":"23:00","end":"23:30"} 를 먼저 넣고 11/21부터 계획 → 1회차가 11/22로 옮겨진 것이 보이는지. 끝나면 그 일정은 DELETE로 지운다.
 완료 기준: 위 확인 + npm run build, pytest.
 ```
@@ -121,6 +129,7 @@ docs/review-frontend.md에 표로:
 - 마우스 올리기(hover) 이름 표시는 터치에서 안 되니, 물체를 짧게 누르면 지금처럼 동작하고 길게 누르면(0.5초) 이름만 잠깐 보여준다.
 - 화면 키보드가 올라오면 도크가 가려지지 않게 (visualViewport 기준으로 도크 위치 조정).
 - 끌다가 손을 뗀 것은 누르기로 치지 않는다 (지금 마우스 규칙과 같게).
+- [R2] 떠오르는 이름표(floatChips, ClinicScene.vue)는 동시에 최대 5개, 넘치면 오래된 것부터 뺀다 (작은 화면에서 겹침).
 완료 기준: 개발자 도구 모바일(390×844, 터치)에서 확인, npm run build, pytest.
 ```
 

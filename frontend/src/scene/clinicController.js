@@ -600,6 +600,18 @@ export async function createClinicController(canvas, callbacks) {
 
   // ── 매 프레임 ─────────────────────────────────────────
   const tmpV = new THREE.Vector3();
+  // 화면(Vue)에는 값이 바뀐 때만 넘긴다 — 매 프레임 배열·객체를 갈아 끼우면 이름표가 매번 다시 그려진다
+  let lastTags = [];
+  let lastBubble = { right: -1, top: -1 };
+  const moved = (a, b) => Math.abs(a - b) > 0.5;
+  function tagsChanged(a, b) {
+    if (a.length !== b.length) return true;
+    for (let i = 0; i < a.length; i++) {
+      const p = a[i], q = b[i];
+      if (p.name !== q.name || p.visible !== q.visible || p.color !== q.color || moved(p.x, q.x) || moved(p.y, q.y)) return true;
+    }
+    return false;
+  }
   onSay('어서 오세요. requirements.txt를 올려 주세요.');
 
   function frame(now) {
@@ -628,7 +640,11 @@ export async function createClinicController(canvas, callbacks) {
     const chartWant = hovered === chartApi.chart ? 0.15 : 0;
     chartApi.chart.position.y += (chartWant - chartApi.chart.position.y) * 0.18;
 
-    onBubblePos(getBubbleAnchor(camera));
+    const bp = getBubbleAnchor(camera);
+    if (moved(bp.right, lastBubble.right) || moved(bp.top, lastBubble.top)) {
+      lastBubble = bp;
+      onBubblePos(bp);
+    }
 
     const showTags = camera.position.distanceTo(controls.target) < BASE_DIST * 1.3 * getDistScale();
     const tagList = [];
@@ -656,7 +672,10 @@ export async function createClinicController(canvas, callbacks) {
       }
       placed.push({ x: t.x, y: t.y, w });
     }
-    onPillTagsUpdate(tagList);
+    if (tagsChanged(tagList, lastTags)) {
+      lastTags = tagList;
+      onPillTagsUpdate(tagList);
+    }
 
     rafId = requestAnimationFrame(frame);
   }

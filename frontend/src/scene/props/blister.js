@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CELL, COLOR, END_W, LAYOUT } from '../../demo.js';
-import { FONT, mergeStatic, prep, textTexture } from '../utils.js';
+import { disposeOwned, FONT, mergeStatic, prep, textTexture } from '../utils.js';
 
 function shortDate(iso) {
   if (!iso) return '미정';
@@ -20,6 +20,7 @@ export function setupBlisters(world, M, addPick, removePick) {
     for (const p of packs) {
       removePick?.(p.group);
       world.remove(p.group);
+      disposeOwned(p.group, [p.label.tex, p.labelMat, ...p.slots.map((s) => s.wellMat)]);
     }
     packs = [];
   }
@@ -92,7 +93,7 @@ export function setupBlisters(world, M, addPick, removePick) {
           c.restore();
         }
       });
-      labelMesh.material = new THREE.MeshStandardMaterial({ map: label.tex, roughness: 0.6 });
+      const labelMat = (labelMesh.material = new THREE.MeshStandardMaterial({ map: label.tex, roughness: 0.6 }));
       mergeStatic(end);
 
       const slots = [];
@@ -114,6 +115,7 @@ export function setupBlisters(world, M, addPick, removePick) {
         round: r,
         state,
         label,
+        labelMat,
         slots,
         used: 0,
         redrawLabel(opts = {}) {

@@ -29,12 +29,18 @@ const unassignedItems = computed(() => props.sheet?.plan?.unassigned || []);
 const uncheckedItems = computed(() => props.sheet?.plan?.unchecked || []);
 const heldItems = computed(() => props.sheet?.plan?.held || []);
 
+// 열 때 초점을 닫기 버튼으로, 닫을 때 연 자리(누른 버튼 등)로 돌려준다
+let returnFocus = null;
 watch(
   () => props.sheet,
-  async (val) => {
+  async (val, old) => {
     if (val) {
+      if (!old) returnFocus = document.activeElement;
       await nextTick();
       closeBtn.value?.focus({ preventScroll: true });
+    } else if (returnFocus?.isConnected && returnFocus !== document.body) {
+      returnFocus.focus({ preventScroll: true });
+      returnFocus = null;
     }
   },
 );
@@ -47,7 +53,8 @@ onBeforeUnmount(() => removeEventListener('keydown', onKeyDown));
 </script>
 
 <template>
-  <div class="sheet" :class="{ open: !!sheet }">
+  <!-- 닫힌 종이는 안 보이므로 Tab 초점도 받지 않게 (inert) -->
+  <div class="sheet" :class="{ open: !!sheet }" :inert="!sheet">
     <div class="paper" role="dialog" aria-labelledby="sheet-title">
       <div class="band" :style="{ background: sheet?.color || 'transparent' }"></div>
       <button ref="closeBtn" class="close" aria-label="닫기" @click="emit('close')">×</button>
