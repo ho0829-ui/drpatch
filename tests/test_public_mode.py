@@ -193,3 +193,16 @@ def test_purge_older_than(tmp_path):
         assert counts == {"sessions": 1, "plans": 1, "events": 2, "calendar_events": 1}
         assert [r["id"] for r in conn.execute("SELECT id FROM sessions")] == [new]
         assert repo.purge_older_than(conn, 0) == {"sessions": 0, "plans": 0, "events": 0, "calendar_events": 0}
+
+
+def test_cors_allows_pages_origin_only(local_client):
+    pre = {"Origin": "https://ho0829-ui.github.io", "Access-Control-Request-Method": "POST",
+           "Access-Control-Request-Headers": "content-type,x-session-id",
+           "Access-Control-Request-Private-Network": "true"}
+    r = local_client.options("/chat", headers=pre)
+    assert r.status_code == 200
+    assert r.headers["access-control-allow-origin"] == "https://ho0829-ui.github.io"
+    assert "x-session-id" in r.headers["access-control-allow-headers"].lower()
+    assert r.headers.get("access-control-allow-private-network") == "true"
+    bad = local_client.options("/chat", headers={**pre, "Origin": "https://evil.example"})
+    assert bad.status_code == 400 and "access-control-allow-origin" not in bad.headers  # 브라우저가 막음

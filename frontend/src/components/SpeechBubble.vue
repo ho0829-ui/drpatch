@@ -1,4 +1,5 @@
 <script setup>
+import { asset } from '../paths.js';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import RichText from './RichText.vue';
 
@@ -153,7 +154,7 @@ watch(
     @keydown.enter.prevent="closeBubble"
     @keydown.space.prevent="closeBubble"
   >
-    <img class="avatar" src="/brand/mascot.svg" alt="" draggable="false">
+    <img class="avatar" :src="asset('brand/mascot.svg')" alt="" draggable="false">
     <b>DR.PATCH</b>
     <div class="bubble-body"><RichText :text="shownText" /></div>
     <p v-if="action" class="bubble-action">

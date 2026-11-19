@@ -1,4 +1,5 @@
 <script setup>
+import { asset } from './paths.js';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as api from './api.js';
 import { previewConditions } from './conditionPreview.js';
@@ -236,7 +237,7 @@ async function onSelectExample(ex) {
     if (ex.addSeedEvent && ex.seed_event) {
       await ensureSeedEvent(ex.seed_event);
     }
-    const res = await fetch(`/examples/${ex.file}`, { cache: 'no-store' });
+    const res = await fetch(asset(`examples/${ex.file}`), { cache: 'no-store' });
     if (!res.ok) throw new Error('예시 파일을 불러오지 못했어요.');
     const text = await res.text();
     const file = new File([text], ex.file, { type: 'text/plain' });
@@ -313,7 +314,7 @@ onMounted(() => {
   window.addEventListener('drop', clearDrag);
   window.addEventListener('blur', clearDrag);
   window.addEventListener('keydown', onWindowKeyDown);
-  fetch('/examples/index.json')
+  fetch(asset('examples/index.json'))
     .then((r) => (r.ok ? r.json() : []))
     .then((list) => {
       if (Array.isArray(list)) exampleCatalog.value = list;
@@ -434,7 +435,7 @@ function reloadPage() {
     </div>
 
     <header class="brand">
-      <img src="/brand/logo-mark.svg" width="46" height="46" alt="" draggable="false">
+      <img :src="asset('brand/logo-mark.svg')" width="46" height="46" alt="" draggable="false">
       <div><b>DR<span class="dot">.</span>PATCH</b><small>진료 책상</small></div>
     </header>
 

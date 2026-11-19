@@ -1,4 +1,6 @@
-# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.24 · 2026-11-19)
+# sudo-patch: 서버 패치·EOL 점검 플래너 (v1.25 · 2026-11-19)
+
+> v1.24 → v1.25 (2026-11-19): 배포를 sudo-quest와 같게 — 화면은 GitHub Pages, API만 Tailscale Funnel. 상세: "v1.25 Pages + Funnel".
 
 > v1.23 → v1.24 (2026-11-19): 공개 배포(Tailscale Funnel)용 공개 모드 — 내 데이터만 보기, 호출 상한, 공개용 DB. 상세: "v1.24 공개 배포".
 
@@ -552,6 +554,14 @@ I15 검증에서 나온 것: scipy 물결이 SP 글자와 겹침, uvicorn 뿔이
 - **실행:** `scripts/serve_public.sh` — 화면 빌드 → 공개 모드로 `127.0.0.1:8010`에 서버. Funnel 켜기/끄기는 사용자가 직접 (`tailscale funnel --bg 8010` / `tailscale funnel reset`). 안내는 `docs/deploy.md`.
 - 업로드 1MB·메시지 2000자 제한은 지금 그대로.
 - **DB (2026-11-19 추가):** WAL 모드(로깅 스레드가 쓰는 동안에도 읽기 가능), 색인 `plans(session_id, date)`·`calendar_events(owner, date)` (옛 DB는 칸을 더한 뒤 만듦). 공개 모드는 서버를 켤 때 `PUBLIC_RETENTION_DAYS`(기본 7)일 넘게 손대지 않은 세션과 그 계획·실행 로그·일정을 지운다 (로컬 DB는 안 지움). 구조(표 4개, 항목은 JSON 칸)는 그대로 — 그 안을 검색하는 기능이 없어 쪼갤 이득이 없음.
+
+## v1.25 Pages + Funnel (2026-11-19, 사용자 확인 "GitHub로 배포하고 API만 Tailscale")
+v1.24는 화면·API를 모두 Mac에서 Funnel로 냈는데, 밖에서 열면 화면(3D 모델 17MB)을 받는 데 너무 오래 걸렸다(사용자 보고). sudo-quest처럼 나눈다.
+- **화면:** GitHub Actions(`.github/workflows/pages.yml`)가 `main` push마다 백엔드 테스트 → 화면 빌드(`VITE_BASE=/sudo-patch/`, `VITE_API_BASE=저장소 변수 API_BASE_URL`) → Pages 배포. 주소 https://ho0829-ui.github.io/sudo-patch/
+- **API:** 이 Mac `scripts/serve.sh --public`(8010) + `tailscale funnel --bg 8010` → https://macmini.taile20f54.ts.net
+- **화면 코드:** 정적 파일은 `asset()`(BASE_URL 붙임), API는 `apiUrl()`(VITE_API_BASE 붙임, 비면 같은 주소) — `frontend/src/paths.js`. 로컬은 지금과 같다.
+- **CORS:** `ALLOWED_ORIGINS`(기본 `https://ho0829-ui.github.io`)만, 메서드 GET·POST·PUT·DELETE, 머리말 Content-Type·X-Session-Id. Chrome 사설망 사전 확인(Private Network Access)도 허용 출처에만 (Starlette `allow_private_network`).
+- 확인(2026-11-19): 로컬에서 Pages 흉내(화면 127.0.0.1:8090/sudo-patch/, API 8011 공개 모드) — 모델·예시·브랜드 경로, 업로드·계획·캘린더·대화 스트림 모두 다른 주소로 동작.
 
 ## 말투 (DR.PATCH)
 - Agent는 **능청스러운 나이 든 박사님**처럼 말한다. 예: "허허, urllib3 1.24.1이라니… 꽤 오래 방치하셨군요."

@@ -1,4 +1,5 @@
 <script setup>
+import { asset } from '../paths.js';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
@@ -69,7 +70,7 @@ async function load() {
   error.value = '';
   loadDoneSet();
   try {
-    const res = await fetch('/examples/index.json', { cache: 'no-store' });
+    const res = await fetch(asset('examples/index.json'), { cache: 'no-store' });
     if (!res.ok) throw new Error('예시 목록을 불러오지 못했어요.');
     const data = await res.json();
     examples.value = Array.isArray(data) ? data : [];

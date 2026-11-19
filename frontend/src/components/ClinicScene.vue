@@ -1,4 +1,5 @@
 <script setup>
+import { asset } from '../paths.js';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { createClinicController } from '../scene/clinicController.js';
 import { hasWebGL } from '../scene/utils.js';
@@ -111,7 +112,7 @@ defineExpose({
 
   <div v-if="loading" class="loading" role="status" aria-live="polite">
     <div>
-      <img src="/brand/mascot.svg" width="96" height="96" alt="">
+      <img :src="asset('brand/mascot.svg')" width="96" height="96" alt="">
       <p>진료실 준비 중… {{ loadPct }}%</p>
       <div class="load-bar" aria-hidden="true"><i :style="{ width: `${loadPct}%` }"></i></div>
     </div>

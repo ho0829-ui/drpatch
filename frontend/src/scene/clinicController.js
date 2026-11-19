@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as api from '../api.js';
 import { COLOR, EGGS, MODELS, NIGHT_LINES, QUIPS, QUIPS_NIGHT, SEV, sevKey } from '../demo.js';
 import { setupNight } from './night.js';
+import { asset } from '../paths.js';
 import { BASE_DIST, createEngine } from './engine.js';
 import { addGroundShadows } from './shadows.js';
 import { createTweener, ease } from './utils.js';
@@ -57,7 +58,7 @@ export async function createClinicController(canvas, callbacks) {
   ]).catch(() => {});
 
   const loaded = await Promise.all(
-    MODELS.map((n) => loader.loadAsync(`/models/${n}.glb`).then((g) => [n, g.scene])),
+    MODELS.map((n) => loader.loadAsync(asset(`models/${n}.glb`)).then((g) => [n, g.scene])),
   );
   await fontsReady;
   const M = Object.fromEntries(loaded);

@@ -3,18 +3,21 @@
     uvicorn app.main:app --reload   →  http://localhost:8000
 
 구조는 1일차 FastAPI 실습과 같다: 이 파일은 앱을 만들고 라우터를 붙이기만 한다.
-화면(HTML/CSS/JS)도 이 서버가 같이 내보낼 예정이라(같은 주소) CORS 설정은 두지 않는다.
+화면은 이 서버가 같이 내보내고(로컬·같은 주소), 배포 때는 GitHub Pages가 내보낸다(spec v1.25).
+그래서 CORS는 Pages 주소(`ALLOWED_ORIGINS`, 기본 https://ho0829-ui.github.io)만 허용한다.
 
 앱이 켜질 때: DB 표 준비 → 이벤트 버스 → 로깅 Agent(별도 스레드) → LLM(GmsBrain) 준비.
 - 로깅 Agent가 실패해도 앱은 뜬다 (로깅이 멈춰도 대화는 정상, F3013).
 - API 키가 없으면 brain=None → /chat이 "서버 설정(API 키) 확인" 안내만 보낸다 (F3019).
 """
 
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -69,6 +72,31 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="sudo-patch", description="서버 패치·EOL 점검 플래너", lifespan=lifespan)
+
+DEFAULT_ORIGINS = "https://ho0829-ui.github.io"
+
+
+def allowed_origins() -> list[str]:
+    """화면을 다른 주소(GitHub Pages)에서 내보낼 때 API를 부를 수 있는 주소. 쉼표로 여러 개."""
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    raw = os.getenv("ALLOWED_ORIGINS", DEFAULT_ORIGINS)
+    return [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
+
+
+ORIGINS = allowed_origins()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ORIGINS,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "X-Session-Id"],
+    # Chrome: 공개 페이지(Pages)가 사설 주소로 풀리는 이 Mac을 부를 때의 사전 확인에 '허용' (sudo-quest 때와 같은 처리)
+    allow_private_network=True,
+    max_age=600,
+)
+
+
 
 
 @app.exception_handler(RequestValidationError)

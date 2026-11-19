@@ -1,3 +1,5 @@
+import { apiUrl } from './paths.js';
+
 const SESSION_KEY = 'sudo-patch.session';
 const MAX_UPLOAD_BYTES = 1024 * 1024; // 1MB
 let pendingUpload = null;
@@ -29,7 +31,7 @@ let serverInfoPromise = null;
 /** GET /health → { ok, public } 한 번만 묻고 기억 (공개 모드면 "모든 계획 보기"를 숨긴다) */
 export function serverInfo() {
   if (!serverInfoPromise) {
-    serverInfoPromise = fetch('/health')
+    serverInfoPromise = fetch(apiUrl('/health'))
       .then((r) => (r.ok ? r.json() : { ok: false, public: false }))
       .catch(() => ({ ok: false, public: false }));
   }
@@ -39,7 +41,7 @@ export function serverInfo() {
 async function requestJson(method, url, body) {
   let res;
   try {
-    res = await fetch(url, {
+    res = await fetch(apiUrl(url), {
       method,
       headers: sessionHeaders(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -64,7 +66,7 @@ export async function upload(file, sessionId = getSession()) {
   const run = (async () => {
     let res;
     try {
-      res = await fetch(url, { method: 'POST', body: file });
+      res = await fetch(apiUrl(url), { method: 'POST', body: file });
     } catch {
       throw new Error('허허, 연결이 끊겼네요. 잠시 후 다시 해 보시죠.');
     }
@@ -108,7 +110,7 @@ export async function chat(sessionId, message, onEvent) {
   const sid = sessionId ?? getSession();
   let res;
   try {
-    res = await fetch('/chat', {
+    res = await fetch(apiUrl('/chat'), {
       method: 'POST',
       headers: sessionHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ session_id: sid, message }),

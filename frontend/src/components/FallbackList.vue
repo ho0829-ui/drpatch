@@ -1,4 +1,5 @@
 <script setup>
+import { asset } from '../paths.js';
 import { SEV, sevKey } from '../demo.js';
 
 defineProps({
@@ -20,7 +21,7 @@ const sevLabel = (sev) => SEV[sevKey(sev)][1];
   <section class="fallback" aria-label="패치 계획 목록 화면">
     <div>
       <div class="fallback-head">
-        <h1><img src="/brand/logo-lockup.svg" height="56" alt="DR.PATCH"></h1>
+        <h1><img :src="asset('brand/logo-lockup.svg')" height="56" alt="DR.PATCH"></h1>
         <button v-if="canReturn3d" type="button" class="btn btn-sm" @click="emit('return-3d')">
           3D 진료실로 보기
         </button>

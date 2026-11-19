@@ -2,6 +2,8 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
+  // GitHub Pages는 /sudo-patch/ 아래에 올라간다 (워크플로가 VITE_BASE를 준다). 로컬·Funnel 단독은 /
+  base: process.env.VITE_BASE || '/',
   plugins: [vue()],
   build: {
     outDir: 'dist',

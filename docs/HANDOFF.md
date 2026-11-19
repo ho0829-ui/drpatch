@@ -1,6 +1,9 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-19] 배포 구조를 sudo-quest와 같게 (spec v1.25): 화면 GitHub Pages(.github/workflows/pages.yml), API만 Funnel. paths.js(asset/apiUrl), CORS(ALLOWED_ORIGINS + 사설망), vite base. 294 통과
+  - 로컬 Pages 흉내(8090 화면 + 8011 API)로 업로드·계획·캘린더·대화 스트림 확인
+  - 사용자가 할 것: Settings→Pages Source=GitHub Actions, 변수 API_BASE_URL=https://macmini.taile20f54.ts.net, push, 8010 서버 다시 켜기(CORS 코드 반영). 모바일 속도는 README·PC 배포 뒤에
 - [Claude Code 2026-11-19] DB 다듬기: WAL 모드, 색인 plans(session_id,date)·calendar_events(owner,date), 공개 모드 시작 시 7일 지난 방문자 데이터 정리(purge_older_than). 293 통과. 구조(표 4개·JSON 칸)는 그대로
 - [Claude Code 2026-11-19] 배포 준비 (spec v1.24 공개 모드, docs/deploy.md, scripts/serve.sh). 290 통과·빌드 경고 0
   - 공개 모드(PUBLIC_MODE=1): X-Session-Id로 계획·로그·캘린더 일정을 내 것만(남의 것 404), 캘린더 owner 칸, 겹침도 같은 세션끼리, /chat IP 시간당 20·하루 300, /upload IP 시간당 60(429), data/public.db, /health에 public → 화면이 "모든 계획 보기" 숨김
