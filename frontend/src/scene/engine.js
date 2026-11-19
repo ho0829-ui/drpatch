@@ -60,6 +60,7 @@ export function createEngine(canvas, tween, isReduced) {
     maxPolarAngle: 1.36,
     minAzimuthAngle: -0.95,
     maxAzimuthAngle: 0.95,
+    touches: { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN },
   });
 
   const homeView = () => ({

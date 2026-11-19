@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import RichText from './RichText.vue';
 
 const props = defineProps({
@@ -12,6 +12,30 @@ const emit = defineEmits(['send', 'upload']);
 const text = ref('');
 const historyOpen = ref(false);
 const historyRef = ref(null);
+const kbOffset = ref(0);
+
+function updateViewport() {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const gap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  kbOffset.value = gap > 40 ? Math.round(gap) : 0;
+}
+
+onMounted(() => {
+  const vv = window.visualViewport;
+  if (vv) {
+    vv.addEventListener('resize', updateViewport);
+    vv.addEventListener('scroll', updateViewport);
+  }
+});
+
+onBeforeUnmount(() => {
+  const vv = window.visualViewport;
+  if (vv) {
+    vv.removeEventListener('resize', updateViewport);
+    vv.removeEventListener('scroll', updateViewport);
+  }
+});
 
 function submit() {
   const msg = text.value.trim();
@@ -39,7 +63,7 @@ watch(
 </script>
 
 <template>
-  <div class="chat-dock">
+  <div class="chat-dock" :style="kbOffset ? { bottom: `${kbOffset + 10}px` } : undefined">
     <slot />
     <div v-if="historyOpen" ref="historyRef" class="chat-history" aria-label="대화 기록">
       <div v-if="!messages.length" class="chat-empty">아직 대화 기록이 없어요.</div>

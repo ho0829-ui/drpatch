@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/fe-08-loading ~ agy/fe-11-touch] I3~I6 완료: I3(청크 분리·로딩 진행률·visibilitychange·GPU 해제·언마운트 가드), I4(API 키 누락·연결 끊김 재시도·413·try/finally), I5(이동/충돌/미확인 경고·달력 aria-label·범례), I6(모바일 터치·0.5초 롱프레스·visualViewport·floatChips 5개 상한)
 - [Claude Code 2026-11-19] R2(review-frontend) 검증 → 14건 판정(맞음 9·일부 2·틀림 1·문제없음 1·낮음 1). 고침: 매 프레임 이름표·말풍선 갱신 줄임(정지 시 DOM 변경 0), 말풍선 ResizeObserver, 블리스터·알약 치울 때 GPU 해제(공유 재질 제외), 닫힌 종이 inert·초점 복원. I3·I4·I5·I6 프롬프트에 덧붙임. 다음: I3~I6(Hydrogen), S7(Flash)
 - [agy/review-frontend] R2 완료: `docs/review-frontend.md` 작성 (`frontend/src` 자원 정리·매 프레임 낭비·오류·누수·접근성·명세·보안 리뷰 및 I3~I6 반영 항목 정리)
 - [Claude Code 2026-11-19] R1(review-final) 검증 → 5건 모두 맞음. 1·2·3·5 직접 고침(제외 목록 표시, 캘린더 없을 때도 도장, 로그 건수·LLM 판단 표시, 조회 칩 중립), 4는 I5에, 숨긴 탭 첫 로딩 문제는 I3에 덧붙임. 실제 GMS로 업로드→계획→확정 확인, 255 통과. 다음: R2(Neon)·S7(Flash)

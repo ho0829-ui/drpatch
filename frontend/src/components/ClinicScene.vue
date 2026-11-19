@@ -60,7 +60,7 @@ onMounted(async () => {
         tip.value = t;
       },
       onFloatChip: (chip) => {
-        floatChips.value.push(chip);
+        floatChips.value = [...floatChips.value.slice(-4), chip];
         setTimeout(() => {
           floatChips.value = floatChips.value.filter((c) => c.id !== chip.id);
         }, props.reduced ? 400 : 1500);

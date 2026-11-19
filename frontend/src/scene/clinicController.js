@@ -521,7 +521,23 @@ export async function createClinicController(canvas, callbacks) {
     }[d.kind];
   }
 
+  let downAt = null;
+  let longPressTimer = 0;
+  let longPressHideTimer = 0;
+  let longPressFired = false;
+
+  const cancelLongPress = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = 0;
+    }
+  };
+
   const onPointerMove = (e) => {
+    if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) {
+      cancelLongPress();
+    }
+    if (e.pointerType === 'touch') return;
     const o = pick(e);
     hovered = o;
     canvas.style.cursor = o ? 'pointer' : 'default';
@@ -530,14 +546,39 @@ export async function createClinicController(canvas, callbacks) {
   };
   const onPointerLeave = () => {
     hovered = null;
+    cancelLongPress();
     onTip({ show: false, text: '', x: 0, y: 0 });
   };
 
-  let downAt = null;
   const onPointerDown = (e) => {
     downAt = [e.clientX, e.clientY];
+    longPressFired = false;
+    cancelLongPress();
+    if (e.pointerType === 'touch') {
+      const cx = e.clientX;
+      const cy = e.clientY;
+      longPressTimer = setTimeout(() => {
+        longPressTimer = 0;
+        const o = pick({ clientX: cx, clientY: cy });
+        if (!o) return;
+        longPressFired = true;
+        onTip({ show: true, text: tipText(o), x: cx, y: Math.max(40, cy - 36) });
+        if (longPressHideTimer) clearTimeout(longPressHideTimer);
+        longPressHideTimer = setTimeout(() => {
+          onTip({ show: false, text: '', x: 0, y: 0 });
+        }, 1500);
+      }, 500);
+    }
+  };
+  const onPointerUp = () => {
+    cancelLongPress();
   };
   const onClick = async (e) => {
+    cancelLongPress();
+    if (longPressFired) {
+      longPressFired = false;
+      return;
+    }
     if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
     const o = pick(e);
     if (!o) {
@@ -633,6 +674,8 @@ export async function createClinicController(canvas, callbacks) {
   canvas.addEventListener('pointerleave', onPointerLeave);
   canvas.addEventListener('dblclick', resetView);
   canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointerup', onPointerUp);
+  canvas.addEventListener('pointercancel', onPointerUp);
   canvas.addEventListener('click', onClick);
   addEventListener('keydown', onKeyDown);
   addEventListener('resize', resize);
@@ -737,10 +780,14 @@ export async function createClinicController(canvas, callbacks) {
     unpopPill,
     destroy() {
       cancelAnimationFrame(rafId);
+      cancelLongPress();
+      if (longPressHideTimer) clearTimeout(longPressHideTimer);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerleave', onPointerLeave);
       canvas.removeEventListener('dblclick', resetView);
       canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerUp);
       canvas.removeEventListener('click', onClick);
       removeEventListener('keydown', onKeyDown);
       removeEventListener('resize', resize);
