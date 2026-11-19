@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as api from './api.js';
 import ChatBar from './components/ChatBar.vue';
 import ClinicScene from './components/ClinicScene.vue';
@@ -149,11 +149,68 @@ async function onFileSelected(e) {
   await handleUploadFile(file);
 }
 
-async function onDropFile(e) {
+let dragDepth = 0;
+
+function hasDraggedFiles(e) {
+  const types = e.dataTransfer?.types;
+  return Boolean(types && Array.from(types).includes('Files'));
+}
+
+function clearDrag() {
+  dragDepth = 0;
   dragging.value = false;
+}
+
+function onDragEnter(e) {
+  if (!hasDraggedFiles(e)) return;
+  e.preventDefault();
+  dragDepth += 1;
+  dragging.value = true;
+}
+
+function onDragOver(e) {
+  if (!hasDraggedFiles(e)) return;
+  e.preventDefault();
+  dragging.value = true;
+}
+
+function onDragLeave() {
+  if (!dragging.value) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) dragging.value = false;
+}
+
+async function onDropFile(e) {
+  e.preventDefault();
+  clearDrag();
   const file = e.dataTransfer?.files?.[0];
+  if (!file) return;
   await handleUploadFile(file);
 }
+
+function onWindowDragLeave(e) {
+  if (!e.relatedTarget) clearDrag();
+}
+
+function onWindowKeyDown(e) {
+  if (e.key === 'Escape' && dragging.value) clearDrag();
+}
+
+onMounted(() => {
+  window.addEventListener('dragleave', onWindowDragLeave);
+  window.addEventListener('dragend', clearDrag);
+  window.addEventListener('drop', clearDrag);
+  window.addEventListener('blur', clearDrag);
+  window.addEventListener('keydown', onWindowKeyDown);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('dragleave', onWindowDragLeave);
+  window.removeEventListener('dragend', clearDrag);
+  window.removeEventListener('drop', clearDrag);
+  window.removeEventListener('blur', clearDrag);
+  window.removeEventListener('keydown', onWindowKeyDown);
+});
 
 // 대화 기록에 답을 넣는 곳은 onChatTurn 한 곳뿐 (보내기·다시 시도·진료 시작 모두 거기로 온다)
 async function onSendChat(message) {
@@ -199,10 +256,12 @@ function reloadPage() {
   <div
     v-show="!fallback && !listView"
     class="drop-zone"
-    @dragover.prevent="dragging = true"
-    @dragleave.self="dragging = false"
-    @drop.prevent="onDropFile"
+    @dragenter="onDragEnter"
+    @dragover="onDragOver"
+    @dragleave="onDragLeave"
+    @drop="onDropFile"
   >
+    <div class="sr-only" aria-live="polite">{{ dragging ? '파일을 놓으면 접수합니다' : '' }}</div>
     <ClinicScene
       v-if="!fallback"
       ref="sceneRef"
@@ -222,7 +281,8 @@ function reloadPage() {
       @retry-change="retryMessage = $event"
     />
 
-    <div v-if="dragging" class="drop-overlay">
+    <div v-if="dragging" class="drop-overlay" @click="clearDrag">
+      <button type="button" class="drop-close" aria-label="닫기" @click.stop="clearDrag">×</button>
       <p>여기에 requirements.txt를 놓아 주세요</p>
     </div>
 

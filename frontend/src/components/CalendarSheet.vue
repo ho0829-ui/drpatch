@@ -16,8 +16,14 @@ const events = ref([]);
 const plans = ref([]);
 const showAllSessions = ref(!api.getSession());
 const eventFormOpen = ref(false);
-const errorMsg = ref('');
-const loading = ref(false);
+const plansError = ref('');
+const eventsError = ref('');
+const actionError = ref('');
+const plansLoading = ref(false);
+const eventsLoading = ref(false);
+
+let plansReqId = 0;
+let eventsReqId = 0;
 
 const newTitle = ref('');
 const newDate = ref(selectedDate.value);
@@ -68,23 +74,37 @@ const calendarCells = computed(() => {
   return cells;
 });
 
-async function loadAll() {
-  loading.value = true;
-  errorMsg.value = '';
+async function loadPlans() {
+  const reqId = ++plansReqId;
+  plansLoading.value = true;
+  plansError.value = '';
+  try {
+    const sid = showAllSessions.value ? null : api.getSession();
+    const plRes = await api.plans.list(sid);
+    if (reqId !== plansReqId) return;
+    plans.value = plRes || [];
+  } catch {
+    if (reqId !== plansReqId) return;
+    plansError.value = '허허, 점검 목록을 불러오지 못했네요.';
+  } finally {
+    if (reqId === plansReqId) plansLoading.value = false;
+  }
+}
+
+async function loadEvents() {
+  const reqId = ++eventsReqId;
+  eventsLoading.value = true;
+  eventsError.value = '';
   try {
     const { from, to } = monthRange.value;
-    const sid = showAllSessions.value ? null : api.getSession();
-    const [evRes, plRes] = await Promise.all([
-      api.calendar.list(from, to).catch(() => []),
-      api.plans.list(sid).catch((err) => {
-        errorMsg.value = err.message;
-        return [];
-      }),
-    ]);
+    const evRes = await api.calendar.list(from, to);
+    if (reqId !== eventsReqId) return;
     events.value = evRes || [];
-    plans.value = plRes || [];
+  } catch {
+    if (reqId !== eventsReqId) return;
+    eventsError.value = '허허, 달력을 불러오지 못했네요.';
   } finally {
-    loading.value = false;
+    if (reqId === eventsReqId) eventsLoading.value = false;
   }
 }
 
@@ -105,19 +125,19 @@ async function selectDay(iso) {
 }
 
 async function toggleDone(plan) {
-  errorMsg.value = '';
+  actionError.value = '';
   const nextStatus = plan.status === 'done' ? 'planned' : 'done';
   try {
     const updated = await api.plans.update(plan.id, { status: nextStatus });
     emit('plan-done-change', { roundNo: updated.round_no, done: updated.status === 'done' });
-    await loadAll();
+    await loadPlans();
   } catch (err) {
-    errorMsg.value = err.message;
+    actionError.value = err.message || '허허, 상태를 바꾸지 못했네요.';
   }
 }
 
 async function toggleItem({ plan, index, checked }) {
-  errorMsg.value = '';
+  actionError.value = '';
   const nowIso = new Date().toISOString().slice(0, 19) + 'Z';
   const nextItems = (plan.items || []).map((it, i) =>
     i === index ? { ...it, done_at: checked ? nowIso : null } : it,
@@ -125,35 +145,35 @@ async function toggleItem({ plan, index, checked }) {
   try {
     const updated = await api.plans.update(plan.id, { items: nextItems });
     emit('plan-done-change', { roundNo: updated.round_no, done: updated.status === 'done' });
-    await loadAll();
+    await loadPlans();
   } catch (err) {
-    errorMsg.value = err.message;
+    actionError.value = err.message || '허허, 항목을 바꾸지 못했네요.';
   }
 }
 
 async function saveEdit({ id, date, window_start, window_end }) {
-  errorMsg.value = '';
+  actionError.value = '';
   try {
     await api.plans.update(id, { date, window_start, window_end });
-    await loadAll();
+    await loadPlans();
   } catch (err) {
-    errorMsg.value = err.message;
+    actionError.value = err.message || '허허, 계획을 고치지 못했네요.';
   }
 }
 
 async function deletePlan(id) {
-  errorMsg.value = '';
+  actionError.value = '';
   try {
     await api.plans.remove(id);
-    await loadAll();
+    await loadPlans();
   } catch (err) {
-    errorMsg.value = err.message;
+    actionError.value = err.message || '허허, 계획을 지우지 못했네요.';
   }
 }
 
 async function addEvent() {
   if (!newTitle.value.trim() || !newDate.value) return;
-  errorMsg.value = '';
+  actionError.value = '';
   try {
     await api.calendar.add({
       title: newTitle.value.trim(),
@@ -165,24 +185,28 @@ async function addEvent() {
     newStart.value = '';
     newEnd.value = '';
     eventFormOpen.value = false;
-    await loadAll();
+    await loadEvents();
   } catch (err) {
-    errorMsg.value = err.message;
+    actionError.value = err.message || '허허, 일정을 넣지 못했네요.';
   }
 }
 
 async function removeEvent(id) {
-  errorMsg.value = '';
+  actionError.value = '';
   try {
     await api.calendar.remove(id);
-    await loadAll();
+    await loadEvents();
   } catch (err) {
-    errorMsg.value = err.message;
+    actionError.value = err.message || '허허, 일정을 지우지 못했네요.';
   }
 }
 
-watch([viewYear, viewMonth, showAllSessions], loadAll);
-onMounted(loadAll);
+watch([viewYear, viewMonth], loadEvents);
+watch(showAllSessions, loadPlans);
+onMounted(() => {
+  loadPlans();
+  loadEvents();
+});
 </script>
 
 <template>
@@ -196,13 +220,18 @@ onMounted(loadAll);
       </label>
     </div>
 
-    <div v-if="errorMsg" class="cal-err">
-      <span>{{ errorMsg }}</span>
-      <button type="button" class="cal-btn nowrap" @click="loadAll">다시 불러오기</button>
+    <div v-if="actionError" class="cal-err">
+      <span>{{ actionError }}</span>
+      <button type="button" class="cal-btn nowrap" @click="actionError = ''">닫기</button>
+    </div>
+
+    <div v-if="plansError" class="cal-err">
+      <span>{{ plansError }}</span>
+      <button type="button" class="cal-btn nowrap" @click="loadPlans">다시 불러오기</button>
     </div>
 
     <div class="cal-section">
-      <p v-if="!upcomingPlans.length && !loading" class="cal-muted">예정된 점검이 없어요.</p>
+      <p v-if="!upcomingPlans.length && !plansLoading && !plansError" class="cal-muted">예정된 점검이 없어요.</p>
       <div class="plan-cards">
         <PlanCard
           v-for="p in upcomingPlans"
@@ -282,6 +311,11 @@ onMounted(loadAll);
           {{ eventFormOpen ? '접기' : '일정 추가' }}
         </button>
       </div>
+      <div v-if="eventsError" class="cal-err">
+        <span>{{ eventsError }}</span>
+        <button type="button" class="cal-btn nowrap" @click="loadEvents">다시 불러오기</button>
+      </div>
+      <p v-else-if="eventsLoading && !events.length" class="cal-muted">달력을 불러오는 중…</p>
       <form v-if="eventFormOpen" class="cal-form" @submit.prevent="addEvent">
         <input v-model="newTitle" type="text" placeholder="일정 제목" required aria-label="일정 제목">
         <input v-model="newDate" type="date" required aria-label="일정 날짜">
