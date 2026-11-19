@@ -55,6 +55,9 @@ async def lifespan(app: FastAPI):
     app.state.logger = None
     try:
         repo.init_db(app.state.db_path)
+        if app.state.public.enabled:  # 공개 모드만: 오래된 방문자 데이터 정리 (로컬 DB는 건드리지 않음)
+            with repo.connect(app.state.db_path) as conn:
+                repo.purge_older_than(conn, app.state.public.settings.retention_days)
         app.state.logger = LoggingAgent(app.state.bus, app.state.db_path).start()
     except Exception:
         pass  # 로깅 없이도 서비스는 동작

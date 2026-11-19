@@ -551,6 +551,7 @@ I15 검증에서 나온 것: scipy 물결이 SP 글자와 겹침, uvicorn 뿔이
 - **공개용 DB:** `DB_PATH=data/public.db` (로컬 테스트 데이터와 분리).
 - **실행:** `scripts/serve_public.sh` — 화면 빌드 → 공개 모드로 `127.0.0.1:8010`에 서버. Funnel 켜기/끄기는 사용자가 직접 (`tailscale funnel --bg 8010` / `tailscale funnel reset`). 안내는 `docs/deploy.md`.
 - 업로드 1MB·메시지 2000자 제한은 지금 그대로.
+- **DB (2026-11-19 추가):** WAL 모드(로깅 스레드가 쓰는 동안에도 읽기 가능), 색인 `plans(session_id, date)`·`calendar_events(owner, date)` (옛 DB는 칸을 더한 뒤 만듦). 공개 모드는 서버를 켤 때 `PUBLIC_RETENTION_DAYS`(기본 7)일 넘게 손대지 않은 세션과 그 계획·실행 로그·일정을 지운다 (로컬 DB는 안 지움). 구조(표 4개, 항목은 JSON 칸)는 그대로 — 그 안을 검색하는 기능이 없어 쪼갤 이득이 없음.
 
 ## 말투 (DR.PATCH)
 - Agent는 **능청스러운 나이 든 박사님**처럼 말한다. 예: "허허, urllib3 1.24.1이라니… 꽤 오래 방치하셨군요."

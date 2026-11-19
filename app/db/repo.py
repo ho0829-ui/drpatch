@@ -6,7 +6,7 @@
 import json
 import os
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -44,6 +44,13 @@ ADDED_COLUMNS = {
 }
 
 
+# 색인은 칸을 더한 뒤에 만든다 (옛 DB에는 owner 칸이 ALTER로 나중에 생기므로 schema.sql에 두면 실패)
+INDEXES = [
+    "CREATE INDEX IF NOT EXISTS idx_plans_session ON plans (session_id, date)",          # 공개 모드: 내 계획만
+    "CREATE INDEX IF NOT EXISTS idx_calendar_owner ON calendar_events (owner, date)",    # 공개 모드: 내 일정만
+]
+
+
 def init_db(path: str | None = None) -> None:
     with connect(path) as conn:
         conn.executescript(SCHEMA.read_text(encoding="utf-8"))
@@ -52,6 +59,34 @@ def init_db(path: str | None = None) -> None:
             for column in columns:
                 if column.split()[0] not in existing:
                     conn.execute(f"ALTER TABLE {table} ADD COLUMN {column}")
+        for sql in INDEXES:
+            conn.execute(sql)
+        # WAL: 로깅 스레드가 쓰는 동안에도 다른 요청이 읽을 수 있게 (파일에 남는 설정, 한 번이면 됨)
+        if (path or db_path()) != ":memory:":
+            conn.execute("PRAGMA journal_mode=WAL")
+
+
+def purge_older_than(conn: sqlite3.Connection, days: int, now: datetime | None = None) -> dict:
+    """공개 모드용 정리 (spec v1.24): days일 넘게 손대지 않은 세션과 그 계획·실행 로그·일정을 지운다.
+    세션 표에 없는 오래된 로그·일정(주인 있는 것)도 같이. 로컬 DB에는 부르지 않는다."""
+    if days <= 0:
+        return {"sessions": 0, "plans": 0, "events": 0, "calendar_events": 0}
+    cutoff = ((now or datetime.now(timezone.utc)) - timedelta(days=days)).isoformat(timespec="seconds")
+    old = [r["id"] for r in conn.execute("SELECT id FROM sessions WHERE updated_at < ?", (cutoff,))]
+    counts = {"sessions": 0, "plans": 0, "events": 0, "calendar_events": 0}
+    for sid in old:
+        counts["plans"] += conn.execute("DELETE FROM plans WHERE session_id = ?", (sid,)).rowcount
+        counts["events"] += conn.execute("DELETE FROM events WHERE session_id = ?", (sid,)).rowcount
+        counts["calendar_events"] += conn.execute("DELETE FROM calendar_events WHERE owner = ?", (sid,)).rowcount
+        counts["sessions"] += conn.execute("DELETE FROM sessions WHERE id = ?", (sid,)).rowcount
+    # 세션 없이 남은 오래된 로그·일정 (세션 저장 전에 끊긴 대화 등)
+    counts["events"] += conn.execute(
+        "DELETE FROM events WHERE created_at < ? AND session_id NOT IN (SELECT id FROM sessions)", (cutoff,)).rowcount
+    counts["calendar_events"] += conn.execute(
+        "DELETE FROM calendar_events WHERE owner IS NOT NULL AND created_at < ? "
+        "AND owner NOT IN (SELECT id FROM sessions)", (cutoff,)).rowcount
+    conn.commit()
+    return counts
 
 
 def _now() -> str:

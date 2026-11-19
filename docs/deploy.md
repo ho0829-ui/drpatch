@@ -34,6 +34,8 @@ sudo-quest 때와 같은 방식이다: **서버는 이 Mac에서 돌리고, Tail
 | 로컬 테스트 데이터와 섞임 | `DB_PATH=data/public.db` (git에 안 올라감, `*.db`) |
 
 - 상한 값은 `.env`나 환경 변수로: `PUBLIC_CHAT_PER_HOUR`, `PUBLIC_CHAT_PER_DAY`, `PUBLIC_UPLOAD_PER_HOUR` (0이면 상한 없음). 서버를 다시 켜면 횟수는 처음부터.
+- **오래된 방문자 데이터 정리:** 공개 모드 서버를 켤 때 7일(`PUBLIC_RETENTION_DAYS`) 넘게 손대지 않은 세션과 그 계획·로그·일정을 지운다. 오래 켜 둘 거면 가끔 서버를 다시 켜면 된다. 로컬 DB는 지우지 않는다.
+- DB는 WAL 모드라 `data/public.db` 옆에 `-wal`·`-shm` 파일이 생긴다 (정상, git에 안 올라감).
 - 업로드 1MB, 메시지 2000자 제한은 원래 있음.
 - 화면의 "모든 계획 보기" 토글은 공개 모드에서 숨는다.
 

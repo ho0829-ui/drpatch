@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-19] DB 다듬기: WAL 모드, 색인 plans(session_id,date)·calendar_events(owner,date), 공개 모드 시작 시 7일 지난 방문자 데이터 정리(purge_older_than). 293 통과. 구조(표 4개·JSON 칸)는 그대로
 - [Claude Code 2026-11-19] 배포 준비 (spec v1.24 공개 모드, docs/deploy.md, scripts/serve.sh). 290 통과·빌드 경고 0
   - 공개 모드(PUBLIC_MODE=1): X-Session-Id로 계획·로그·캘린더 일정을 내 것만(남의 것 404), 캘린더 owner 칸, 겹침도 같은 세션끼리, /chat IP 시간당 20·하루 300, /upload IP 시간당 60(429), data/public.db, /health에 public → 화면이 "모든 계획 보기" 숨김
   - scripts/serve.sh [--public]: 가상환경·빌드·서버 한 번에 (로컬 8000 / 공개 8010)

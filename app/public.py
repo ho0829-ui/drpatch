@@ -33,6 +33,7 @@ class PublicSettings:
     chat_per_hour: int = 20
     chat_per_day: int = 300
     upload_per_hour: int = 60
+    retention_days: int = 7  # 서버를 켤 때 이보다 오래 손대지 않은 공개 데이터를 지운다 (0이면 안 지움)
 
 
 def load_public_settings() -> PublicSettings:
@@ -43,6 +44,7 @@ def load_public_settings() -> PublicSettings:
         chat_per_hour=_int_env("PUBLIC_CHAT_PER_HOUR", 20),
         chat_per_day=_int_env("PUBLIC_CHAT_PER_DAY", 300),
         upload_per_hour=_int_env("PUBLIC_UPLOAD_PER_HOUR", 60),
+        retention_days=_int_env("PUBLIC_RETENTION_DAYS", 7),
     )
 
 

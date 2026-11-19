@@ -147,3 +147,49 @@ def test_ip_limit_does_not_eat_daily_budget():
     g.check_chat(Req("3.3.3.3"))
     with pytest.raises(Exception):
         g.check_chat(Req("4.4.4.4"))  # 하루 3회 다 씀
+
+
+def test_init_db_wal_and_indexes(tmp_path):
+    path = str(tmp_path / "w.db")
+    repo.init_db(path)
+    with repo.connect(path) as conn:
+        assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+        names = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+    assert {"idx_plans_session", "idx_calendar_owner"} <= names
+
+
+def test_init_db_old_calendar_without_owner(tmp_path):
+    """owner 칸이 없던 옛 DB도 칸을 더한 뒤 색인을 만든다."""
+    import sqlite3
+    path = str(tmp_path / "old.db")
+    with sqlite3.connect(path) as c:
+        c.execute("CREATE TABLE calendar_events (id INTEGER PRIMARY KEY, title TEXT NOT NULL, date TEXT NOT NULL, "
+                  "start_time TEXT, end_time TEXT, source TEXT NOT NULL DEFAULT 'user', plan_id INTEGER, "
+                  "created_at TEXT NOT NULL)")
+    repo.init_db(path)
+    with repo.connect(path) as conn:
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(calendar_events)")}
+    assert "owner" in cols
+
+
+def test_purge_older_than(tmp_path):
+    from datetime import datetime, timezone
+    path = str(tmp_path / "p.db")
+    repo.init_db(path)
+    old, new = "o" * 32, "n" * 32
+    with repo.connect(path) as conn:
+        for sid, ts in ((old, "2026-11-01T00:00:00+00:00"), (new, "2026-11-19T00:00:00+00:00")):
+            conn.execute("INSERT INTO sessions (id, created_at, updated_at) VALUES (?, ?, ?)", (sid, ts, ts))
+            conn.execute("INSERT INTO events (session_id, seq, type, payload_json, created_at) "
+                         "VALUES (?, 1, 'x', '{}', ?)", (sid, ts))
+            conn.execute("INSERT INTO calendar_events (title, date, created_at, owner) VALUES ('t', '2026-12-01', ?, ?)",
+                         (ts, sid))
+            repo.insert_plan(conn, {**_plan(sid)})
+        # 세션 없이 남은 오래된 로그
+        conn.execute("INSERT INTO events (session_id, seq, type, payload_json, created_at) "
+                     "VALUES ('ghost', 1, 'x', '{}', '2026-11-01T00:00:00+00:00')")
+        conn.commit()
+        counts = repo.purge_older_than(conn, 7, now=datetime(2026, 11, 19, tzinfo=timezone.utc))
+        assert counts == {"sessions": 1, "plans": 1, "events": 2, "calendar_events": 1}
+        assert [r["id"] for r in conn.execute("SELECT id FROM sessions")] == [new]
+        assert repo.purge_older_than(conn, 0) == {"sessions": 0, "plans": 0, "events": 0, "calendar_events": 0}
