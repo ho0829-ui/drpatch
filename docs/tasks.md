@@ -44,7 +44,8 @@
 - [x] ~~ [C] (선택) Google Calendar 구현체 — OAuth 준비 후~~ (폐기 — SQLite 로컬 캘린더로 마무리)
 - [ ] [C] (선택) 심화 F3020 이상 징후 / F3021 Planner·Worker / F3022 RAG — 하려면 spec 먼저
 - [ ] [나] 명세 밖 나만의 기능 정하기
-- [ ] [나] 모든 기능 끝난 뒤 README
+- [ ] [C] README (sudo-quest 형식, 튜토리얼 GIF) — 내용 목록은 HANDOFF "다음에 할 것"
+- [ ] [C] 모바일 최적화 (첫 로딩 속도·375 겹침) — README·PC 배포 뒤
 
 ## 사용 중 발견 (spec v1.17, 2026-11-19) — agy가 하고 Claude Code가 확인 (docs/agy-prompt-next.md)
 - [x] [G] I7 OS 입력: macOS·Windows 받기, OS 이름만 있으면 버전만 되묻기, macOS "지원 중 (종료일 미발표)"

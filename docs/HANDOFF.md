@@ -124,6 +124,12 @@
   - 기준선 태그 v1-submit은 캘린더 전 상태
 
 ## 다음에 할 것
+- **(우선) README.md 작성** — 사용자가 배포 등은 직접 함(2026-11-19). 형식은 sudo-quest README 참고(`~/Developer/sudo-quest/README.md`: 유기적으로 연결된 구성 + GIF).
+  - 담을 것(수업 산출물 8번 기준, 번호로만 참조): 개요·실행 방법(`scripts/serve.sh`, `.env`), 전체 기능(필수/심화 F3023 캘린더 구분), API 키 발급·설정 요약, 외부 API 출처·이용 조건(docs/research/api-terms.md), 심화 요약, 배포(docs/deploy.md 링크: Pages + Funnel)
+  - 산출물 문서 링크: 요구사항(spec.md·planning-check.md), Agent 설계(architecture.md), Tool 정의(spec "Tool 명세"), API 명세(spec "백엔드 API"), 검증(scenario-check.md), 실행 로그 샘플
+- **튜토리얼 GIF 만들기** (README에 넣음): 예시 고르기 → 보내기 → 처방(블리스터) → 처방 확정 → 진료 예약(날짜 패널·일정 넣기) → 야간 당직(16/16). 브라우저 녹화 → GIF, `docs/media/`에
+- **모바일 최적화** (README·PC 배포 뒤): Funnel/Pages 경유 첫 로딩이 느림(모델 17MB — Draco/meshopt 압축은 새 도구라 사용자에게 먼저 묻기, 무거운 모델 늦게 불러오기, 캐시 머리말), 375 화면에서 열린 대화 기록이 블리스터를 가림, 칩 줄·기록 사이 이름표 비침, 야간 모드 375 미확인
+- 남은 사용자 일: Pages 켜기(Settings→Pages→GitHub Actions)·변수 `API_BASE_URL`·push, 8010 서버 재시작(CORS 반영), 셀프 체크리스트, `web/` 삭제 여부
 - agy 작업 묶음 I14~I19 모두 끝남
 - 다음: 공개(사용자가 Funnel 켜기) → 제출 산출물·README(sudo-quest README 참고, GIF) → 셀프 체크리스트(사용자)
 - 사용자 결정 남음: web/ 삭제 여부, README·셀프 체크리스트
