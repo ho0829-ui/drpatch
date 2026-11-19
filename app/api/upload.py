@@ -17,9 +17,9 @@ MAX_BYTES = 1_000_000
 async def upload(request: Request, session_id: str | None = None):
     raw = await request.body()
     if not raw:
-        raise HTTPException(status_code=400, detail="빈 파일이에요. pip freeze로 만든 requirements.txt를 올려 주세요.")
+        raise HTTPException(status_code=400, detail="허허, 빈 차트네요. pip freeze로 만든 requirements.txt를 올려 주시죠.")
     if len(raw) > MAX_BYTES:
-        raise HTTPException(status_code=413, detail="파일이 너무 커요 (1MB까지).")
+        raise HTTPException(status_code=413, detail="허허, 차트가 너무 두껍네요. 1MB까지만 받습니다.")
     session_id = session_id or new_session_id()
     parsed = parse_bytes(raw).to_dict()
     packages = [{"name": p["name"], "version": p["version"]} for p in parsed["packages"]]

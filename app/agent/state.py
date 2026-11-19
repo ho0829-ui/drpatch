@@ -120,7 +120,7 @@ def ask_message(missing: list[str], conditions: Conditions | None = None) -> str
             return "윈도우시군요. 버전과 기능 업데이트만 알려 주시죠 (예: Windows 11 24H2 — 설정 > 시스템 > 정보)."
         if os_name == "ubuntu":
             return "우분투시군요. 버전만 알려 주시죠 (예: Ubuntu 20.04)."
-        return f"{os_name}이시군요. 버전만 알려 주시죠."
+        return f"{os_name} 쓰시는군요. 버전만 알려 주시죠."
     lines = "\n".join(
         f"- {_os_missing_label(os_name) if key == 'os' else labels[key]}"
         for key in missing

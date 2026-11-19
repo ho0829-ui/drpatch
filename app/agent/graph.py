@@ -14,6 +14,7 @@ from datetime import date, timedelta
 from langgraph.graph import END, START, StateGraph
 
 from app.agent.brain import AgentBrain
+from app.agent.os_display import os_display_name, os_display_version, upgrade_hint
 from app.agent.planner.items import PackageResult, build_items, top_severity
 from app.agent.planner.priority import sort_items
 from app.agent.planner.python_upgrade import UpgradePlan, candidate_versions, plan_python_upgrade
@@ -243,8 +244,8 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         items = build_items(
             state["package_results"], c.python_version,
             py_r["data"] if py_r and py_r["ok"] else None, state.get("upgrade"),
-            c.os_name.capitalize() if c.os_name else None, c.os_version,
-            os_r["data"] if os_r and os_r["ok"] else None,
+            os_display_name(c.os_name), os_display_version(c.os_name, c.os_version),
+            os_r["data"] if os_r and os_r["ok"] else None, upgrade_hint(c.os_name),
         )
         ordered = sort_items(items.items, state["today"])
         schedule_missing = [k for k in state.get("missing", []) if k in SCHEDULE_KEYS]
@@ -269,7 +270,9 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
         plan["window"] = {"start": c.window_start, "end": c.window_end}
         plan["excluded"] = c.excluded
         plan["eol_checks"] = {
-            "os": os_r["data"] if os_r and os_r["ok"] else "확인 못 함",
+            # 조회 기준(예: Windows Home/Pro)을 함께 넘겨 답에 그대로 밝히게 한다 (spec v1.17)
+            "os": {**os_r["data"], "name": os_display_name(c.os_name),
+                   "version": os_display_version(c.os_name, c.os_version)} if os_r and os_r["ok"] else "확인 못 함",
             "python": py_r["data"] if py_r and py_r["ok"] else "확인 못 함",
         }
         return {"plan": plan}

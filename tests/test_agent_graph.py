@@ -457,3 +457,23 @@ def test_v117_maintained_macos_not_added_and_null_eol_sorts_safely():
         Item("package", "b", "1.0", "2.0", "HIGH", date(2026, 12, 1), "이유"),
     ], TODAY)
     assert [i.name for i in ordered] == ["b", "a"]
+
+
+def test_v117_os_item_uses_display_name_and_os_specific_hint():
+    """spec v1.17: 지원 끝난 Windows는 조회 이름(11-24h2-w)·'LTS' 대신 보이는 이름과 OS에 맞는 안내."""
+    from app.agent.os_display import os_display_name, os_display_version, upgrade_hint
+    from app.agent.planner.items import build_items
+
+    assert os_display_name("macos") == "macOS"
+    assert os_display_version("windows", "11-24h2-w") == "11 24H2 (Home/Pro 기준)"
+    assert os_display_version("windows", "11-24h2-e") == "11 24H2 (Enterprise/Education 기준)"
+    assert os_display_version("ubuntu", "20.04") == "20.04"
+
+    res = build_items(
+        [], "3.11", {"eol_date": "2027-10-31", "is_eol": False}, None,
+        os_display_name("windows"), os_display_version("windows", "11-24h2-w"),
+        {"eol_date": "2026-10-13", "is_eol": True}, upgrade_hint("windows"),
+    )
+    item = res.items[0]
+    assert (item.name, item.current_version) == ("Windows", "11 24H2 (Home/Pro 기준)")
+    assert "기능 업데이트" in item.reason and "LTS" not in item.reason

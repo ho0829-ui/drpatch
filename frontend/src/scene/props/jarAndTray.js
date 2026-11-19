@@ -12,6 +12,8 @@ const TRAY_SPOTS = [
   [0.45, 0.35],
   [1.25, 0.3],
 ];
+// 곡반 자리 수만큼만 알약을 올린다. 넘친 안전 패키지는 "+N" 이름표로만 (곡반 종이에는 전부)
+export const MAX_TRAY_PILLS = TRAY_SPOTS.length;
 
 export function setupJarAndTray(world, M, addPick, removePick, tween) {
   const [bx, by, bz] = LAYOUT.bottle;
@@ -32,6 +34,7 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
   let pills = [];
   let trayUsed = 0;
   let jarTotal = 0;
+  let trayExtra = 0;
 
   function clearPills() {
     for (const p of pills) {
@@ -42,6 +45,14 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
     pills = [];
     trayUsed = 0;
     jarTotal = 0;
+    trayExtra = 0;
+  }
+
+  function removePill(p) {
+    pills = pills.filter((q) => q !== p);
+    removePick?.(p.root);
+    world.remove(p.root);
+    disposeOwned(p.root);
   }
 
   function placeInJar(p, i) {
@@ -125,6 +136,7 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
 
   function resetToJar() {
     trayUsed = 0;
+    trayExtra = 0;
     const extra = pills.splice(MAX_JAR_PILLS);
     for (const p of extra) {
       removePick?.(p.root);
@@ -156,6 +168,8 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
   }
 
   const jarTop = new THREE.Vector3(bx, 3.0, bz);
+  // 곡반 위 알약 이름표들과 겹치지 않게 오른쪽 가장자리에 둔다 (가운데 두면 위로 밀려 약병 이름표처럼 보임)
+  const trayTop = new THREE.Vector3(tray.position.x + 1.7, tray.position.y + 0.35, tray.position.z + 0.4);
   const lidTo = (open) =>
     tween(
       520,
@@ -182,7 +196,11 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
     resetToJar,
     setJarTotal,
     getOverflowCount,
+    removePill,
+    setTrayExtra: (n) => { trayExtra = Math.max(0, n); },
+    getTrayExtra: () => trayExtra,
     jarTop,
+    trayTop,
     lidTo,
     nextTrayPos,
   };

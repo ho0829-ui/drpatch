@@ -18,8 +18,8 @@ const place = ref({ right: 0, top: 0 });
 let typingId = 0;
 const timers = [];
 const EDGE = 16;
-const TOP_SAFE = 76; // 상태 칩·로고 아래
-let size = { w: 300, h: 80 };
+const TOP_SAFE = 96; // 상태 칩·로고 아래. 아바타가 말풍선 위로 20px 나오므로 그만큼 더 내려야 로고와 안 겹친다
+let size = { w: 300, h: 80 }; // 크기가 바뀔 때만 잰다 (위치가 바뀔 때마다 재면 매 프레임 레이아웃 계산)
 let ro = null;
 let downAt = null;
 
@@ -38,6 +38,7 @@ function onPointerDown(e) {
   downAt = [e.clientX, e.clientY];
 }
 
+// 끌어서 스크롤하거나 글자를 고른 클릭은 닫지 않는다 (spec v1.17: 움직임 없는 클릭만)
 function onClick(e) {
   if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
   const sel = window.getSelection?.();
@@ -54,7 +55,7 @@ function onGlobalKeyDown(e) {
 // 박사님 머리 옆에 두되, 화면 밖(왼쪽·위)으로 나가지 않게 붙잡는다
 function clamp() {
   const { w, h } = size;
-  const maxRight = Math.max(EDGE, innerWidth - w - EDGE - 24);
+  const maxRight = Math.max(EDGE, innerWidth - w - EDGE - 24); // 왼쪽 아바타 여유
   place.value = {
     right: Math.min(Math.max(EDGE, props.pos.right), maxRight),
     top: Math.max(TOP_SAFE + h, Math.min(props.pos.top, innerHeight - 160)),
@@ -87,6 +88,7 @@ watch(
     if (props.reduced) {
       shownText.value = next;
     } else {
+      // 긴 답도 1.6초 안에 다 나오게 (한 글자 최대 22ms)
       const step = Math.max(4, Math.min(22, 1600 / next.length));
       const chunk = Math.max(1, Math.round(4 / step));
       shownText.value = '';

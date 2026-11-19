@@ -354,7 +354,7 @@ items_json 항목: name, current_version, target_version, severity, eol_date, re
 - 패키지 20개짜리 파일도 **60초 안에** 응답이 나오고, 기다리는 동안 실행 단계가 실시간으로 보인다 (실측 35.2초, docs/scenario-check.md)
 
 ## 남은 확인
-- [ ] 실제 freeze 파일(130개) 응답 시간 — 패키지마다 OSV·PyPI를 부르므로 260번 안팎. 20개 기준(60초)만 재 봤음 (v1.17)
+- [x] 실제 freeze 파일(130개) 응답 시간 — 46~49초 (2026-11-19, 실제 GMS·세 API, 계획 3번 잼)
 - [x] 세 API 실제 호출 (2026-11-18, 모두 200)
 - [x] PyPI 버전별 requires_python 있음 (django 4.2 `>=3.8`, 5.0 `>=3.10`)
 - [x] OSV 중복 제거 후 등급 없음 0건 (django 75→43건, requests 2.19.0 10→5건, 2.32.3 4→2건). "심각도 미상" 칸은 대비용으로만 유지

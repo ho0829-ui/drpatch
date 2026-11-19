@@ -8,7 +8,7 @@ import { createTweener, ease } from './utils.js';
 import { setupRoom } from './props/room.js';
 import { setupEggs } from './props/eggs.js';
 import { setupBlisters, worldOfSlot } from './props/blister.js';
-import { MAX_JAR_PILLS, setupJarAndTray } from './props/jarAndTray.js';
+import { MAX_JAR_PILLS, MAX_TRAY_PILLS, setupJarAndTray } from './props/jarAndTray.js';
 import { setupIv } from './props/iv.js';
 import { setupChart } from './props/chart.js';
 import { setupStamp } from './props/stamp.js';
@@ -288,7 +288,14 @@ export async function createClinicController(canvas, callbacks) {
       }
     }
 
-    for (const safeName of plan.safe || []) {
+    // 패키지가 많으면(실제 freeze는 100개 넘음) 안전한 것도 많다: 곡반 자리만큼만 올리고 나머지는 장면에서 치운다
+    const safe = plan.safe || [];
+    for (const safeName of safe.slice(MAX_TRAY_PILLS)) {
+      const p = jarApi.pillByName(safeName);
+      if (p) jarApi.removePill(p);
+    }
+    jarApi.setTrayExtra(safe.length - MAX_TRAY_PILLS);
+    for (const safeName of safe.slice(0, MAX_TRAY_PILLS)) {
       const p = jarApi.ensurePill({ name: safeName });
       Object.assign(p.it, {
         tgt: p.it.cur,
@@ -424,7 +431,7 @@ export async function createClinicController(canvas, callbacks) {
       });
 
       if (!finalEvent || typeof finalEvent !== 'object') {
-        const err = new Error('연결이 끊겼어요. 잠시 후 다시 시도해 주세요.');
+        const err = new Error('허허, 연결이 끊겼네요. 잠시 후 다시 해 보시죠.');
         err.retryable = true;
         throw err;
       }
@@ -469,7 +476,7 @@ export async function createClinicController(canvas, callbacks) {
       return finalEvent;
     } catch (err) {
       if (err?.retryable) {
-        onSay('연결이 끊겼어요. 잠시 후 다시 시도해 주세요.');
+        onSay('허허, 연결이 끊겼네요. 잠시 후 다시 해 보시죠.');
         onStatus('연결 끊김', -1);
         onRetryChange?.(message);
       } else {
@@ -759,11 +766,12 @@ export async function createClinicController(canvas, callbacks) {
         visible: showTags && front && popped !== p,
       });
     }
-    const overflow = jarApi.getOverflowCount();
-    if (overflow > 0) {
-      const [x, y, front] = toScreen(jarApi.jarTop);
+    const extras = [[jarApi.getOverflowCount(), jarApi.jarTop], [jarApi.getTrayExtra(), jarApi.trayTop]];
+    for (const [count, at] of extras) {
+      if (count <= 0) continue;
+      const [x, y, front] = toScreen(at);
       tagList.push({
-        name: `+${overflow}`,
+        name: `+${count}`,
         color: COLOR.deep,
         x,
         y,

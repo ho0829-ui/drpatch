@@ -84,6 +84,7 @@ def build_items(
     os_label: str | None = None,
     os_version: str | None = None,
     os_eol: dict | None = None,
+    os_upgrade_hint: str = "지원 중인 다음 LTS로 올림 필요",
 ) -> ItemsResult:
     result = ItemsResult()
     upgrade_ok = upgrade is not None and upgrade.status == "ok"
@@ -123,5 +124,5 @@ def build_items(
     if os_eol and os_eol.get("is_eol"):
         result.items.insert(0, Item("os", os_label or "OS", os_version or "", None, "HIGH",
                                     _to_date(os_eol.get("eol_date")),
-                                    f"지원 종료({os_eol['eol_date']}), 지원 중인 다음 LTS로 올림 필요"))
+                                    f"지원 종료({os_eol['eol_date']}), {os_upgrade_hint}"))
     return result
