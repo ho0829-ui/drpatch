@@ -141,9 +141,10 @@ export function setupNight({ world, scene, renderer, lights, room, docBody, M, t
     const top = new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2);
     docBody.worldToLocal(top);
     // 모자 띠가 머리보다 좁으면 머리에 박혀 보인다 → 조금 키우고(띠 반지름 0.5→0.58) 정수리 바로 아래에 얹는다
-    cap.scale.setScalar(1.16);
-    cap.position.set(top.x - 0.04, top.y - 0.17, top.z - 0.06);
-    cap.rotation.set(-0.16, 0, -0.14);
+    // 띠(반지름 0.53)가 그 높이의 머리 반지름(≈0.50)보다 살짝 넓게 — 정수리에서 0.2 내려 얹고, 높이는 줄여 덜 크게
+    cap.scale.set(1.0, 0.8, 1.0);
+    cap.position.set(top.x, top.y - 0.2, top.z - 0.03);
+    cap.rotation.set(-0.08, 0, -0.1);
     cap.visible = false;
     docBody.add(cap);
   }
