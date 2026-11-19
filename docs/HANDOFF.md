@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/fe-19-pills] I15 완료: Blender `pills.py`에 새 특별 알약 10종 추가(기존 10종 유지, 총 20종·일반 기호 각인·`pills.glb` 854KB→2.0MB·미리보기 `pills.png`), `demo.js` `POPULAR` 10개 추가, 268 통과·빌드 경고 0
 - [Claude Code 2026-11-19] I14 검증 → main 합침(ff, f223581). 범위 OK, 268 통과·빌드 경고 0
   - 375: 종이 점선 없음(`.paper::after` none), 11→1월 넘겨도 오류 없음
   - 끌어 놓기(합성 DragEvent): 파일 끌기만 켜짐, 덮개 위로 옮겨도 유지, 창 밖·× ·덮개 클릭·Esc로 꺼짐

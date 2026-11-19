@@ -29,6 +29,8 @@ export const COLOR = {
 export const POPULAR = new Set([
   'python', 'requests', 'urllib3', 'django', 'flask',
   'numpy', 'pandas', 'pytest', 'pyyaml', 'jinja2',
+  'fastapi', 'pydantic', 'starlette', 'uvicorn', 'scipy',
+  'matplotlib', 'pillow', 'celery', 'cryptography', 'certifi',
 ]);
 
 export const QUIPS = [
