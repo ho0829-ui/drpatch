@@ -45,6 +45,7 @@
 - [ ] [C] (선택) 심화 F3020 이상 징후 / F3021 Planner·Worker / F3022 RAG — 하려면 spec 먼저
 - [ ] [나] 명세 밖 나만의 기능 정하기
 - [ ] [C] README (sudo-quest 형식, 튜토리얼 GIF) — 내용 목록은 HANDOFF "다음에 할 것"
+- [ ] [C] PC 최적화 — 다른 PC에서 프레임 드랍 심함 (측정 → 품질 자동 조절)
 - [ ] [C] 모바일 최적화 (첫 로딩 속도·375 겹침) — README·PC 배포 뒤
 
 ## 사용 중 발견 (spec v1.17, 2026-11-19) — agy가 하고 Claude Code가 확인 (docs/agy-prompt-next.md)
