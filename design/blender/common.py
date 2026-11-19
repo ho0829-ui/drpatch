@@ -219,8 +219,8 @@ def cylinder(name, loc, radius, depth, mat, rot=(0, 0, 0), verts=64, bevel=0.0):
     return ob
 
 
-def torus(name, loc, major, minor, mat, rot=(0, 0, 0)):
-    bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor, major_segments=64, minor_segments=16,
+def torus(name, loc, major, minor, mat, rot=(0, 0, 0), segs=(64, 16)):
+    bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor, major_segments=segs[0], minor_segments=segs[1],
                                      location=loc, rotation=rot)
     ob = _active()
     ob.name = name

@@ -44,14 +44,42 @@ def mat(key, color, **kw):
 
 
 # ── 일반 기호 함수 (실제 로고 금지, 기본 도형으로만 구성) ──────
+def prism(name, pts, at, depth, m, scale=1.0, rot=0.0):
+    """평평한 다각형(XY)을 위로 뽑은 기둥. 기호를 또렷한 윤곽으로 새길 때 쓴다."""
+    import bmesh
+    x0, y0, z0 = at
+    cs, sn = math.cos(rot), math.sin(rot)
+    me = C.bpy.data.meshes.new(name)
+    bm = bmesh.new()
+
+    def tr(px, py):
+        px, py = px * scale, py * scale
+        return (x0 + px * cs - py * sn, y0 + px * sn + py * cs)
+
+    bot = [bm.verts.new((*tr(px, py), z0)) for px, py in pts]
+    top = [bm.verts.new((*tr(px, py), z0 + depth)) for px, py in pts]
+    bm.faces.new(list(reversed(bot)))
+    bm.faces.new(top)
+    for i in range(len(pts)):
+        j = (i + 1) % len(pts)
+        bm.faces.new((bot[i], bot[j], top[j], top[i]))
+    bm.normal_update()
+    bm.to_mesh(me)
+    bm.free()
+    ob = C.bpy.data.objects.new(name, me)
+    C.bpy.context.collection.objects.link(ob)
+    me.materials.append(m)
+    return ob
+
+
+# 번개: 꺾인 지그재그 한 줄기 (원·방패 테두리 없이)
+BOLT = [(0.10, 0.50), (-0.20, 0.02), (-0.02, 0.02), (-0.12, -0.50), (0.22, 0.08), (0.03, 0.08)]
+
+
 def symbol_bolt(key, color, at):
-    """단순 번개 기호 (원 테두리 없음)."""
+    """번개 기호."""
     x, y, z = at
-    m = mat(key, color)
-    a = C.rbox(f"{key}_sym_a", (x - 0.025, y + 0.04, z), (0.12, 0.036, 0.024), m, 0.006, rot=(0, 0, -0.95))
-    b = C.rbox(f"{key}_sym_b", (x, y, z), (0.11, 0.032, 0.024), m, 0.006, rot=(0, 0, 0.25))
-    c = C.rbox(f"{key}_sym_c", (x + 0.025, y - 0.04, z), (0.12, 0.036, 0.024), m, 0.006, rot=(0, 0, -0.95))
-    return [C.join([a, b, c], f"{key}_sym")]
+    return [prism(f"{key}_sym", BOLT, (x, y, z - 0.006), 0.024, mat(key, color), scale=0.36, rot=-0.15)]
 
 
 def symbol_check(key, color, at):
@@ -78,30 +106,43 @@ def symbol_star(key, color, at):
     return [C.join(parts, f"{key}_sym")]
 
 
-def symbol_horn(key, color, at):
-    """나선 원뿔(뿔) 기호."""
+def symbol_horn(key, color, at, groove=None):
+    """휘어진 뿔 + 가로 홈 3줄 (윤곽으로 읽히게 평평한 기둥으로)."""
+    # 캡슐 윗면은 길이(X) 방향으로 평평하므로 뿔을 X축으로 눕힌다 (Y로 세우면 뒤쪽이 겉면 아래로 묻힘).
+    # 로컬 좌표: 밑동 (0, -0.09) → 끝 (0.06, 0.09), rot=+90°로 끝이 -X(캡슐 끝) 쪽을 향함
     x, y, z = at
-    m = mat(key, color)
-    profile = [(0.0, 0.0), (0.055, 0.0), (0.042, 0.05), (0.028, 0.10), (0.014, 0.15), (0.0, 0.19)]
-    cone = C.lathe(f"{key}_sym_cone", profile, m, segs=24)
-    cone.location = (x - 0.06, y, z + 0.015)
-    cone.rotation_euler = (0, PI / 2, 0)
-    rings = []
-    for idx, (off, rad) in enumerate([(0.04, 0.046), (0.085, 0.034), (0.13, 0.022)]):
-        r = C.torus(f"{key}_sym_r{idx}", (x - 0.06 + off, y, z + 0.015), rad, 0.008, m, rot=(0, PI / 2 - 0.25, 0))
-        rings.append(r)
-    return [C.join([cone] + rings, f"{key}_sym")]
+    n = 10
+    rot = PI / 2
+
+    def spine(t):
+        return 0.06 * t * t, -0.09 + 0.18 * t, 0.045 * (1 - t) ** 0.8 + 0.004
+
+    right, left = [], []
+    for i in range(n + 1):
+        cx, cy, w = spine(i / n)
+        right.append((cx + w, cy))
+        left.append((cx - w, cy))
+    pts = right + list(reversed(left))
+    parts = [prism(f"{key}_sym_horn", pts, (x, y, z - 0.012), 0.03, mat(key, color), rot=rot)]
+    gm = mat(key, groove or color)
+    for k, t in enumerate((0.2, 0.42, 0.64)):
+        cx, cy, w = spine(t)
+        bar = [(cx - w - 0.004, cy - 0.008), (cx + w + 0.004, cy + 0.004), (cx + w + 0.004, cy + 0.014), (cx - w - 0.004, cy + 0.002)]
+        parts.append(prism(f"{key}_sym_g{k}", bar, (x, y, z + 0.016), 0.006, gm, rot=rot))
+    return [C.join(parts, f"{key}_sym")]
 
 
-def symbol_wave(key, color, at):
-    """사인 물결 기호."""
+def symbol_wave(key, color, at, surf=None):
+    """사인 물결 기호. surf(x, y)가 있으면 알약 겉면을 따라 붙인다."""
     x, y, z = at
     m = mat(key, color)
     pts = []
-    for i in range(25):
-        t = (i / 24) * 2 - 1  # -1..1
-        pts.append((x + t * 0.16, y + math.sin(t * PI * 1.5) * 0.055, z + 0.006))
-    return [C.tube(f"{key}_sym", pts, 0.016, m, sides=12)]
+    for i in range(21):
+        t = (i / 20) * 2 - 1  # -1..1
+        px, py = x + t * 0.13, y + math.sin(t * PI * 1.5) * 0.045
+        pz = (surf(px, py) + 0.006) if surf else z + 0.006
+        pts.append((px, py, pz))
+    return [C.tube(f"{key}_sym", pts, 0.017, m, sides=8)]
 
 
 def symbol_bars(key, color, at):
@@ -154,7 +195,7 @@ def symbol_seal(key, color, at):
     x, y, z = at
     m = mat(key, color)
     disc = C.cylinder(f"{key}_sym_disc", (x, y + 0.022, z), 0.062, 0.022, m, verts=24)
-    rim = C.torus(f"{key}_sym_rim", (x, y + 0.022, z + 0.004), 0.064, 0.011, m)
+    rim = C.torus(f"{key}_sym_rim", (x, y + 0.022, z + 0.004), 0.064, 0.011, m, segs=(24, 6))
     t1 = C.rbox(f"{key}_sym_t1", (x - 0.032, y - 0.055, z - 0.002), (0.032, 0.085, 0.018), m, 0.005, rot=(0, 0, -0.28))
     t2 = C.rbox(f"{key}_sym_t2", (x + 0.032, y - 0.055, z - 0.002), (0.032, 0.085, 0.018), m, 0.005, rot=(0, 0, 0.28))
     return [C.join([disc, rim, t1, t2], f"{key}_sym")]
@@ -175,16 +216,25 @@ SYMBOLS = {
 
 
 # ── 알약 기본 모양 4종 (+ 납작 연질캡슐) ──────────────────────
+# 새 10종(기호 있음)은 분할 수를 낮춰 용량을 아낀다. 기존 10종은 예전 값 그대로.
+def res(sym, old, new):
+    return new if sym else old
+
+
 def capsule(key, c1, c2, letters, sym=None):
     r, half = 0.26, 0.23
     r2 = r + 0.012
-    a = C.lathe(f"{key}_a", C.hemi(r, -half, up=False) + [(r, 0.0), (0.0, 0.0)], mat(key, c1), segs=48)
-    b = C.lathe(f"{key}_b", [(0.0, -0.05), (r2, -0.05), (r2, half)] + C.hemi(r2, half, up=True)[1:], mat(key, c2), segs=48)
-    lip = C.torus(f"{key}_lip", (0, 0, -0.05), r2, 0.01, mat(key, c2))
+    seg = res(sym, 48, 32)
+    a = C.lathe(f"{key}_a", C.hemi(r, -half, up=False) + [(r, 0.0), (0.0, 0.0)], mat(key, c1), segs=seg)
+    b = C.lathe(f"{key}_b", [(0.0, -0.05), (r2, -0.05), (r2, half)] + C.hemi(r2, half, up=True)[1:], mat(key, c2), segs=seg)
+    lip = C.torus(f"{key}_lip", (0, 0, -0.05), r2, 0.01, mat(key, c2), segs=res(sym, (64, 16), (40, 6)))
     objs = [a, b, lip]
     C.apply_rot(objs, (0, PI / 2, 0))
     t = C.text(f"{key}_txt", letters, (0.26, 0, r2 + 0.004), 0.24, mat(key, c1), extrude=0.016)
-    extra = SYMBOLS[sym](key, c2, (-0.23, 0, r + 0.004)) if sym else []
+    if not sym:
+        return objs + [t]
+    at = (-0.15, 0, r + 0.004)  # 왼쪽 반쪽 원기둥 부분 (끝 반구에 걸치지 않게)
+    extra = symbol_horn(key, c2, at, groove=c1) if sym == "horn" else SYMBOLS[sym](key, c2, at)
     return objs + [t] + extra
 
 
@@ -202,7 +252,7 @@ def caplet(key, c1, c2, letters, sym=None):
 def tablet(key, c1, c2, letters, sym=None):
     body = C.lathe(f"{key}_body", [(0.0, -0.15), (0.3, -0.12), (0.42, -0.06), (0.45, 0.0), (0.42, 0.06), (0.3, 0.12), (0.0, 0.15)], mat(key, c1), segs=56)
     body.scale = (1.05, 1.05, 1.0)
-    band = C.torus(f"{key}_band", (0, 0, 0), 0.468, 0.022, mat(key, c2))
+    band = C.torus(f"{key}_band", (0, 0, 0), 0.468, 0.022, mat(key, c2), segs=res(sym, (64, 16), (48, 8)))
     if sym:
         t = C.text(f"{key}_txt", letters, (0, -0.13, 0.146), 0.23, mat(key, c2), extrude=0.015)
         extra = SYMBOLS[sym](key, c2, (0, 0.13, 0.146))
@@ -213,13 +263,21 @@ def tablet(key, c1, c2, letters, sym=None):
 
 
 def softgel(key, c1, c2, letters, sym=None):
-    gel = C.sphere(f"{key}_gel", (0, 0, 0), (0.52, 0.3, 0.26), C.material(f"gel_{key}", c1, rough=0.08, coat=1.0, coat_rough=0.05, transmission=0.55), segs=48, rings=24)
-    core = C.sphere(f"{key}_core", (0, 0, -0.02), (0.38, 0.2, 0.16), mat(key, c1), segs=32, rings=16)
-    seam = C.torus(f"{key}_seam", (0, 0, 0), 1.0, 0.012, mat(key, c2))
-    seam.scale = (0.52, 0.3, 1.0)
+    sx, sy, sz = 0.52, 0.3, 0.26
+    gel = C.sphere(f"{key}_gel", (0, 0, 0), (sx, sy, sz), C.material(f"gel_{key}", c1, rough=0.08, coat=1.0, coat_rough=0.05, transmission=0.55), segs=res(sym, 48, 36), rings=res(sym, 24, 18))
+    core = C.sphere(f"{key}_core", (0, 0, -0.02), (0.38, 0.2, 0.16), mat(key, c1), segs=res(sym, 32, 20), rings=res(sym, 16, 10))
+    seam = C.torus(f"{key}_seam", (0, 0, 0), 1.0, 0.012, mat(key, c2), segs=res(sym, (64, 16), (48, 6)))
+    seam.scale = (sx, sy, 1.0)
     if sym:
-        t = C.text(f"{key}_txt", letters, (0, -0.085, 0.254), 0.19, mat(key, c2), extrude=0.014)
-        extra = SYMBOLS[sym](key, c2, (0, 0.075, 0.254))
+        def surf(px, py):  # 타원체 윗면 높이
+            return sz * math.sqrt(max(0.0, 1 - (px / sx) ** 2 - (py / sy) ** 2))
+
+        # 글자는 왼쪽, 기호는 오른쪽 — 위아래로 쌓으면 좁은 폭에서 겹친다
+        t = C.text(f"{key}_txt", letters, (-0.17, 0, surf(-0.17, 0) - 0.006), 0.2, mat(key, c2), extrude=0.016)
+        if sym == "wave":
+            extra = symbol_wave(key, c2, (0.17, 0, 0), surf=surf)
+        else:
+            extra = SYMBOLS[sym](key, c2, (0.17, 0, surf(0.17, 0)))
         return [gel, core, seam, t] + extra
     t = C.text(f"{key}_txt", letters, (0, 0, 0.264), 0.22, mat(key, c2), extrude=0.014)
     return [gel, core, seam, t]
@@ -227,9 +285,9 @@ def softgel(key, c1, c2, letters, sym=None):
 
 def softgel_flat(key, c1, c2, letters, sym=None):
     """납작 연질캡슐 (pillow 등 쿠션형)."""
-    gel = C.sphere(f"{key}_gel", (0, 0, 0), (0.50, 0.36, 0.19), C.material(f"gel_{key}", c1, rough=0.1, coat=1.0, coat_rough=0.06, transmission=0.52), segs=48, rings=24)
-    core = C.sphere(f"{key}_core", (0, 0, -0.015), (0.37, 0.25, 0.12), mat(key, c1), segs=32, rings=16)
-    seam = C.torus(f"{key}_seam", (0, 0, 0), 1.0, 0.012, mat(key, c2))
+    gel = C.sphere(f"{key}_gel", (0, 0, 0), (0.50, 0.36, 0.19), C.material(f"gel_{key}", c1, rough=0.1, coat=1.0, coat_rough=0.06, transmission=0.52), segs=36, rings=18)
+    core = C.sphere(f"{key}_core", (0, 0, -0.015), (0.37, 0.25, 0.12), mat(key, c1), segs=20, rings=10)
+    seam = C.torus(f"{key}_seam", (0, 0, 0), 1.0, 0.012, mat(key, c2), segs=(48, 6))
     seam.scale = (0.50, 0.36, 1.0)
     t = C.text(f"{key}_txt", letters, (-0.17, 0, 0.186), 0.20, mat(key, c2), extrude=0.014)
     extra = SYMBOLS[sym](key, c2, (0.16, 0, 0.186)) if sym else []
