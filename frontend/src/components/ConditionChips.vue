@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { fmtSchedule } from '../conditionPreview.js';
 
 const props = defineProps({
   packagesCount: { type: Number, default: 0 },
@@ -35,11 +36,6 @@ function fmtDate(iso) {
   return `${Number(m[2])}/${Number(m[3])}(${WEEKDAYS[d.getDay()]})`;
 }
 
-function fmtInterval(days) {
-  if (!days) return null;
-  return { 7: '매주', 14: '격주', 30: '매월' }[days] || `${days}일마다`;
-}
-
 function fmtWindow(c) {
   if (!c?.window_start || !c?.window_end) return null;
   const s = c.window_start;
@@ -54,6 +50,8 @@ const chips = computed(() => {
   const hasOs = Boolean(c.os_name && c.os_version);
   const osExample =
     c.os_name === 'macos' ? 'macOS 15' : c.os_name === 'windows' ? 'Windows 11 24H2' : 'Ubuntu 22.04';
+  const hasInterval = Boolean(c.interval_days || (Array.isArray(c.weekdays) && c.weekdays.length > 0));
+  const needsWeekday = Boolean(!hasInterval && c.weekly_count);
 
   const makeState = (filled, draftVal) => (filled ? 'filled' : draftVal ? 'draft' : 'missing');
 
@@ -100,10 +98,10 @@ const chips = computed(() => {
     {
       key: 'interval_days',
       label: '간격',
-      value: fmtInterval(c.interval_days),
-      draftValue: !c.interval_days ? d.interval_days || null : null,
-      state: makeState(Boolean(c.interval_days), d.interval_days),
-      snippet: '매주',
+      value: hasInterval ? fmtSchedule(c) : needsWeekday ? `주 ${c.weekly_count}회 · 요일` : null,
+      draftValue: !hasInterval ? d.interval_days || null : null,
+      state: makeState(hasInterval, d.interval_days),
+      snippet: needsWeekday ? '화·금' : '매주',
     },
   ];
 
