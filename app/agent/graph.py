@@ -104,6 +104,10 @@ def merge_conditions(prev: Conditions, analysis) -> Conditions:
         updates["interval_days"] = None
         updates["weekly_count"] = None
         updates["week_interval"] = 2 if new_interval == 14 else 1
+    elif new_interval in (7, 14) and prev.weekdays:
+        # 요일을 정해 둔 뒤 "격주로 바꿔줘"·"매주로" → 요일은 두고 주 간격만 바꾼다 (요일을 잃지 않게)
+        updates["week_interval"] = 2 if new_interval == 14 else 1
+        updates["weekly_count"] = None
     elif new_interval:
         updates["interval_days"] = new_interval
         updates["weekdays"] = None

@@ -105,6 +105,18 @@ def test_merge_conditions_priority_and_override():
     assert ask_message(["interval_days"], base, interval_unsupported=True) == UNSUPPORTED_INTERVAL_MSG
 
 
+def test_merge_conditions_biweekly_keeps_existing_weekdays():
+    """'매주 화·목' 뒤 '격주로 바꿔줘' → 격주 화·목 (요일을 지우지 않는다). '매주로' → 다시 매주."""
+    base = Conditions()
+    c1 = merge_conditions(base, Analysis(intent="plan", intent_reason="r", weekdays=[1, 3]))
+    c2 = merge_conditions(c1, Analysis(intent="plan", intent_reason="r", interval_days=14))
+    assert c2.weekdays == [1, 3] and c2.week_interval == 2 and c2.interval_days is None
+    c3 = merge_conditions(c2, Analysis(intent="plan", intent_reason="r", interval_days=7))
+    assert c3.weekdays == [1, 3] and c3.week_interval == 1
+    c4 = merge_conditions(c3, Analysis(intent="plan", intent_reason="r", interval_days=3))
+    assert c4.weekdays is None and c4.interval_days == 3
+
+
 def test_conditions_header_uses_fmt_schedule():
     c = Conditions(
         os_name="ubuntu", os_version="22.04", python_version="3.11",

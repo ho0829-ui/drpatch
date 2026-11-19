@@ -1,6 +1,10 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-19] I18 검증 → main 합침(ff, cd8af66) + 고침 1개. 280 통과
+  - 실제 GMS: probe_conditions.py 47건 모두 일치. 세션 실행: "다음 주 화요일부터 매주 화·목" → 11/24·11/26·12/1, "주 2회" → 요일 되묻기 → "화·금으로" → 11/24·11/27
+  - 고침: "매주 화·목" 뒤 "격주로 바꿔줘"가 요일을 지우고 14일 간격이 되던 것 → 요일 두고 주 간격만 (격주 화·목: 11/24·11/26·12/8). 테스트·spec M 한 줄
+  - 다음: I19(화면 칩·미리보기)
 - [agy/be-03-weekdays] I18 완료: 요일 반복 규칙(`weekdays`/`weekly_count`/`week_interval`·`interval_unsupported`), `schedule_text.fmt_schedule`, 회차 날짜·캘린더 허용 요일 이동·회차 중복 밀림, `sessions` DB 자동 컬럼 추가, `test_weekdays.py`·`test_condition_phrases.py`·`scripts/probe_conditions.py` 실측 확인, 279 통과
 - [Claude Code 2026-11-19] spec v1.21 요일 규칙(M)·조건 표현 표(N) + agy I18(백엔드)·I19(화면). 코드는 안 고침
   - 실측(실제 GMS analyze 35개): 매일·격일·사흘·3주·분기·다음 주 월요일·모레·다섯 개·밤 10시~자정·jammy·py311은 서버가 알아들음. 주 2회·평일·매주 화·목은 못 알아들음, "매달 첫째 주 화요일"은 30일로 틀리게
@@ -95,7 +99,7 @@
   - 기준선 태그 v1-submit은 캘린더 전 상태
 
 ## 다음에 할 것
-- agy I18(`agy/be-03-weekdays`) → I19(`agy/fe-22-weekdays`) — 앞 작업 합친 뒤 main에서 브랜치, 끝나면 Claude Code가 확인·합침
+- agy I19(`agy/fe-22-weekdays`) — main에서 브랜치, 끝나면 Claude Code가 확인·합침 (I18 끝남)
 - 사용자 결정 남음: web/ 삭제 여부, README·셀프 체크리스트
 - 저장소 정리: 구 화면 `web/` 삭제 여부 결정, `main`에 합쳐진 `agy/*` 로컬 브랜치 정리, `git push`
 - 최종 제출 마무리: 셀프 체크리스트 점검, `README.md` 최종 작성
