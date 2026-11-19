@@ -15,7 +15,7 @@ const emit = defineEmits(['closed', 'action']);
 const shownText = ref('');
 const visible = ref(false);
 const el = ref(null);
-const place = ref({ right: 0, top: 0 });
+const place = ref({ right: 0, top: 0, maxH: null });
 let typingId = 0;
 const timers = [];
 const EDGE = 16;
@@ -58,17 +58,45 @@ function onGlobalKeyDown(e) {
   }
 }
 
-// 박사님 머리 옆에 두되, 화면 밖(왼쪽·위)으로 나가지 않게 붙잡는다
+// 박사님 머리 옆에 두되, 화면 밖(왼쪽·위)과 블리스터 판 위로 내려오지 않게 붙잡는다 (spec v1.20 I)
 function clamp() {
   const { w, h } = size;
   const maxRight = Math.max(EDGE, innerWidth - w - EDGE - 24); // 왼쪽 아바타 여유
+  const mobile = innerWidth < 768;
+  const bTop = typeof props.pos.blisterTop === 'number' ? props.pos.blisterTop : null;
+
+  if (mobile) {
+    const mobileTop = 112;
+    const baseMaxH = Math.round(innerHeight * 0.22);
+    const maxH = bTop !== null ? Math.max(68, Math.min(baseMaxH, Math.floor(bTop - mobileTop - 10))) : baseMaxH;
+    place.value = {
+      right: Math.min(Math.max(EDGE, props.pos.right), maxRight),
+      top: mobileTop,
+      maxH,
+    };
+    return;
+  }
+
+  const baseMaxH = Math.round(innerHeight * 0.30);
+  const maxBottom = bTop !== null ? Math.min(innerHeight - 160, Math.floor(bTop - 12)) : innerHeight - 160;
+  let top = Math.min(props.pos.top, maxBottom);
+  let maxH = baseMaxH;
+  if (top - h < TOP_SAFE) {
+    if (maxBottom - TOP_SAFE < h) {
+      top = Math.max(TOP_SAFE + 68, maxBottom);
+      maxH = Math.max(68, Math.min(baseMaxH, top - TOP_SAFE));
+    } else {
+      top = TOP_SAFE + h;
+    }
+  }
   place.value = {
     right: Math.min(Math.max(EDGE, props.pos.right), maxRight),
-    top: Math.max(TOP_SAFE + h, Math.min(props.pos.top, innerHeight - 160)),
+    top,
+    maxH,
   };
 }
 
-watch(() => [props.pos.right, props.pos.top], clamp);
+watch(() => [props.pos.right, props.pos.top, props.pos.blisterTop], clamp);
 onMounted(() => {
   ro = new ResizeObserver(() => {
     if (!el.value) return;
@@ -114,7 +142,7 @@ watch(
     ref="el"
     class="bubble"
     :class="{ show: visible }"
-    :style="{ right: `${place.right}px`, top: `${place.top}px` }"
+    :style="{ right: `${place.right}px`, top: `${place.top}px`, maxHeight: place.maxH ? `${place.maxH}px` : undefined }"
     :tabindex="visible ? 0 : -1"
     :inert="!visible"
     role="button"

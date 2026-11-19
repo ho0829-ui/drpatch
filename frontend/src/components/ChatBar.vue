@@ -5,9 +5,10 @@ import RichText from './RichText.vue';
 const props = defineProps({
   messages: { type: Array, default: () => [] },
   busy: Boolean,
+  thinkingText: { type: String, default: '' },
 });
 
-const emit = defineEmits(['send', 'upload', 'examples']);
+const emit = defineEmits(['send', 'upload', 'examples', 'update:draft', 'history-change']);
 
 const text = ref('');
 const historyOpen = ref(false);
@@ -15,19 +16,40 @@ const historyRef = ref(null);
 const textareaRef = ref(null);
 const kbOffset = ref(0);
 
+watch(text, (val) => emit('update:draft', val));
+watch(historyOpen, (open) => {
+  emit('history-change', open);
+  if (open) {
+    nextTick(() => {
+      if (historyRef.value) historyRef.value.scrollTop = historyRef.value.scrollHeight;
+    });
+  }
+});
+
+function focusInput() {
+  nextTick(() => textareaRef.value?.focus({ preventScroll: true }));
+}
+
+function openHistory() {
+  historyOpen.value = true;
+  nextTick(() => {
+    if (historyRef.value) historyRef.value.scrollTop = historyRef.value.scrollHeight;
+  });
+}
+
 function appendSnippet(snippet) {
   if (!snippet) return;
   const cur = text.value.trim();
   text.value = cur ? `${cur}, ${snippet}` : snippet;
-  nextTick(() => textareaRef.value?.focus({ preventScroll: true }));
+  focusInput();
 }
 
 function setText(value) {
   text.value = value || '';
-  nextTick(() => textareaRef.value?.focus({ preventScroll: true }));
+  focusInput();
 }
 
-defineExpose({ appendSnippet, setText });
+defineExpose({ appendSnippet, setText, openHistory, focusInput });
 
 function updateViewport() {
   const vv = window.visualViewport;
@@ -65,6 +87,7 @@ function submit() {
   const msg = text.value.trim();
   if (!msg || props.busy) return;
   text.value = '';
+  historyOpen.value = true;
   emit('send', msg);
 }
 
@@ -76,7 +99,7 @@ function onKeyDown(e) {
 }
 
 watch(
-  () => props.messages.length,
+  () => [props.messages.length, props.thinkingText],
   async () => {
     if (historyOpen.value) {
       await nextTick();
@@ -92,7 +115,7 @@ watch(
     <slot name="chips" />
 
     <div v-if="historyOpen" ref="historyRef" class="chat-history" aria-label="대화 기록">
-      <div v-if="!messages.length" class="chat-empty">아직 대화 기록이 없어요.</div>
+      <div v-if="!messages.length && !thinkingText" class="chat-empty">아직 대화 기록이 없어요.</div>
       <div
         v-for="(m, i) in messages"
         :key="i"
@@ -101,6 +124,10 @@ watch(
       >
         <b>{{ m.role === 'user' ? '나' : 'DR.PATCH' }}</b>
         <p><RichText :text="m.text" /></p>
+      </div>
+      <div v-if="thinkingText" class="chat-msg assistant chat-thinking" aria-live="polite">
+        <b>DR.PATCH</b>
+        <p>{{ thinkingText }}</p>
       </div>
     </div>
 

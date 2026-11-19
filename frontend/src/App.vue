@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as api from './api.js';
+import { previewConditions } from './conditionPreview.js';
 import ChatBar from './components/ChatBar.vue';
 import ClinicScene from './components/ClinicScene.vue';
 import ConditionChips from './components/ConditionChips.vue';
@@ -39,6 +40,8 @@ const currentPlan = ref(null);
 const currentPackages = ref([]);
 const currentConditions = ref(null);
 const chatMessages = ref([]);
+const chatDraft = ref('');
+const historyOpen = ref(false);
 const dragging = ref(false);
 const uploading = ref(false);
 const retryMessage = ref(null);
@@ -49,6 +52,31 @@ const DONE_EXAMPLES_KEY = 'drpatch.examples.done';
 
 const isBusy = computed(() => uploading.value || state.value === 'running' || state.value === 'confirming');
 const tickerLines = computed(() => logs.value.slice(-4).reverse());
+const draftConditions = computed(() => previewConditions(chatDraft.value));
+const thinkingText = computed(() => {
+  if (state.value !== 'running' && state.value !== 'confirming') return '';
+  const st = status.value?.text || '';
+  if (['접수', '검사 중', '판정', '재계획', '처방'].includes(st)) {
+    return `박사님이 차트를 보는 중… (${st})`;
+  }
+  return '박사님이 차트를 보는 중…';
+});
+
+function shortenForBubble(text) {
+  const src = String(text || '');
+  if (!historyOpen.value) return src;
+  const lines = src.split('\n');
+  if (lines.length <= 3 && src.length <= 200) return src;
+  const nonEmpty = lines.map((l) => l.trim()).filter(Boolean);
+  let pick = nonEmpty[0] || '';
+  if (pick.startsWith('차트:') && nonEmpty.length > 1) {
+    pick = nonEmpty[1];
+  }
+  const clean = pick.replace(/^\s*[-*•#]+\s*/, '').replace(/\*\*/g, '');
+  const m = clean.match(/^(.+?[.?!])(?:\s|$)/);
+  const firstSentence = m ? m[1] : clean.slice(0, 100);
+  return `${firstSentence}\n자세한 처방은 대화 기록에 적었습니다.`;
+}
 
 function sayBubble(text, action = null) {
   bubbleText.value = text;
@@ -70,7 +98,7 @@ function onSceneSay(text) {
     action = pendingBubbleAction;
   }
   pendingBubbleAction = null;
-  sayBubble(text, action);
+  sayBubble(shortenForBubble(text), action);
 }
 
 function openExamples(focusId = '') {
@@ -302,12 +330,26 @@ onBeforeUnmount(() => {
 
 // 대화 기록에 답을 넣는 곳은 onChatTurn 한 곳뿐 (보내기·다시 시도·진료 시작 모두 거기로 온다)
 async function onSendChat(message) {
+  chatBarRef.value?.openHistory();
   chatMessages.value.push({ role: 'user', text: message });
   await sceneRef.value?.sendChatMessage(message);
 }
 
+async function onStartVisit() {
+  if (currentPackages.value.length > 0) {
+    chatBarRef.value?.openHistory();
+    const lastUser = [...chatMessages.value].reverse().find((m) => m.role === 'user');
+    if (lastUser?.text !== '패치 계획 짜줘') {
+      chatMessages.value.push({ role: 'user', text: '패치 계획 짜줘' });
+    }
+  }
+  await sceneRef.value?.runVisit();
+}
+
 async function onRetryChat() {
-  if (retryMessage.value) await sceneRef.value?.sendChatMessage(retryMessage.value);
+  if (!retryMessage.value) return;
+  chatBarRef.value?.openHistory();
+  await sceneRef.value?.sendChatMessage(retryMessage.value);
 }
 
 function onChatTurn({ msg, finalEvent }) {
@@ -422,14 +464,17 @@ function reloadPage() {
       ref="chatBarRef"
       :messages="chatMessages"
       :busy="isBusy"
+      :thinking-text="thinkingText"
       @send="onSendChat"
       @upload="triggerUpload"
       @examples="openExamples()"
+      @update:draft="chatDraft = $event"
+      @history-change="historyOpen = $event"
     >
       <Controls
         :state="uploading ? 'running' : state"
         :can-retry="!!retryMessage"
-        @start="sceneRef?.runVisit()"
+        @start="onStartVisit"
         @confirm="sceneRef?.confirmPlan()"
         @retry="onRetryChat"
         @calendar="activeSheet = { kind: 'calendar', color: '#3E9E98' }"
@@ -439,9 +484,11 @@ function reloadPage() {
         <ConditionChips
           :packages-count="currentPackages.length"
           :conditions="currentConditions"
+          :draft="draftConditions"
           @upload="triggerUpload"
           @examples="openExamples()"
           @fill="chatBarRef?.appendSnippet($event)"
+          @focus-input="chatBarRef?.focusInput()"
         />
       </template>
     </ChatBar>

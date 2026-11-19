@@ -4,9 +4,10 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 const props = defineProps({
   packagesCount: { type: Number, default: 0 },
   conditions: { type: Object, default: null },
+  draft: { type: Object, default: () => ({}) },
 });
 
-const emit = defineEmits(['fill', 'upload', 'examples']);
+const emit = defineEmits(['fill', 'upload', 'examples', 'focus-input']);
 
 const fileMenuOpen = ref(false);
 const fileMenuRef = ref(null);
@@ -49,61 +50,76 @@ function fmtWindow(c) {
 
 const chips = computed(() => {
   const c = props.conditions || {};
+  const d = props.draft || {};
   const hasOs = Boolean(c.os_name && c.os_version);
   const osExample =
     c.os_name === 'macos' ? 'macOS 15' : c.os_name === 'windows' ? 'Windows 11 24H2' : 'Ubuntu 22.04';
+
+  const makeState = (filled, draftVal) => (filled ? 'filled' : draftVal ? 'draft' : 'missing');
 
   const list = [
     {
       key: 'packages',
       label: '파일',
       value: props.packagesCount > 0 ? `파일 ${props.packagesCount}개` : null,
-      missing: props.packagesCount === 0,
+      state: props.packagesCount > 0 ? 'filled' : 'missing',
       action: 'upload',
     },
     {
       key: 'os',
       label: 'OS',
       value: fmtOs(c),
-      missing: !hasOs,
+      draftValue: !hasOs ? d.os || null : null,
+      state: makeState(hasOs, d.os),
       snippet: osExample,
     },
     {
       key: 'python_version',
       label: 'Python',
       value: c.python_version ? `Python ${c.python_version}` : null,
-      missing: !c.python_version,
+      draftValue: !c.python_version ? d.python_version || null : null,
+      state: makeState(Boolean(c.python_version), d.python_version),
       snippet: 'Python 3.11',
     },
     {
       key: 'capacity',
       label: '한 번에 N개',
       value: c.capacity ? `${c.capacity}개` : null,
-      missing: !c.capacity,
+      draftValue: !c.capacity ? d.capacity || null : null,
+      state: makeState(Boolean(c.capacity), d.capacity),
       snippet: '한 번에 5개까지',
     },
     {
       key: 'first_date',
       label: '첫 날짜',
       value: fmtDate(c.first_date),
-      missing: !c.first_date,
+      draftValue: !c.first_date ? d.first_date || null : null,
+      state: makeState(Boolean(c.first_date), d.first_date),
       snippet: '11/25부터',
     },
     {
       key: 'interval_days',
       label: '간격',
       value: fmtInterval(c.interval_days),
-      missing: !c.interval_days,
+      draftValue: !c.interval_days ? d.interval_days || null : null,
+      state: makeState(Boolean(c.interval_days), d.interval_days),
       snippet: '매주',
     },
   ];
 
   const win = fmtWindow(c);
   if (win) {
-    list.push({ key: 'window', label: '시각', value: win, missing: false });
+    list.push({ key: 'window', label: '시각', value: win, state: 'filled' });
   }
   return list;
 });
+
+function chipTitle(chip) {
+  if (chip.state === 'filled') return chip.label;
+  if (chip.state === 'draft') return `${chip.label}: 입력창에 ${chip.draftValue} — 보내면 확인`;
+  if (chip.action === 'upload') return '파일 올리기 또는 예시 고르기';
+  return `누르면 '${chip.snippet}' 입력`;
+}
 
 function closeFileMenu() {
   fileMenuOpen.value = false;
@@ -111,14 +127,17 @@ function closeFileMenu() {
 
 function onClickChip(chip) {
   if (chip.action === 'upload') {
-    if (chip.missing) {
+    if (chip.state === 'missing') {
       fileMenuOpen.value = !fileMenuOpen.value;
       if (fileMenuOpen.value) nextTick(() => uploadOptRef.value?.focus({ preventScroll: true }));
     } else {
       fileMenuOpen.value = false;
       emit('upload');
     }
-  } else if (chip.missing && chip.snippet) {
+  } else if (chip.state === 'draft') {
+    fileMenuOpen.value = false;
+    emit('focus-input');
+  } else if (chip.state === 'missing' && chip.snippet) {
     fileMenuOpen.value = false;
     emit('fill', chip.snippet);
   }
@@ -168,18 +187,21 @@ onBeforeUnmount(() => {
         예시 고르기
       </button>
     </div>
-    <div class="cond-chips" role="group" aria-label="입력된 점검 조건">
+    <div class="cond-chips" role="group" aria-label="받은 조건">
+      <span class="cond-label" aria-hidden="true">받은 조건</span>
       <button
         v-for="chip in chips"
         :key="chip.key"
         type="button"
         class="cond-chip"
-        :class="{ missing: chip.missing, filled: !chip.missing }"
-        :aria-expanded="chip.action === 'upload' && chip.missing ? fileMenuOpen : undefined"
-        :title="chip.missing ? (chip.action === 'upload' ? '파일 올리기 또는 예시 고르기' : `누르면 '${chip.snippet}' 입력`) : chip.label"
+        :class="chip.state"
+        :aria-expanded="chip.action === 'upload' && chip.state === 'missing' ? fileMenuOpen : undefined"
+        :aria-label="chip.state === 'draft' ? chipTitle(chip) : undefined"
+        :title="chipTitle(chip)"
         @click="onClickChip(chip)"
       >
-        <template v-if="!chip.missing">{{ chip.value }}</template>
+        <template v-if="chip.state === 'filled'">{{ chip.value }}</template>
+        <template v-else-if="chip.state === 'draft'">{{ chip.label }} <span class="draft-mark" aria-hidden="true">○</span></template>
         <template v-else>{{ chip.value || chip.label }} <em>필요</em></template>
       </button>
     </div>

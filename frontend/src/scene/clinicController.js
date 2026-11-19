@@ -769,7 +769,18 @@ export async function createClinicController(canvas, callbacks) {
     chartApi.chart.position.y += (chartWant - chartApi.chart.position.y) * 0.18;
 
     const bp = getBubbleAnchor(camera);
-    if (moved(bp.right, lastBubble.right) || moved(bp.top, lastBubble.top)) {
+    const packs = blisterApi.getPacks();
+    let blisterTop = null;
+    for (const pk of packs) {
+      tmpV.set(0, 0.5, -1.2);
+      pk.group.localToWorld(tmpV);
+      const [, y, front] = toScreen(tmpV);
+      if (front && (blisterTop === null || y < blisterTop)) blisterTop = y;
+    }
+    bp.blisterTop = blisterTop;
+    const prevTop = lastBubble.blisterTop ?? -999;
+    const nextTop = bp.blisterTop ?? -999;
+    if (moved(bp.right, lastBubble.right) || moved(bp.top, lastBubble.top) || moved(nextTop, prevTop)) {
       lastBubble = bp;
       onBubblePos(bp);
     }
