@@ -1,6 +1,11 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-19] I14 검증 → main 합침(ff, f223581). 범위 OK, 268 통과·빌드 경고 0
+  - 375: 종이 점선 없음(`.paper::after` none), 11→1월 넘겨도 오류 없음
+  - 끌어 놓기(합성 DragEvent): 파일 끌기만 켜짐, 덮개 위로 옮겨도 유지, 창 밖·× ·덮개 클릭·Esc로 꺼짐
+  - 고침: 창 밖 판단을 relatedTarget 없음 → 좌표로 (relatedTarget이 비면 화면 안에서 옮기기만 해도 꺼졌음 — 합성 이벤트로 재현, Safari는 늘 비움)
+  - 못 본 것: 실제 OS 파일 끌기(사람 손), 달 넘김 "허허" 원래 증상 재현
 - [agy/fe-18-sheet-fixes] I14 완료: `.paper::after` 점선 제거, 달력 월 이동 시 일정(`calendar.list`)만 재조회·요청 번호 경합 방지·실패 안내 분리(`달력`/`점검 목록` + 다시 불러오기), 파일 끌어 놓기 전용·카운터·창 이탈/Esc/클릭/× 닫기·`aria-live`, 268 통과·빌드 경고 0
 - [Claude Code 2026-11-19] spec v1.19 + agy 작업 문서 I14~I16(`docs/agy-prompt-next.md`). 코드는 안 고침. main push(88ec106..377723b), 합쳐진 agy 브랜치 5개 삭제
   - 진료 예약 점선: 원인 확정 `style.css` `.paper::after`(top 50% 접힌 자국) — 375에서 재현

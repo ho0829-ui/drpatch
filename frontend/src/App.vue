@@ -188,8 +188,10 @@ async function onDropFile(e) {
   await handleUploadFile(file);
 }
 
+// 창 밖으로 나갔는지는 좌표로 본다 (Safari 등은 relatedTarget을 늘 비워서 안에서 옮겨도 꺼질 수 있음)
 function onWindowDragLeave(e) {
-  if (!e.relatedTarget) clearDrag();
+  const out = e.clientX <= 0 || e.clientY <= 0 || e.clientX >= innerWidth || e.clientY >= innerHeight;
+  if (out) clearDrag();
 }
 
 function onWindowKeyDown(e) {
