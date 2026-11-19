@@ -41,6 +41,12 @@ function formatEvent(ev) {
     const target = p.args?.name || p.args?.product || '';
     return `${ev.type}: ${p.tool || ''} ${target} ${p.ok === false ? `(${p.error_code || '실패'})` : ''}`.trim();
   }
+  if (ev.type === 'llm_decision') {
+    const what = { intent: '의도', tool_plan: '도구 순서', replan_strategy: '재계획 방법' }[p.decision] || p.decision || '';
+    const val = p.intent || (Array.isArray(p.steps) ? p.steps.join(' → ') : '') || p.strategy || '';
+    const added = p.added_by_code?.length ? ` (코드가 추가: ${p.added_by_code.join(', ')})` : '';
+    return `LLM 판단 — ${what}: ${val}${added}${p.reason ? ` · ${p.reason}` : ''}`;
+  }
   if (ev.type === 'calendar_check') {
     return `캘린더 확인: ${p.status || ''}`;
   }
@@ -117,7 +123,7 @@ onMounted(loadSessions);
       >
         <button type="button" class="log-sess-btn" @click="selectSession(s.session_id)">
           <b>{{ s.session_id.slice(0, 8) }}</b>
-          <small>{{ s.event_count ?? '' }}건 · {{ s.last_at || '' }}</small>
+          <small>{{ s.events ?? '' }}건 · {{ s.last_at || '' }}</small>
         </button>
         <button
           type="button"

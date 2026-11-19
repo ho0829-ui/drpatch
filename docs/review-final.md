@@ -63,3 +63,21 @@
    - 7일 안에 빈 날이 없어 못 옮긴 경우의 `calendar_conflicts` 경고와 `calendar_check === "확인 못 함"` 안내가 회차 종이에 표시되지 않음(I5 작업 범위).
 5. **[낮음] 검사 중 `tool_result` 이름표가 취약 패키지도 잠깐 `"안전"`으로 표시됨** (`frontend/src/scene/clinicController.js:373-375`)
    - `ev.ok`가 `true`이기만 하면 `emitFloatChip(pkgName, 'safe', ...)`를 호출해, 취약점이 있는 패키지도 검사 단계에서 초록색 `"안전"` 칩이 뜸. `tool_result` 단계에서는 중립 상태(`조회 완료`)로 띄우고 실제 등급은 `judgment` 이후에 표시하는 것이 정확함.
+
+---
+
+## Claude Code 판정 (2026-11-19)
+
+지적마다 해당 줄을 열어 확인했다. 5건 모두 **맞음**.
+
+| # | 판정 | 처리 |
+|---|---|---|
+| 1 | 맞음 — `handleUploadFile`이 `res.packages`만 씀 | 고침: 대화 기록에 "접수하지 않은 줄 n개" + `n번째 줄 내용 — 이유`(최대 8개, 나머지 개수), 말풍선에 한 줄 요약 |
+| 2 | 맞음 — `label.redraw(true)`는 `state`를 안 바꾸고, `calendar_event` 없으면 도장 갱신 안 함 | 고침: stamp.js의 `redraw(true)` 제거, 항상 `redrawLabel({stamped:true, reserved:!!conf?.calendar_event})`. 실제 확정으로 라벨 도장 확인 |
+| 3 | 맞음 — 필드는 `events`, `llm_decision`은 타입 이름만 나옴 | 고침: `s.events`, `LLM 판단 — 의도/도구 순서/재계획 방법: 값 (코드가 추가: …) · 이유` |
+| 4 | 맞음 — I5 범위 | I5 프롬프트에 덧붙임 (`calendar_conflicts`, `calendar_check` "확인 못 함") |
+| 5 | 맞음 — 조회 성공(`ok`)은 안전하다는 뜻이 아님 | 고침: `SEV.checked` "조회 완료"(중립 회청색) 추가, `tool_result` 칩은 `checked`/`unchecked` |
+
+검증 중 새로 본 것 (I3에 덧붙임): 탭이 숨겨진 상태에서 페이지를 처음 열면 3D 장면이 그려지지 않은 채 남는 경우가 있었다(새로고침하면 정상). 콘솔 오류·WebGL 컨텍스트 손실은 없었다. 재현 조건 확인 필요.
+
+"확인 필요" 항목(말투는 프롬프트로만 보장, 20개 60초 실측)은 그대로 둔다 — 실측은 제출 전 사람이 한 번 더.

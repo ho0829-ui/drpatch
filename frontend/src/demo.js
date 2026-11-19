@@ -6,6 +6,7 @@ export const SEV = {
   unknown: ['#A3AEB0', '미상'],
   safe: ['#3E9E98', '안전'],
   unchecked: ['#A3AEB0', '확인 못 함'],
+  checked: ['#5E7F86', '조회 완료'],
   held: ['#7C5CD6', '보류'],
   next: ['#16313A', '다음 진료'],
 };

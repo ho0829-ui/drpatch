@@ -371,7 +371,7 @@ export async function createClinicController(canvas, callbacks) {
           const pkgName = ev.args?.name || ev.args?.product || '';
           logEvent('tool_result', `${ev.tool || ''} ${pkgName} ${ev.ok ? 'ok' : ev.error_code || 'err'}`.trim());
           if (pkgName) {
-            emitFloatChip(pkgName, ev.ok ? 'safe' : 'unchecked', ev.ok ? '' : ' · 확인 못 함');
+            emitFloatChip(pkgName, ev.ok ? 'checked' : 'unchecked', ev.ok ? '' : ' · 확인 못 함');
           }
         } else if (ev.type === 'judgment') {
           const pkgs = ev.packages || [];
@@ -416,9 +416,8 @@ export async function createClinicController(canvas, callbacks) {
       await stampPacks(confirmedPacks, (roundNo) => {
         const conf = finalEvent.confirmed.find((c) => c.round_no === roundNo);
         const pack = confirmedPacks.find((pk) => pk.round.round_no === roundNo);
-        if (pack && conf?.calendar_event) {
-          pack.redrawLabel({ stamped: true, reserved: true });
-        }
+        // 확정되면 항상 도장. 캘린더에 들어갔을 때만 '예약됨', 아니면 'Rx 확정'
+        pack?.redrawLabel({ stamped: true, reserved: !!conf?.calendar_event });
         logEvent('tool_result', `confirm ${roundNo}회차`);
       });
       docAct.wave();
