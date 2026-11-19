@@ -605,11 +605,24 @@ export async function createClinicController(canvas, callbacks) {
     }
   };
 
+  let lastPickAt = 0;
   const onPointerMove = (e) => {
     if (downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) {
       cancelLongPress();
     }
     if (e.pointerType === 'touch') return;
+    // 마우스 버튼을 누른 채 화면을 회전·이동하는 중에는 무거운 3D 레이캐스트를 건너뛴다
+    if (e.buttons !== 0) {
+      if (hovered) {
+        hovered = null;
+        canvas.style.cursor = 'default';
+        onTip({ show: false, text: '', x: 0, y: 0 });
+      }
+      return;
+    }
+    const now = performance.now();
+    if (now - lastPickAt < 32) return;
+    lastPickAt = now;
     const o = pick(e);
     hovered = o;
     canvas.style.cursor = o ? 'pointer' : 'default';

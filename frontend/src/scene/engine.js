@@ -19,7 +19,8 @@ export function createEngine(canvas, tween, isReduced) {
   const forceHigh = params.get('hq') === '1';
   const forceLow = params.get('lq') === '1';
   const isMobile = innerWidth < 768 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-  let lowTier = forceLow || isMobile;
+  const isWindows = /\bWin/i.test(navigator.platform || navigator.userAgent);
+  let lowTier = forceLow || isMobile || (isWindows && !forceHigh);
 
   const getTargetPixelRatio = () => {
     if (lowTier) return Math.min(devicePixelRatio, forceLow ? 1.0 : 1.2);

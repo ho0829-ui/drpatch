@@ -19,17 +19,25 @@ export function esc(s) {
   }[c]));
 }
 
-/** 굴절 유리는 장면을 한 번 더 그려서 무겁다 → 일반 반투명으로 전환 */
+const KEEP_CLEARCOAT = typeof location !== 'undefined' && new URLSearchParams(location.search).get('hq') === '1';
+
+/** 굴절 유리는 장면을 한 번 더 그려서 무겁다 → 일반 반투명으로 전환.
+ *  또한 clearcoat(이중 반사)는 Windows ANGLE(D3D11)에서 환경맵을 두 번 샘플링해 픽셀 부하가 크므로 ?hq=1이 아니면 끈다. */
 export function prep(obj, cast = true) {
   obj.traverse((o) => {
     if (!o.isMesh) return;
     o.receiveShadow = true;
     const m = o.material;
-    if (m && m.transmission > 0) {
-      m.opacity = m.transmission >= 0.9 ? 0.28 : 0.72;
-      m.transmission = 0;
-      m.transparent = true;
-      m.depthWrite = false;
+    if (m) {
+      if (m.transmission > 0) {
+        m.opacity = m.transmission >= 0.9 ? 0.28 : 0.72;
+        m.transmission = 0;
+        m.transparent = true;
+        m.depthWrite = false;
+      }
+      if (!KEEP_CLEARCOAT && m.clearcoat > 0) {
+        m.clearcoat = 0;
+      }
     }
     o.castShadow = cast && !(m && m.transparent);
   });
