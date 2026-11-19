@@ -1,7 +1,7 @@
-# agy(제미나이)에게 넘기는 작업 묶음 — spec v1.19 (2026-11-19)
+# agy(제미나이)에게 넘기는 작업 묶음 — spec v1.20 (2026-11-19)
 
 > 모델: **구현은 Hydrogen**.
-> 진행: **I14 → I15 → I16** 차례로. I16(예시 10개)은 I15의 새 알약을 쓰고, I14·I16은 둘 다 `App.vue`·`style.css`를 고치므로 한 번에 하나씩.
+> 진행: **I14 → I15 → I16 → I17** 차례로 (I14·I15 끝남). I17은 I16과 같은 파일(App.vue·ConditionChips·ChatBar)을 고치므로 I16 합친 뒤. I16(예시 10개)은 I15의 새 알약을 쓰고, I14·I16은 둘 다 `App.vue`·`style.css`를 고치므로 한 번에 하나씩.
 > **다음 작업은 앞 작업이 main에 합쳐진 뒤 main에서 브랜치를 딴다.**
 > 각 작업이 끝나면 Claude Code가 diff·테스트·실제 화면을 확인하고 main에 합친다.
 > (I10~I13은 끝나서 main에 있다.)
@@ -18,7 +18,7 @@
 ```
 sudo-patch 저장소 작업이다. 시작 전에 꼭 읽어:
 - AGENTS.md (프로젝트 규칙), docs/HANDOFF.md, git log -5
-- docs/spec.md v1.19 — 특히 "v1.19 고칠 것·더할 것"(E~H), "v1.18 … D. 예시 시뮬레이션", "화면 (DR.PATCH 진료실)", "말투"
+- docs/spec.md v1.20 — 특히 "v1.20 고칠 것"(I~K), "v1.19 고칠 것·더할 것"(E~H), "v1.18 … D. 예시 시뮬레이션", "화면 (DR.PATCH 진료실)", "말투"
 - docs/design.md (4-1 알약, 4-6 UI 배치, 5 말투, 7 꼭 지킬 것, 8 Blender)
 
 지켜야 할 것:
@@ -122,4 +122,34 @@ docs/spec.md "v1.19 … F"와 "H"를 구현해줘.
    - 9번: 일정 넣기 → 계획에서 1회차가 옮겨지고 "↻ 원래 m/d" → 확인 뒤 [예시] 일정 삭제
    - 다음 환자 한 줄 → 다음 카드 초점
    - 모바일에서 도크 버튼이 꺾이지 않는지
+```
+
+### I17 · 보내면 대화 보이기·긴 답은 기록으로·조건 칩 "입력창에 있음"·모바일 칩 정렬
+브랜치 `agy/fe-21-chat-flow` (I16 합친 뒤) · 파일: `frontend/src/components/ChatBar.vue`, `frontend/src/components/ConditionChips.vue`, `frontend/src/components/SpeechBubble.vue`, `frontend/src/App.vue`, `frontend/src/scene/clinicController.js`(블리스터 화면 위치 전달만), `frontend/src/style.css`, 새 `frontend/src/conditionPreview.js`, `tests/`(정규식 예문 표)
+```
+docs/spec.md "v1.20 … I·J·K"를 구현해줘. (L은 Claude Code가 한다 — design/blender·pills.glb는 건드리지 않는다.)
+
+1. I · 보내면 대화 기록 열기
+   - 보내기·진료 시작·다시 시도 모두: 대화 기록을 열고, 보낸 말을 바로 맨 아래에, "박사님이 차트를 보는 중…"(step_start 단계 이름 따라: 접수·검사·판정·처방) 한 줄. final이 오면 그 줄을 답으로 바꾼다.
+   - 대화 기록에 답을 넣는 곳은 지금처럼 App.vue onChatTurn 한 곳뿐 (두 번 들어가던 버그가 있었다 — 주석 참고). "보는 중" 줄은 대화 기록 배열이 아니라 ChatBar의 표시 상태로.
+   - 사용자가 닫아도 다음 보낼 때 다시 연다.
+2. I · 긴 답은 기록으로, 말풍선은 짧게
+   - 대화 기록이 열려 있고 답이 길면(줄 3개 넘음 또는 200자 넘음) 말풍선은 첫 문장(조건 한 줄 `차트:`로 시작하면 그 다음 문장) + "자세한 처방은 대화 기록에 적었습니다."만.
+   - 말풍선 높이 상한: 모바일(<768) 22vh, 그 밖 30vh.
+   - 블리스터 판이 화면에 있으면 말풍선 아래 끝이 판 윗선보다 위에 있게 (판 화면 위치를 clinicController가 0.5px 문턱으로만 알려 줌, 지금 onBubblePos 방식 그대로). 자리가 없으면 말풍선을 화면 위쪽에 붙이고 더 짧게(스크롤).
+   - 재현 방법(보고에 전후 캡처): 375에서 패키지 5개 업로드 → "Ubuntu 22.04, Python 3.10, 한 번에 2개, 첫 점검은 다음 화요일부터 매주" → 처방 완료. 지금은 말풍선이 블리스터 3판을 덮는다.
+3. J · 조건 칩 세 상태
+   - 새 frontend/src/conditionPreview.js: previewConditions(text) → {os, python_version, capacity, first_date, interval} 중 찾은 것만 (표시용 문자열). 정규식은 tests/test_examples.py 조건 정규식과 같은 범위 + "우분투/맥/윈도우" 한글 이름.
+   - ChatBar의 입력 글을 App으로 올려(v-model 또는 emit) ConditionChips에 draft로 넘긴다. 받음(서버) > 입력창에 있음(draft) > 필요 순.
+   - "입력창에 있음" 모양: 청록 점선 테두리 + 값 + 작은 "보내면 확인". 누르면 입력창 초점.
+   - 서버가 준 값이 생기면 그 칩은 "받음". 보냈는데 서버가 못 알아들은 칸은 draft가 비었으니 다시 "필요".
+   - 칩 줄 앞 "받은 조건" 작은 글씨(768 미만 숨김, 줄 aria-label은 "받은 조건").
+   - 테스트: 화면 JS 테스트 도구가 없으므로 새 라이브러리 없이 — tests/test_condition_preview_table.py에 예문 표(입력 → 기대 칸)를 두고 파이썬 정규식이 같은 결과인지 확인하고, 같은 표를 conditionPreview.js 주석에 적는다. (JS 정규식과 파이썬 정규식이 같은 패턴 문자열이 되게.)
+4. K · 모바일 칩 줄 가운데
+   - style.css 768 미만 `.cond-chips { justify-content: flex-start }` → 다 들어가면 가운데, 넘치면 왼쪽부터 스크롤 (`justify-content: safe center`가 안 먹는 브라우저 대비 첫/끝 칩 margin-inline:auto).
+   - 확인: 칩이 짧을 때(값 다 받은 뒤)와 길 때(전부 필요) 둘 다 375 캡처. 버튼 줄과 가운데 축이 같은지.
+5. 확인 (1280·375 캡처, 실제 GMS 한 번)
+   - 보내기 → 기록 열림·보낸 말·보는 중 → 답, 말풍선 짧음, 블리스터 안 가림
+   - 입력창에 "Ubuntu 22.04, Python 3.10" 입력만 → 두 칩 "입력창에 있음" → 보내기 → "받음"
+   - Esc로 기록 닫기, 다시 보내면 열림
 ```
