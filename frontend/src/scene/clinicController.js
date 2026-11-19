@@ -8,7 +8,7 @@ import { createTweener, ease } from './utils.js';
 import { setupRoom } from './props/room.js';
 import { setupEggs } from './props/eggs.js';
 import { setupBlisters, worldOfSlot } from './props/blister.js';
-import { setupJarAndTray } from './props/jarAndTray.js';
+import { MAX_JAR_PILLS, setupJarAndTray } from './props/jarAndTray.js';
 import { setupIv } from './props/iv.js';
 import { setupChart } from './props/chart.js';
 import { setupStamp } from './props/stamp.js';
@@ -302,8 +302,16 @@ export async function createClinicController(canvas, callbacks) {
       await sleep(80);
     }
 
-    for (const item of plan.unassigned || []) {
-      const p = jarApi.ensurePill({ name: item.name, version: item.current_version });
+    let jarPlaced = 0;
+    const unassigned = plan.unassigned || [];
+    const unchecked = plan.unchecked || [];
+    const held = plan.held || [];
+
+    for (const item of unassigned) {
+      const existing = jarApi.pillByName(item.name);
+      if (!existing && jarPlaced >= MAX_JAR_PILLS) continue;
+      const p = existing || jarApi.ensurePill({ name: item.name, version: item.current_version });
+      jarPlaced++;
       Object.assign(p.it, {
         cur: item.current_version || '미상',
         tgt: item.target_version || '미상',
@@ -318,8 +326,11 @@ export async function createClinicController(canvas, callbacks) {
       p.tagText = `${p.it.name} · 다음 진료`;
     }
 
-    for (const u of plan.unchecked || []) {
-      const p = jarApi.ensurePill({ name: u.name });
+    for (const u of unchecked) {
+      const existing = jarApi.pillByName(u.name);
+      if (!existing && jarPlaced >= MAX_JAR_PILLS) continue;
+      const p = existing || jarApi.ensurePill({ name: u.name });
+      jarPlaced++;
       Object.assign(p.it, {
         sev: 'unchecked',
         round: null,
@@ -331,8 +342,11 @@ export async function createClinicController(canvas, callbacks) {
       p.tagText = `${p.it.name} · 확인 못 함`;
     }
 
-    for (const h of plan.held || []) {
-      const p = jarApi.ensurePill({ name: h.name });
+    for (const h of held) {
+      const existing = jarApi.pillByName(h.name);
+      if (!existing && jarPlaced >= MAX_JAR_PILLS) continue;
+      const p = existing || jarApi.ensurePill({ name: h.name });
+      jarPlaced++;
       Object.assign(p.it, {
         sev: 'held',
         round: null,
@@ -344,6 +358,7 @@ export async function createClinicController(canvas, callbacks) {
       p.tagText = `${p.it.name} · 보류`;
     }
 
+    jarApi.setJarTotal(unassigned.length + unchecked.length + held.length);
     await Promise.all(flights);
     await jarApi.lidTo(false);
   }
@@ -742,6 +757,17 @@ export async function createClinicController(canvas, callbacks) {
         x,
         y,
         visible: showTags && front && popped !== p,
+      });
+    }
+    const overflow = jarApi.getOverflowCount();
+    if (overflow > 0) {
+      const [x, y, front] = toScreen(jarApi.jarTop);
+      tagList.push({
+        name: `+${overflow}`,
+        color: COLOR.deep,
+        x,
+        y,
+        visible: showTags && front,
       });
     }
     // 이름표가 서로 겹치면 위로 한 칸씩 올려 놓는다 (최대 3칸). 너비는 글자 수로 어림.

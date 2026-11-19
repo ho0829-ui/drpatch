@@ -3,6 +3,7 @@ import { LAYOUT, POPULAR } from '../../demo.js';
 import { disposeOwned, ease, mergeStatic, prep } from '../utils.js';
 
 const JAR_SCALE = 0.72;
+export const MAX_JAR_PILLS = 24; // 약병 최대 24알 (6층 × 4알)
 const TRAY_SPOTS = [
   [-0.9, -0.25],
   [0, -0.3],
@@ -30,6 +31,7 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   let pills = [];
   let trayUsed = 0;
+  let jarTotal = 0;
 
   function clearPills() {
     for (const p of pills) {
@@ -39,6 +41,17 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
     }
     pills = [];
     trayUsed = 0;
+    jarTotal = 0;
+  }
+
+  function placeInJar(p, i) {
+    const capped = Math.min(i, MAX_JAR_PILLS - 1);
+    const layer = Math.floor(capped / 4);
+    const k = capped % 4;
+    const a = (k * Math.PI) / 2 + layer * 0.78;
+    p.root.position.set(bx + Math.cos(a) * 0.55, 0.32 + layer * 0.4, bz + Math.sin(a) * 0.55);
+    p.root.rotation.set(0, -a + Math.PI / 2, (rnd() - 0.5) * 0.3);
+    p.root.scale.setScalar(JAR_SCALE);
   }
 
   function createPill(pkg, i) {
@@ -56,13 +69,6 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
     model.position.set(0, 0, 0);
     inner.add(model);
     mergeStatic(model);
-
-    const layer = Math.floor(i / 4);
-    const k = i % 4;
-    const a = (k * Math.PI) / 2 + layer * 0.78;
-    root.position.set(bx + Math.cos(a) * 0.55, 0.32 + layer * 0.4, bz + Math.sin(a) * 0.55);
-    root.rotation.set(0, -a + Math.PI / 2, (rnd() - 0.5) * 0.3);
-    root.scale.setScalar(JAR_SCALE);
 
     const pill = {
       it: {
@@ -90,6 +96,7 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
       tagText: null,
       jarIndex: i,
     };
+    placeInJar(pill, i);
     addPick(root, 'pill', { pill });
     return pill;
   }
@@ -97,7 +104,8 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
   function setPackages(packages = []) {
     clearPills();
     seed = 7;
-    pills = packages.map((pkg, i) => createPill(pkg, i));
+    jarTotal = packages.length;
+    pills = packages.slice(0, MAX_JAR_PILLS).map((pkg, i) => createPill(pkg, i));
     return pills;
   }
 
@@ -117,13 +125,15 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
 
   function resetToJar() {
     trayUsed = 0;
+    const extra = pills.splice(MAX_JAR_PILLS);
+    for (const p of extra) {
+      removePick?.(p.root);
+      world.remove(p.root);
+      disposeOwned(p.root);
+    }
     pills.forEach((p, i) => {
-      const layer = Math.floor(i / 4);
-      const k = i % 4;
-      const a = (k * Math.PI) / 2 + layer * 0.78;
-      p.root.position.set(bx + Math.cos(a) * 0.55, 0.32 + layer * 0.4, bz + Math.sin(a) * 0.55);
-      p.root.rotation.set(0, -a + Math.PI / 2, 0);
-      p.root.scale.setScalar(JAR_SCALE);
+      placeInJar(p, i);
+      p.root.rotation.z = 0;
       p.lift.rotation.set(0, 0, 0);
       p.inner.position.set(0, 0, 0);
       p.inner.rotation.set(0, 0, 0);
@@ -134,6 +144,15 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
       p.hasTag = false;
       p.tagText = null;
     });
+  }
+
+  function setJarTotal(n) {
+    jarTotal = Math.max(0, n);
+  }
+
+  function getOverflowCount() {
+    const visibleInJar = pills.filter((p) => p.inJar).length;
+    return Math.max(0, jarTotal - visibleInJar);
   }
 
   const jarTop = new THREE.Vector3(bx, 3.0, bz);
@@ -161,6 +180,8 @@ export function setupJarAndTray(world, M, addPick, removePick, tween) {
     pillByName,
     ensurePill,
     resetToJar,
+    setJarTotal,
+    getOverflowCount,
     jarTop,
     lidTo,
     nextTrayPos,

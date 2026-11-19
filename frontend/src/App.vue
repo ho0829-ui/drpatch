@@ -27,6 +27,7 @@ const fallbackMsg = ref(undefined);
 const state = ref('idle');
 const status = ref({ text: '대기 중', stage: -1 });
 const bubbleText = ref('');
+const bubbleSeq = ref(0);
 const bubblePos = ref({ right: 0, top: 0 });
 const logs = ref([]);
 const activeSheet = ref(null);
@@ -39,6 +40,15 @@ const retryMessage = ref(null);
 
 const isBusy = computed(() => state.value === 'running' || state.value === 'confirming');
 const tickerLines = computed(() => logs.value.slice(-4).reverse());
+
+function sayBubble(text) {
+  bubbleText.value = text;
+  bubbleSeq.value++;
+}
+
+function focusChatInput() {
+  document.querySelector('.chat-textarea')?.focus({ preventScroll: true });
+}
 
 function onFallback(msg) {
   fallback.value = true;
@@ -69,10 +79,10 @@ async function handleUploadFile(file) {
     }
     chatMessages.value.push({ role: 'assistant', text: lines.join('\n') });
     if (excluded.length && currentPackages.value.length) {
-      bubbleText.value = `${currentPackages.value.length}개 패키지 접수했어요. **${excluded.length}줄은 접수하지 않았어요** — 대화 기록에 이유를 적어 뒀습니다.`;
+      sayBubble(`${currentPackages.value.length}개 패키지 접수했어요. **${excluded.length}줄은 접수하지 않았어요** — 대화 기록에 이유를 적어 뒀습니다.`);
     }
   } catch (err) {
-    bubbleText.value = err.message || '파일을 올리지 못했어요.';
+    sayBubble(err.message || '파일을 올리지 못했어요.');
   }
 }
 
@@ -117,7 +127,8 @@ function reloadPage() {
     type="file"
     accept=".txt,text/plain"
     class="sr-only"
-    aria-label="requirements.txt 파일 선택"
+    tabindex="-1"
+    aria-hidden="true"
     @change="onFileSelected"
   >
 
@@ -135,7 +146,7 @@ function reloadPage() {
       @fallback="onFallback"
       @state-change="state = $event"
       @status="status = $event"
-      @say="bubbleText = $event"
+      @say="sayBubble($event)"
       @log="logs = $event.logs"
       @open-sheet="activeSheet = $event"
       @close-sheet="activeSheet = null"
@@ -152,7 +163,7 @@ function reloadPage() {
     </div>
 
     <header class="brand">
-      <img src="/brand/logo-mark.svg" width="46" height="46" alt="">
+      <img src="/brand/logo-mark.svg" width="46" height="46" alt="" draggable="false">
       <div><b>DR<span class="dot">.</span>PATCH</b><small>진료 책상</small></div>
     </header>
 
@@ -170,7 +181,7 @@ function reloadPage() {
       @reset="reloadPage"
     />
 
-    <SpeechBubble :text="bubbleText" :reduced="reduced" :pos="bubblePos" />
+    <SpeechBubble :text="bubbleText" :seq="bubbleSeq" :reduced="reduced" :pos="bubblePos" @closed="focusChatInput" />
 
     <ChatBar
       :messages="chatMessages"
