@@ -1,6 +1,7 @@
 # 마지막 갱신: 2026-11-19 / 작성: Claude Code
 
 ## 지금 하던 것
+- [agy/fs-15-conditions] I11 완료: 입력창 위 조건 칩 줄(`ConditionChips.vue`, 빠진 칩 클릭 시 예시 조각 입력, 모바일 가로 스크롤) + 계획 답 맨 앞 코드 생성 조건 한 줄(`conditions_header`), 262 통과·빌드 경고 0
 - [agy/fe-14-restart] I10 완료: `final.missing` 시 상태 칩 `"정보 필요"` 전환, `"처음부터"` 확인+`"새 차트입니다"` 인사, 업로드 중 `"접수 중…"` 차단 및 `pendingUpload` 대기(세션 엇갈림 방지)
 - [agy/fe-13-brand-tip] 로고 왼쪽 위 검은 점 원인 확정·수정(`.tip` 숨김 시 `x:0, y:0` 이동으로 `(14px,14px)`에 빈 툴팁이 깜빡임 → 좌표 유지 + `:empty` 숨김) 및 `.brand` 글자·여백 균형 조정
 - [Claude Code 2026-11-19] I7·I8·I9 검증 → main 합침(I7·I8 ff, I9 merge — App.vue 업로드 안내 충돌은 I8 말투 + I9 sayBubble로 풂) + 검증에서 나온 것 고침, 261 통과·빌드 경고 0

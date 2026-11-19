@@ -56,7 +56,8 @@ def test_second_turn_changes_only_what_changed(db):
     c = load_session("s1", db)["conditions"]
     assert (c.capacity, c.python_version, c.os_version, c.interval_days) == (4, "3.8", "20.04", 14)
     assert c.first_date.isoformat() == "2026-11-21" and len(c.packages) == 2
-    assert brain.seen_last_turn == {"message": "첫 요청", "answer": "회차별 계획을 만들었어요."}  # 직전 대화 전달
+    assert brain.seen_last_turn["message"] == "첫 요청"
+    assert brain.seen_last_turn["answer"].endswith("회차별 계획을 만들었어요.")  # 직전 대화 전달
     assert out["plan"] is not None
 
 

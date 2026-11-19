@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import * as api from './api.js';
 import ChatBar from './components/ChatBar.vue';
 import ClinicScene from './components/ClinicScene.vue';
+import ConditionChips from './components/ConditionChips.vue';
 import Controls from './components/Controls.vue';
 import FallbackList from './components/FallbackList.vue';
 import PaperSheet from './components/PaperSheet.vue';
@@ -11,6 +12,7 @@ import StatusChip from './components/StatusChip.vue';
 import TopTools from './components/TopTools.vue';
 
 const sceneRef = ref(null);
+const chatBarRef = ref(null);
 const fileInputRef = ref(null);
 const reduced = ref(matchMedia('(prefers-reduced-motion: reduce)').matches);
 watch(
@@ -34,6 +36,7 @@ const activeSheet = ref(null);
 const eggCount = ref({ found: 0, total: 16 });
 const currentPlan = ref(null);
 const currentPackages = ref([]);
+const currentConditions = ref(null);
 const chatMessages = ref([]);
 const dragging = ref(false);
 const uploading = ref(false);
@@ -115,6 +118,9 @@ async function onRetryChat() {
 }
 
 function onChatTurn({ msg, finalEvent }) {
+  if (finalEvent?.conditions) {
+    currentConditions.value = finalEvent.conditions;
+  }
   // 진료 시작 버튼처럼 입력창을 거치지 않은 말은 여기서 넣는다 (다시 시도는 이미 들어 있음)
   const lastUser = [...chatMessages.value].reverse().find((m) => m.role === 'user');
   if (lastUser?.text !== msg) chatMessages.value.push({ role: 'user', text: msg });
@@ -194,6 +200,7 @@ function reloadPage() {
     <SpeechBubble :text="bubbleText" :seq="bubbleSeq" :reduced="reduced" :pos="bubblePos" @closed="focusChatInput" />
 
     <ChatBar
+      ref="chatBarRef"
       :messages="chatMessages"
       :busy="isBusy"
       @send="onSendChat"
@@ -208,6 +215,14 @@ function reloadPage() {
         @calendar="activeSheet = { kind: 'calendar', color: '#3E9E98' }"
         @logs="activeSheet = { kind: 'log', color: '#3E9E98' }"
       />
+      <template #chips>
+        <ConditionChips
+          :packages-count="currentPackages.length"
+          :conditions="currentConditions"
+          @upload="triggerUpload"
+          @fill="chatBarRef?.appendSnippet($event)"
+        />
+      </template>
     </ChatBar>
   </div>
 

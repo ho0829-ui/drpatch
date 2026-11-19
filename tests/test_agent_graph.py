@@ -138,7 +138,8 @@ def test_spec_example_through_graph(transport):
     assert plan["python_upgrade"]["python"] == "3.11" and plan["python_upgrade"]["replans"] == 2
     assert plan["window"] == {"start": "22:00", "end": "24:00"}
     assert plan["excluded"][0]["reason"] == "PyPI 출처 아님"
-    assert out["answer"] == "회차별 계획을 만들었어요."
+    assert out["answer"].endswith("회차별 계획을 만들었어요.")
+    assert out["answer"].startswith("차트: Ubuntu 20.04 · Python 3.8 · 한 번에 2개 · 11/21(토)부터 격주 (22–24시)")
 
     # 같은 호출은 한 번만 (F3009 재사용): 저장본 호출 목록에 중복 없음
     assert len(t.calls) == len(set(t.calls)) == out["tool_calls"]
@@ -457,6 +458,25 @@ def test_v117_maintained_macos_not_added_and_null_eol_sorts_safely():
         Item("package", "b", "1.0", "2.0", "HIGH", date(2026, 12, 1), "이유"),
     ], TODAY)
     assert [i.name for i in ordered] == ["b", "a"]
+
+
+def test_v118_conditions_header_shape_and_respond_prefix(transport):
+    """spec v1.18 B: 계획 답 맨 앞에 코드가 만든 조건 한 줄이 붙는다."""
+    from app.agent.render import conditions_header
+
+    c = Conditions(
+        os_name="ubuntu", os_version="22.04", python_version="3.11",
+        capacity=5, first_date=date(2026, 11, 25), interval_days=7,
+        window_start="22:00", window_end="24:00",
+    )
+    assert conditions_header(c) == "차트: Ubuntu 22.04 · Python 3.11 · 한 번에 5개 · 11/25(수)부터 매주 (22–24시)"
+
+    c_win = Conditions(os_name="windows", os_version="11-24h2-w", python_version="3.12")
+    assert conditions_header(c_win) == "차트: Windows 11 24H2 (Home/Pro 기준) · Python 3.12"
+
+    transport()
+    out = run_agent("계획 짜줘", EXAMPLE_FILE, FakeBrain(EXAMPLE_MESSAGE), today=TODAY)
+    assert out["answer"].startswith("차트: Ubuntu 20.04 · Python 3.8 · 한 번에 2개 · 11/21(토)부터 격주 (22–24시)\n\n")
 
 
 def test_v117_os_item_uses_display_name_and_os_specific_hint():

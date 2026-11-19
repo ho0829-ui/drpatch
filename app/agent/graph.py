@@ -21,7 +21,7 @@ from app.agent.planner.python_upgrade import UpgradePlan, candidate_versions, pl
 from app.agent.planner.calendar_fit import SEARCH_DAYS, conflicts_on, find_free_date
 from app.agent.planner.rounds import RoundsResult, move_round, split_rounds
 from app.agent.planner.versions import is_newer, pick_latest
-from app.agent.render import fallback_text, plan_dict
+from app.agent.render import conditions_header, fallback_text, plan_dict
 from app.agent.runner import Emit, ToolRunner, no_emit
 from app.agent.state import (
     AgentState,
@@ -308,6 +308,9 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
             answer = brain.write_response(state["plan"])
         except Exception:
             answer = fallback_text(state["plan"])
+        header = conditions_header(state["conditions"])
+        if header:
+            answer = f"{header}\n\n{answer}"
         if state["plan"].get("schedule_missing"):  # 우선순위를 보여 준 뒤 일정만 되묻는다 (spec v1.14)
             answer += "\n\n" + schedule_ask_message(state["plan"]["schedule_missing"])
         return {"answer": answer}
