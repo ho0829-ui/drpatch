@@ -36,7 +36,15 @@ function updateViewport() {
   kbOffset.value = gap > 40 ? Math.round(gap) : 0;
 }
 
+// 대화 기록이 열려 있으면 Esc로 닫고 입력창으로 돌아간다
+function onEscapeHistory(e) {
+  if (e.key !== 'Escape' || !historyOpen.value) return;
+  historyOpen.value = false;
+  nextTick(() => textareaRef.value?.focus({ preventScroll: true }));
+}
+
 onMounted(() => {
+  addEventListener('keydown', onEscapeHistory);
   const vv = window.visualViewport;
   if (vv) {
     vv.addEventListener('resize', updateViewport);
@@ -45,6 +53,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  removeEventListener('keydown', onEscapeHistory);
   const vv = window.visualViewport;
   if (vv) {
     vv.removeEventListener('resize', updateViewport);
@@ -80,6 +89,8 @@ watch(
 <template>
   <div class="chat-dock" :style="kbOffset ? { bottom: `${kbOffset + 10}px` } : undefined">
     <slot />
+    <slot name="chips" />
+
     <div v-if="historyOpen" ref="historyRef" class="chat-history" aria-label="대화 기록">
       <div v-if="!messages.length" class="chat-empty">아직 대화 기록이 없어요.</div>
       <div
@@ -92,8 +103,6 @@ watch(
         <p><RichText :text="m.text" /></p>
       </div>
     </div>
-
-    <slot name="chips" />
 
     <div class="chat-input-row">
       <button
