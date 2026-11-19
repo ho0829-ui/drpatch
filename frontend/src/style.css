@@ -143,6 +143,8 @@ body { font-family: var(--sans); color: var(--color-ink); background: var(--colo
 
 .loading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 8; font: 600 16px var(--sans); color: var(--color-deep); text-align: center; }
 .loading img { animation: bob 1.4s ease-in-out infinite; }
+.load-bar { width: 180px; height: 8px; margin: 10px auto 0; border-radius: 999px; background: rgba(255,255,255,.7); overflow: hidden; box-shadow: inset 0 1px 2px rgba(22,49,58,.15); }
+.load-bar i { display: block; height: 100%; background: var(--color-teal); border-radius: 999px; transition: width .2s ease-out; }
 @keyframes bob { 50% { transform: translateY(-8px) rotate(-4deg); } }
 @media (prefers-reduced-motion: reduce) { .loading img { animation: none; } }
 

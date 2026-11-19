@@ -135,6 +135,25 @@ export function createEngine(canvas, tween, isReduced) {
   }
 
   function dispose() {
+    const geos = new Set();
+    const mats = new Set();
+    const texs = new Set();
+    if (scene.environment) texs.add(scene.environment);
+    scene.traverse((o) => {
+      if (o.geometry) geos.add(o.geometry);
+      if (o.material) {
+        const list = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of list) {
+          mats.add(m);
+          for (const v of Object.values(m)) {
+            if (v && v.isTexture) texs.add(v);
+          }
+        }
+      }
+    });
+    geos.forEach((g) => g.dispose());
+    texs.forEach((t) => t.dispose());
+    mats.forEach((m) => m.dispose());
     controls.dispose();
     composer?.dispose();
     pmrem.dispose();

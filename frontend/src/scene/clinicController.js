@@ -21,6 +21,7 @@ const STEP_STAGE = { analyze: [0, '접수'], call_tools: [1, '검사 중'], judg
 export async function createClinicController(canvas, callbacks) {
   const {
     isReduced,
+    onProgress,
     onLoaded,
     onStateChange,
     onStatus,
@@ -38,7 +39,12 @@ export async function createClinicController(canvas, callbacks) {
     onChatTurn,
   } = callbacks;
 
-  const loader = new GLTFLoader();
+  const manager = new THREE.LoadingManager();
+  manager.onProgress = (_url, itemsLoaded, itemsTotal) => {
+    const pct = itemsTotal > 0 ? Math.min(100, Math.round((itemsLoaded / itemsTotal) * 100)) : 0;
+    onProgress?.(pct);
+  };
+  const loader = new GLTFLoader(manager);
   const fontsReady = Promise.race([
     Promise.all([
       document.fonts.load('700 40px "IBM Plex Sans KR"'),
@@ -590,6 +596,13 @@ export async function createClinicController(canvas, callbacks) {
     }
   };
 
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      resize();
+      updateControlsAndRender(performance.now());
+    }
+  };
+
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerleave', onPointerLeave);
   canvas.addEventListener('dblclick', resetView);
@@ -597,6 +610,7 @@ export async function createClinicController(canvas, callbacks) {
   canvas.addEventListener('click', onClick);
   addEventListener('keydown', onKeyDown);
   addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   // ── 매 프레임 ─────────────────────────────────────────
   const tmpV = new THREE.Vector3();
@@ -704,6 +718,7 @@ export async function createClinicController(canvas, callbacks) {
       canvas.removeEventListener('click', onClick);
       removeEventListener('keydown', onKeyDown);
       removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       engine.dispose();
     },
   };

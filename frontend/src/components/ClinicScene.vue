@@ -24,11 +24,13 @@ const emit = defineEmits([
 
 const canvasRef = ref(null);
 const loading = ref(true);
+const loadPct = ref(0);
 const tip = ref({ show: false, text: '', x: 0, y: 0 });
 const floatChips = ref([]);
 const pillTags = ref([]);
 
 let controller = null;
+let disposed = false;
 
 onMounted(async () => {
   if (!hasWebGL()) {
@@ -38,9 +40,13 @@ onMounted(async () => {
   }
 
   try {
-    controller = await createClinicController(canvasRef.value, {
+    const ctrl = await createClinicController(canvasRef.value, {
       isReduced: () => props.reduced,
+      onProgress: (pct) => {
+        loadPct.value = pct;
+      },
       onLoaded: () => {
+        loadPct.value = 100;
         loading.value = false;
       },
       onStateChange: (s) => emit('state-change', s),
@@ -67,6 +73,11 @@ onMounted(async () => {
       onPlanUpdate: (plan, packages) => emit('plan-update', { plan, packages }),
       onChatTurn: (msg, finalEvent) => emit('chat-turn', { msg, finalEvent }),
     });
+    if (disposed) {
+      ctrl.destroy();
+      return;
+    }
+    controller = ctrl;
   } catch (err) {
     console.error(err);
     loading.value = false;
@@ -75,6 +86,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  disposed = true;
   controller?.destroy();
 });
 
@@ -90,10 +102,11 @@ defineExpose({
 <template>
   <canvas ref="canvasRef" id="scene" aria-hidden="true"></canvas>
 
-  <div v-if="loading" class="loading">
+  <div v-if="loading" class="loading" role="status" aria-live="polite">
     <div>
       <img src="/brand/mascot.svg" width="96" height="96" alt="">
-      <p>진료실 준비 중…</p>
+      <p>진료실 준비 중… {{ loadPct }}%</p>
+      <div class="load-bar" aria-hidden="true"><i :style="{ width: `${loadPct}%` }"></i></div>
     </div>
   </div>
 
