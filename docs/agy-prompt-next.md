@@ -141,7 +141,7 @@ docs/spec.md "v1.20 … I·J·K"를 구현해줘. (L은 Claude Code가 한다 �
 3. J · 조건 칩 세 상태
    - 새 frontend/src/conditionPreview.js: previewConditions(text) → {os, python_version, capacity, first_date, interval} 중 찾은 것만 (표시용 문자열). 정규식은 tests/test_examples.py 조건 정규식과 같은 범위 + "우분투/맥/윈도우" 한글 이름.
    - ChatBar의 입력 글을 App으로 올려(v-model 또는 emit) ConditionChips에 draft로 넘긴다. 받음(서버) > 입력창에 있음(draft) > 필요 순.
-   - "입력창에 있음" 모양: 청록 점선 테두리 + 값 + 작은 "보내면 확인". 누르면 입력창 초점.
+   - "입력창에 있음" 모양: 청록 점선 테두리 + `라벨 ○` 만 (예: `OS ○`, `한 번에 N개 ○`). 긴 문구를 칩에 쓰지 않는다 — 찾은 값과 "보내면 확인"은 title·aria-label로 ("OS: 입력창에 Ubuntu 22.04 — 보내면 확인"). ○는 글자색 청록, 받음 칩과 폭이 크게 달라지지 않게. 누르면 입력창 초점.
    - 서버가 준 값이 생기면 그 칩은 "받음". 보냈는데 서버가 못 알아들은 칸은 draft가 비었으니 다시 "필요".
    - 칩 줄 앞 "받은 조건" 작은 글씨(768 미만 숨김, 줄 aria-label은 "받은 조건").
    - 테스트: 화면 JS 테스트 도구가 없으므로 새 라이브러리 없이 — tests/test_condition_preview_table.py에 예문 표(입력 → 기대 칸)를 두고 파이썬 정규식이 같은 결과인지 확인하고, 같은 표를 conditionPreview.js 주석에 적는다. (JS 정규식과 파이썬 정규식이 같은 패턴 문자열이 되게.)
@@ -150,6 +150,6 @@ docs/spec.md "v1.20 … I·J·K"를 구현해줘. (L은 Claude Code가 한다 �
    - 확인: 칩이 짧을 때(값 다 받은 뒤)와 길 때(전부 필요) 둘 다 375 캡처. 버튼 줄과 가운데 축이 같은지.
 5. 확인 (1280·375 캡처, 실제 GMS 한 번)
    - 보내기 → 기록 열림·보낸 말·보는 중 → 답, 말풍선 짧음, 블리스터 안 가림
-   - 입력창에 "Ubuntu 22.04, Python 3.10" 입력만 → 두 칩 "입력창에 있음" → 보내기 → "받음"
+   - 입력창에 "Ubuntu 22.04, Python 3.10" 입력만 → 두 칩 `OS ○`·`Python ○` → 보내기 → 값 칩("Ubuntu 22.04"·"Python 3.10")
    - Esc로 기록 닫기, 다시 보내면 열림
 ```
