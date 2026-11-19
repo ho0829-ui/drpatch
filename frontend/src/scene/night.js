@@ -175,7 +175,10 @@ export function setupNight({ world, scene, renderer, lights, room, docBody, M, t
 
   // 야간 근무표 (뒷벽, 진료실 좌표에 바로 놓인 모델)
   let roster = null;
-  const rosterSrc = M.night?.getObjectByName('Roster');
+  // 근무표는 일단 끈다: 고른 빈 벽(창과 진료등 사이)이 침대 칸막이 커튼에 가려 모양이 이상해 보였음 (2026-11-19).
+  // 보이는 자리를 정하면 SHOW_ROSTER를 켜고 night.py의 RX/RY/RZ를 옮긴다.
+  const SHOW_ROSTER = false;
+  const rosterSrc = SHOW_ROSTER ? M.night?.getObjectByName('Roster') : null;
   if (rosterSrc) {
     roster = prep(rosterSrc.clone(true));
     const paper = roster.getObjectByName('RosterPaper');

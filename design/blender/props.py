@@ -293,8 +293,9 @@ def tray():
     dish.scale = (1.75, 1.0, 1.0)
     C.solidify(dish, 0.03)
     objs = [dish]
-    objs.append(C.rbox("TrayTag", (0, -1.08, 0.2), (0.9, 0.04, 0.22), m["paper"], 0.02))
-    objs.append(C.text("TrayText", "OK", (0, -1.11, 0.2), 0.14, m["deep"], rot=(PI / 2, 0, 0)))
+    # 이름표는 테두리(y -1.04~-1.12) 바깥에 붙인다 — 예전엔 테두리 안에 반쯤 묻혀 보였음 (2026-11-19)
+    objs.append(C.rbox("TrayTag", (0, -1.17, 0.17), (0.9, 0.04, 0.22), m["paper"], 0.02))
+    objs.append(C.text("TrayText", "OK", (0, -1.20, 0.17), 0.14, m["deep"], rot=(PI / 2, 0, 0)))
     return finish("Tray", objs)
 
 

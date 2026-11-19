@@ -28,7 +28,8 @@ export function createEngine(canvas, tween, isReduced) {
     return Math.min(devicePixelRatio, 1.5);
   };
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !forceLow, powerPreference: 'high-performance' });
+  // 낮은 품질(Windows·모바일 기본, ?lq=1)은 MSAA를 끈다 — 고해상도 Windows 화면에서 픽셀 부하가 크다
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowTier, powerPreference: 'high-performance' });
   renderer.setPixelRatio(getTargetPixelRatio());
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = lowTier ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
@@ -147,7 +148,16 @@ export function createEngine(canvas, tween, isReduced) {
     return [(tmpV.x + 1) / 2 * innerWidth, (1 - tmpV.y) / 2 * innerHeight, tmpV.z < 1];
   }
 
-  const perf = { n: 0, sum: 0, last: performance.now(), downgraded: false };
+  const perf = { n: 0, sum: 0, last: performance.now(), downgraded: false, frame: 0 };
+  // ?debug=1: 왼쪽 아래에 프레임 시간·draw call·삼각형 수 (Windows에서 원인 찾기용)
+  const debugEl = params.get('debug') === '1' ? document.createElement('div') : null;
+  if (debugEl) {
+    Object.assign(debugEl.style, { position: 'fixed', left: '8px', bottom: '8px', zIndex: 99, padding: '4px 8px',
+      font: '11px monospace', background: 'rgba(0,0,0,.7)', color: '#0f0', borderRadius: '6px', pointerEvents: 'none' });
+    document.body.appendChild(debugEl);
+  }
+  let debugAcc = 0;
+  let debugN = 0;
   function updateControlsAndRender(now) {
     if (window.__freeze) {
       camera.position.copy(window.__freeze.pos);
@@ -175,8 +185,28 @@ export function createEngine(canvas, tween, isReduced) {
         }
       }
     }
+    // 낮은 품질: 그림자는 3프레임마다 다시 그린다 (그림자 패스가 장면을 한 번 더 그림)
+    perf.frame++;
+    if (lowTier) {
+      renderer.shadowMap.autoUpdate = false;
+      if (perf.frame % 3 === 0) renderer.shadowMap.needsUpdate = true;
+    } else {
+      renderer.shadowMap.autoUpdate = true;
+    }
     if (useAO && composer) composer.render();
     else renderer.render(scene, camera);
+    if (debugEl && dt > 0 && dt < 500) {
+      debugAcc += dt;
+      debugN++;
+      if (debugN >= 30) {
+        const i = renderer.info.render;
+        debugEl.textContent = `${(debugAcc / debugN).toFixed(1)}ms (${Math.round(1000 / (debugAcc / debugN))}fps) · `
+          + `calls ${i.calls} · tris ${(i.triangles / 1000).toFixed(0)}k · px ${renderer.getPixelRatio().toFixed(2)} · `
+          + `${lowTier ? 'low' : 'high'}${useAO ? '+AO' : ''}`;
+        debugAcc = 0;
+        debugN = 0;
+      }
+    }
   }
 
   function dispose() {
