@@ -2,13 +2,14 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { SEV, sevKey } from '../demo.js';
 import CalendarSheet from './CalendarSheet.vue';
+import ExampleSheet from './ExampleSheet.vue';
 import LogSheet from './LogSheet.vue';
 
 const props = defineProps({
   sheet: { type: Object, default: null },
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'inspect-item', 'plan-done-change', 'select-example']);
 const closeBtn = ref(null);
 
 const sevLabel = (sev) => SEV[sevKey(sev)][1];
@@ -95,6 +96,10 @@ onBeforeUnmount(() => removeEventListener('keydown', onKeyDown));
           <dd>{{ sheet.item.reason || '확인 못 함' }}</dd>
           <dt>지원종료</dt>
           <dd>{{ sheet.item.eol_date || '미상' }}</dd>
+          <template v-if="sheet.item.done_at">
+            <dt>끝낸 날</dt>
+            <dd>{{ String(sheet.item.done_at).slice(0, 10) }}</dd>
+          </template>
           <dt>회차</dt>
           <dd>
             {{
@@ -191,11 +196,18 @@ onBeforeUnmount(() => removeEventListener('keydown', onKeyDown));
       </template>
 
       <template v-else-if="sheet?.kind === 'calendar'">
-        <CalendarSheet />
+        <CalendarSheet
+          @inspect-item="emit('inspect-item', $event)"
+          @plan-done-change="emit('plan-done-change', $event)"
+        />
       </template>
 
       <template v-else-if="sheet?.kind === 'log'">
         <LogSheet />
+      </template>
+
+      <template v-else-if="sheet?.kind === 'examples'">
+        <ExampleSheet @select="emit('select-example', $event)" />
       </template>
     </div>
   </div>

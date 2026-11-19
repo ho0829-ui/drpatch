@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS plans (
     window_start  TEXT,
     window_end    TEXT,
     items_json    TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'planned',
+    done_at       TEXT,
     created_at    TEXT NOT NULL,
     updated_at    TEXT NOT NULL
 );

@@ -1,5 +1,6 @@
 """계획 관리 (F3015~F3016): 저장·목록·상세·수정·삭제. 저장·수정 응답에 겹침 경고(overlaps)."""
 
+from datetime import datetime, timezone
 import sqlite3
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -42,6 +43,27 @@ def update_plan(plan_id: int, body: PlanUpdate, conn: sqlite3.Connection = Depen
                       changes.get("window_end", current["window_end"]))
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+    now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    if "items" in changes and "status" not in changes:
+        items = changes["items"] or []
+        if items and all(it.get("done_at") for it in items):
+            changes["status"] = "done"
+            changes["done_at"] = current.get("done_at") or now_iso
+        elif current.get("status") == "done" and any(not it.get("done_at") for it in items):
+            changes["status"] = "planned"
+            changes["done_at"] = None
+    elif "status" in changes:
+        if changes["status"] == "done":
+            done_at = changes.get("done_at") or current.get("done_at") or now_iso
+            changes["done_at"] = done_at
+            if "items" not in changes and current.get("items"):
+                changes["items"] = [{**it, "done_at": it.get("done_at") or done_at} for it in current["items"]]
+        else:
+            changes["done_at"] = None
+            if "items" not in changes and current.get("items"):
+                changes["items"] = [{**it, "done_at": None} for it in current["items"]]
+
     return with_overlaps(conn, repo.update_plan(conn, plan_id, changes))
 
 

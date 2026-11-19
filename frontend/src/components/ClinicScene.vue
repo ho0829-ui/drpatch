@@ -57,7 +57,8 @@ onMounted(async () => {
       onOpenSheet: (sheet) => emit('open-sheet', sheet),
       onCloseSheetRequest: () => emit('close-sheet'),
       onTip: (t) => {
-        tip.value = t;
+        if (t.show && t.text) tip.value = t;
+        else tip.value = { ...tip.value, show: false };
       },
       onFloatChip: (chip) => {
         floatChips.value = [...floatChips.value.slice(-4), chip];
@@ -98,6 +99,7 @@ defineExpose({
   runVisit: () => controller?.runVisit(),
   confirmPlan: () => controller?.confirmPlan(),
   unpopPill: () => controller?.unpopPill(),
+  markRoundDone: (roundNo, done) => controller?.markRoundDone(roundNo, done),
 });
 </script>
 
@@ -114,7 +116,7 @@ defineExpose({
 
   <div
     class="tip"
-    :class="{ show: tip.show }"
+    :class="{ show: tip.show && !!tip.text }"
     :style="{ left: `${tip.x}px`, top: `${tip.y}px` }"
   >
     {{ tip.text }}

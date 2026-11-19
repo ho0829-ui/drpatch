@@ -1,0 +1,46 @@
+[
+  {
+    "id": "old-ubuntu",
+    "title": "오래된 우분투 서버",
+    "description": "Python 업그레이드 재계획, 지원 종료 OS, 조회 제외 줄을 한 번에 봅니다.",
+    "file": "old-ubuntu.txt",
+    "package_count": 2,
+    "excluded_count": 1,
+    "os": "Ubuntu 20.04",
+    "python": "Python 3.8",
+    "condition_template": "Ubuntu 20.04, Python 3.8, 한 번에 2개, 첫 점검은 {date}부터 격주로"
+  },
+  {
+    "id": "macos-local",
+    "title": "맥북 로컬 서버",
+    "description": "지원 중인 macOS(종료일 미발표)와 패키지 큰 변경 안내를 확인합니다.",
+    "file": "macos-local.txt",
+    "package_count": 3,
+    "excluded_count": 0,
+    "os": "macOS 15",
+    "python": "Python 3.11",
+    "condition_template": "macOS 15, Python 3.11, 한 번에 5개, 첫 점검은 {date}부터 매주"
+  },
+  {
+    "id": "windows-dev",
+    "title": "윈도우 개발 PC",
+    "description": "지원 끝난 Windows 기능 업데이트가 계획 항목에 들어가는 흐름을 봅니다.",
+    "file": "windows-dev.txt",
+    "package_count": 4,
+    "excluded_count": 0,
+    "os": "Windows 11 24H2",
+    "python": "Python 3.12",
+    "condition_template": "Windows 11 24H2, Python 3.12, 한 번에 3개, 첫 점검은 {date}부터 매주"
+  },
+  {
+    "id": "large-freeze",
+    "title": "큰 freeze 파일",
+    "description": "실제 130줄 freeze로 약병·곡반 상한(+N)을 확인합니다. 오래 걸림(50초 안팎).",
+    "file": "large-freeze.txt",
+    "package_count": 130,
+    "excluded_count": 0,
+    "os": "Ubuntu 22.04",
+    "python": "Python 3.11",
+    "condition_template": "Ubuntu 22.04, Python 3.11, 한 번에 5개, 첫 점검은 {date} 22~24시부터 매주"
+  }
+]

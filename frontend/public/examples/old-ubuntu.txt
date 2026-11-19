@@ -1,0 +1,3 @@
+requests==2.19.0
+django==2.2.0
+-e git+https://github.com/example/internal-tool.git#egg=internal-tool

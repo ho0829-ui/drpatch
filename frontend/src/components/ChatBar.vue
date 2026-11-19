@@ -7,12 +7,27 @@ const props = defineProps({
   busy: Boolean,
 });
 
-const emit = defineEmits(['send', 'upload']);
+const emit = defineEmits(['send', 'upload', 'examples']);
 
 const text = ref('');
 const historyOpen = ref(false);
 const historyRef = ref(null);
+const textareaRef = ref(null);
 const kbOffset = ref(0);
+
+function appendSnippet(snippet) {
+  if (!snippet) return;
+  const cur = text.value.trim();
+  text.value = cur ? `${cur}, ${snippet}` : snippet;
+  nextTick(() => textareaRef.value?.focus({ preventScroll: true }));
+}
+
+function setText(value) {
+  text.value = value || '';
+  nextTick(() => textareaRef.value?.focus({ preventScroll: true }));
+}
+
+defineExpose({ appendSnippet, setText });
 
 function updateViewport() {
   const vv = window.visualViewport;
@@ -21,7 +36,15 @@ function updateViewport() {
   kbOffset.value = gap > 40 ? Math.round(gap) : 0;
 }
 
+// 대화 기록이 열려 있으면 Esc로 닫고 입력창으로 돌아간다
+function onEscapeHistory(e) {
+  if (e.key !== 'Escape' || !historyOpen.value) return;
+  historyOpen.value = false;
+  nextTick(() => textareaRef.value?.focus({ preventScroll: true }));
+}
+
 onMounted(() => {
+  addEventListener('keydown', onEscapeHistory);
   const vv = window.visualViewport;
   if (vv) {
     vv.addEventListener('resize', updateViewport);
@@ -30,6 +53,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  removeEventListener('keydown', onEscapeHistory);
   const vv = window.visualViewport;
   if (vv) {
     vv.removeEventListener('resize', updateViewport);
@@ -65,6 +89,8 @@ watch(
 <template>
   <div class="chat-dock" :style="kbOffset ? { bottom: `${kbOffset + 10}px` } : undefined">
     <slot />
+    <slot name="chips" />
+
     <div v-if="historyOpen" ref="historyRef" class="chat-history" aria-label="대화 기록">
       <div v-if="!messages.length" class="chat-empty">아직 대화 기록이 없어요.</div>
       <div
@@ -98,7 +124,17 @@ watch(
       >
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5l-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
+      <button
+        type="button"
+        class="btn btn-sm ghost ex-open-btn"
+        :disabled="busy"
+        title="저장된 예시 차트 불러오기"
+        @click="emit('examples')"
+      >
+        예시
+      </button>
       <textarea
+        ref="textareaRef"
         v-model="text"
         class="chat-textarea"
         rows="1"

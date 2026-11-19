@@ -30,7 +30,10 @@ def connect(path: str | None = None) -> sqlite3.Connection:
 
 
 # 나중에 추가한 칸: 예전에 만든 DB 파일에도 붙인다 (CREATE TABLE IF NOT EXISTS는 칸을 추가하지 않음)
-ADDED_COLUMNS = {"sessions": ["last_message TEXT", "last_answer TEXT", "last_plan_json TEXT"]}
+ADDED_COLUMNS = {
+    "sessions": ["last_message TEXT", "last_answer TEXT", "last_plan_json TEXT"],
+    "plans": ["status TEXT NOT NULL DEFAULT 'planned'", "done_at TEXT"],
+}
 
 
 def init_db(path: str | None = None) -> None:
@@ -142,10 +145,14 @@ def delete_events(conn: sqlite3.Connection, session_id: str) -> int:
 
 # ── plans (회차 1개 = 계획 1개) ──────────────────────────
 def _plan_row(row: sqlite3.Row) -> dict:
+    keys = row.keys()
     return {
         "id": row["id"], "session_id": row["session_id"], "round_no": row["round_no"], "date": row["date"],
         "window_start": row["window_start"], "window_end": row["window_end"],
-        "items": json.loads(row["items_json"]), "created_at": row["created_at"], "updated_at": row["updated_at"],
+        "items": json.loads(row["items_json"]),
+        "status": row["status"] if "status" in keys and row["status"] else "planned",
+        "done_at": row["done_at"] if "done_at" in keys else None,
+        "created_at": row["created_at"], "updated_at": row["updated_at"],
     }
 
 
@@ -182,8 +189,15 @@ def plans_on_date(conn: sqlite3.Connection, day: str) -> list[dict]:
 
 
 def update_plan(conn: sqlite3.Connection, plan_id: int, changes: dict) -> dict | None:
-    """날짜·시각·항목만 바꾼다 (넘긴 것만)."""
-    allowed = {"date": "date", "window_start": "window_start", "window_end": "window_end", "items": "items_json"}
+    """날짜·시각·항목·상태·완료시각을 바꾼다 (넘긴 것만)."""
+    allowed = {
+        "date": "date",
+        "window_start": "window_start",
+        "window_end": "window_end",
+        "items": "items_json",
+        "status": "status",
+        "done_at": "done_at",
+    }
     sets, args = [], []
     for key, column in allowed.items():
         if key in changes:

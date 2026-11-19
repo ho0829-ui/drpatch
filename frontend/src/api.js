@@ -1,5 +1,6 @@
 const SESSION_KEY = 'sudo-patch.session';
 const MAX_UPLOAD_BYTES = 1024 * 1024; // 1MB
+let pendingUpload = null;
 
 export function getSession() {
   try {
@@ -43,22 +44,30 @@ export async function upload(file, sessionId = getSession()) {
     throw new Error('허허, 차트가 너무 두껍네요. 1MB까지만 받습니다.');
   }
   const url = '/upload' + (sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : '');
-  let res;
+  const run = (async () => {
+    let res;
+    try {
+      res = await fetch(url, { method: 'POST', body: file });
+    } catch {
+      throw new Error('허허, 연결이 끊겼네요. 잠시 후 다시 해 보시죠.');
+    }
+    if (res.status === 413) {
+      throw new Error('허허, 차트가 너무 두껍네요. 1MB까지만 받습니다.');
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      // 서버가 준 안내(빈 파일 등)를 그대로 보여 준다
+      throw new Error(typeof data.detail === 'string' ? data.detail : '허허, 파일을 받지 못했네요. 다시 올려 보시죠.');
+    }
+    setSession(data.session_id);
+    return data;
+  })();
+  pendingUpload = run;
   try {
-    res = await fetch(url, { method: 'POST', body: file });
-  } catch {
-    throw new Error('허허, 연결이 끊겼네요. 잠시 후 다시 해 보시죠.');
+    return await run;
+  } finally {
+    if (pendingUpload === run) pendingUpload = null;
   }
-  if (res.status === 413) {
-    throw new Error('허허, 차트가 너무 두껍네요. 1MB까지만 받습니다.');
-  }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    // 서버가 준 안내(빈 파일 등)를 그대로 보여 준다
-    throw new Error(typeof data.detail === 'string' ? data.detail : '허허, 파일을 받지 못했네요. 다시 올려 보시죠.');
-  }
-  setSession(data.session_id);
-  return data;
 }
 
 function makeRetryError(msg = '허허, 연결이 끊겼네요. 잠시 후 다시 해 보시죠.') {
@@ -72,6 +81,13 @@ function makeRetryError(msg = '허허, 연결이 끊겼네요. 잠시 후 다시
  * 줄 종류: {type:"session"} → 실행 이벤트들({type, seq, ...}) → {type:"final", ...}
  */
 export async function chat(sessionId, message, onEvent) {
+  if (pendingUpload) {
+    try {
+      await pendingUpload;
+    } catch {
+      /* 업로드 실패 시에도 현재 세션으로 진행 */
+    }
+  }
   const sid = sessionId ?? getSession();
   let res;
   try {

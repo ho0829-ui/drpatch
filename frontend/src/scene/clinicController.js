@@ -251,7 +251,16 @@ export async function createClinicController(canvas, callbacks) {
     } else {
       setState('idle');
       onStatus('대기 중', -1);
-      onSay('어서 오세요. 오늘은 어디가 불편한 서버인가요? requirements.txt부터 올려 주시죠.');
+      let restarted = false;
+  try {
+    restarted = sessionStorage.getItem('drpatch.restarted') === '1';
+    if (restarted) sessionStorage.removeItem('drpatch.restarted');
+  } catch { /* 무시 */ }
+  onSay(
+    restarted
+      ? '새 차트입니다. 파일부터 올려 주시죠.'
+      : '어서 오세요. 오늘은 어디가 불편한 서버인가요? requirements.txt부터 올려 주시죠.',
+  );
     }
   }
 
@@ -459,6 +468,10 @@ export async function createClinicController(canvas, callbacks) {
         docAct.hop();
         onStatus('처방 완료', 3);
         nextState = 'planned';
+      } else if (finalEvent.missing?.length) {
+        docAct.nod();
+        onStatus('정보 필요', -1);
+        nextState = currentPackages.length ? 'ready' : 'idle';
       } else if (finalEvent.intent === 'error') {
         if (finalEvent.answer && /API\s*키|서버\s*설정/.test(finalEvent.answer)) {
           onStatus('설정 필요', -1);
@@ -467,6 +480,7 @@ export async function createClinicController(canvas, callbacks) {
         }
         nextState = currentPackages.length ? 'ready' : 'idle';
       } else {
+        onStatus(currentPackages.length ? '접수 완료' : '대기 중', currentPackages.length ? 0 : -1);
         nextState = currentPackages.length ? 'ready' : 'idle';
       }
 
@@ -717,7 +731,16 @@ export async function createClinicController(canvas, callbacks) {
     }
     return false;
   }
-  onSay('어서 오세요. 오늘은 어디가 불편한 서버인가요? requirements.txt부터 올려 주시죠.');
+  let restarted = false;
+  try {
+    restarted = sessionStorage.getItem('drpatch.restarted') === '1';
+    if (restarted) sessionStorage.removeItem('drpatch.restarted');
+  } catch { /* 무시 */ }
+  onSay(
+    restarted
+      ? '새 차트입니다. 파일부터 올려 주시죠.'
+      : '어서 오세요. 오늘은 어디가 불편한 서버인가요? requirements.txt부터 올려 주시죠.',
+  );
 
   function frame(now) {
     const t = now / 1000;
@@ -806,12 +829,18 @@ export async function createClinicController(canvas, callbacks) {
     freeze: (on) => (window.__freeze = on),
   };
 
+  function markRoundDone(roundNo, done) {
+    const pack = blisterApi.getPacks().find((pk) => pk.round.round_no === roundNo);
+    pack?.redrawLabel({ done: !!done });
+  }
+
   return {
     loadPackages,
     sendChatMessage,
     runVisit,
     confirmPlan,
     unpopPill,
+    markRoundDone,
     destroy() {
       cancelAnimationFrame(rafId);
       cancelLongPress();

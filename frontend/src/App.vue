@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import * as api from './api.js';
 import ChatBar from './components/ChatBar.vue';
 import ClinicScene from './components/ClinicScene.vue';
+import ConditionChips from './components/ConditionChips.vue';
 import Controls from './components/Controls.vue';
 import FallbackList from './components/FallbackList.vue';
 import PaperSheet from './components/PaperSheet.vue';
@@ -11,6 +12,7 @@ import StatusChip from './components/StatusChip.vue';
 import TopTools from './components/TopTools.vue';
 
 const sceneRef = ref(null);
+const chatBarRef = ref(null);
 const fileInputRef = ref(null);
 const reduced = ref(matchMedia('(prefers-reduced-motion: reduce)').matches);
 watch(
@@ -34,11 +36,13 @@ const activeSheet = ref(null);
 const eggCount = ref({ found: 0, total: 16 });
 const currentPlan = ref(null);
 const currentPackages = ref([]);
+const currentConditions = ref(null);
 const chatMessages = ref([]);
 const dragging = ref(false);
+const uploading = ref(false);
 const retryMessage = ref(null);
 
-const isBusy = computed(() => state.value === 'running' || state.value === 'confirming');
+const isBusy = computed(() => uploading.value || state.value === 'running' || state.value === 'confirming');
 const tickerLines = computed(() => logs.value.slice(-4).reverse());
 
 function sayBubble(text) {
@@ -60,12 +64,34 @@ function closeSheet() {
   sceneRef.value?.unpopPill();
 }
 
+function onInspectPlanItem({ item, plan }) {
+  activeSheet.value = {
+    kind: 'item',
+    item: {
+      name: item.name,
+      cur: item.current_version || '미상',
+      tgt: item.target_version || null,
+      sev: item.severity || 'unknown',
+      round: plan?.round_no || null,
+      status: 'patch',
+      reason: item.reason || '',
+      flags: item.flags || [],
+      eol_date: item.eol_date || null,
+      done_at: item.done_at || plan?.done_at || null,
+    },
+    plan: currentPlan.value,
+    color: '#3E9E98',
+  };
+}
+
 function triggerUpload() {
   fileInputRef.value?.click();
 }
 
 async function handleUploadFile(file) {
-  if (!file) return;
+  if (!file || uploading.value) return false;
+  uploading.value = true;
+  status.value = { text: '접수 중…', stage: 0 };
   try {
     const res = await api.upload(file);
     currentPackages.value = res.packages || [];
@@ -81,8 +107,39 @@ async function handleUploadFile(file) {
     if (excluded.length && currentPackages.value.length) {
       sayBubble(`흠, ${currentPackages.value.length}줄 접수됐습니다. **${excluded.length}줄은 차트에서 뺐어요** — 대화 기록에 적어 뒀습니다.`);
     }
+    return true;
   } catch (err) {
+    status.value = { text: currentPackages.value.length ? '접수 완료' : '대기 중', stage: currentPackages.value.length ? 0 : -1 };
     sayBubble(err.message || '허허, 파일을 받지 못했네요. 다시 올려 보시죠.');
+    return false;
+  } finally {
+    uploading.value = false;
+  }
+}
+
+function nextTuesdayLabel() {
+  const d = new Date();
+  // 다음 화요일 (0=일, 2=화). 오늘이 화요일이면 7일 뒤.
+  const diff = (2 - d.getDay() + 7) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+async function onSelectExample(ex) {
+  if (!ex?.file || isBusy.value) return;
+  closeSheet();
+  try {
+    const res = await fetch(`/examples/${ex.file}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('예시 파일을 불러오지 못했어요.');
+    const text = await res.text();
+    const file = new File([text], ex.file, { type: 'text/plain' });
+    const ok = await handleUploadFile(file);
+    if (!ok) return;
+    const condText = String(ex.condition_template || '').replace('{date}', nextTuesdayLabel());
+    chatBarRef.value?.setText(condText);
+    sayBubble('예시 차트를 꺼냈습니다. 조건은 입력창에 적어 뒀으니 보내기만 누르시죠.');
+  } catch {
+    sayBubble('허허, 예시 파일을 못 꺼냈네요. 다시 골라 보시죠.');
   }
 }
 
@@ -109,6 +166,9 @@ async function onRetryChat() {
 }
 
 function onChatTurn({ msg, finalEvent }) {
+  if (finalEvent?.conditions) {
+    currentConditions.value = finalEvent.conditions;
+  }
   // 진료 시작 버튼처럼 입력창을 거치지 않은 말은 여기서 넣는다 (다시 시도는 이미 들어 있음)
   const lastUser = [...chatMessages.value].reverse().find((m) => m.role === 'user');
   if (lastUser?.text !== msg) chatMessages.value.push({ role: 'user', text: msg });
@@ -116,7 +176,11 @@ function onChatTurn({ msg, finalEvent }) {
 }
 
 function reloadPage() {
+  if (!confirm('파일과 조건, 대화를 모두 지우고 처음부터 할까요?')) return;
   api.setSession(null);
+  try {
+    sessionStorage.setItem('drpatch.restarted', '1');
+  } catch { /* 무시 */ }
   location.reload();
 }
 </script>
@@ -184,13 +248,15 @@ function reloadPage() {
     <SpeechBubble :text="bubbleText" :seq="bubbleSeq" :reduced="reduced" :pos="bubblePos" @closed="focusChatInput" />
 
     <ChatBar
+      ref="chatBarRef"
       :messages="chatMessages"
       :busy="isBusy"
       @send="onSendChat"
       @upload="triggerUpload"
+      @examples="activeSheet = { kind: 'examples', color: '#3E9E98' }"
     >
       <Controls
-        :state="state"
+        :state="uploading ? 'running' : state"
         :can-retry="!!retryMessage"
         @start="sceneRef?.runVisit()"
         @confirm="sceneRef?.confirmPlan()"
@@ -198,6 +264,14 @@ function reloadPage() {
         @calendar="activeSheet = { kind: 'calendar', color: '#3E9E98' }"
         @logs="activeSheet = { kind: 'log', color: '#3E9E98' }"
       />
+      <template #chips>
+        <ConditionChips
+          :packages-count="currentPackages.length"
+          :conditions="currentConditions"
+          @upload="triggerUpload"
+          @fill="chatBarRef?.appendSnippet($event)"
+        />
+      </template>
     </ChatBar>
   </div>
 
@@ -216,5 +290,11 @@ function reloadPage() {
     @logs="activeSheet = { kind: 'log', color: '#3E9E98' }"
   />
 
-  <PaperSheet :sheet="activeSheet" @close="closeSheet" />
+  <PaperSheet
+    :sheet="activeSheet"
+    @close="closeSheet"
+    @inspect-item="onInspectPlanItem"
+    @plan-done-change="sceneRef?.markRoundDone($event.roundNo, $event.done)"
+    @select-example="onSelectExample"
+  />
 </template>

@@ -18,7 +18,10 @@ def get_conn(request: Request) -> Iterator[sqlite3.Connection]:
 
 
 def with_overlaps(conn: sqlite3.Connection, plan: dict) -> dict:
-    return {**plan, "overlaps": find_overlaps(plan, repo.plans_on_date(conn, plan["date"]))}
+    if plan.get("status") == "done":
+        return {**plan, "overlaps": []}
+    active = [p for p in repo.plans_on_date(conn, plan["date"]) if p.get("status") != "done"]
+    return {**plan, "overlaps": find_overlaps(plan, active)}
 
 
 def save_confirmed_plan(conn: sqlite3.Connection, session_id: str, plan: dict,
