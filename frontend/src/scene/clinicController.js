@@ -823,6 +823,8 @@ export async function createClinicController(canvas, callbacks) {
     }
 
     const showTags = camera.position.distanceTo(controls.target) < BASE_DIST * 1.3 * getDistScale();
+    const dockCutY = innerHeight - (innerWidth < 768 ? 175 : 145);
+    const inSafeViewport = (y) => y > 64 && y < dockCutY;
     const tagList = [];
     for (const p of pills) {
       if (!p.hasTag) continue;
@@ -834,7 +836,7 @@ export async function createClinicController(canvas, callbacks) {
         color: SEV[sevKey(p.it.sev)][0],
         x,
         y,
-        visible: showTags && front && popped !== p,
+        visible: showTags && front && popped !== p && inSafeViewport(y),
       });
     }
     const extras = [[jarApi.getOverflowCount(), jarApi.jarTop], [jarApi.getTrayExtra(), jarApi.trayTop]];
@@ -846,7 +848,7 @@ export async function createClinicController(canvas, callbacks) {
         color: COLOR.deep,
         x,
         y,
-        visible: showTags && front,
+        visible: showTags && front && inSafeViewport(y),
       });
     }
     // 이름표가 서로 겹치면 위로 한 칸씩 올려 놓는다 (최대 3칸). 너비는 글자 수로 어림.

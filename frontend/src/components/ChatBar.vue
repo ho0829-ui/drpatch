@@ -37,6 +37,10 @@ function openHistory() {
   });
 }
 
+function closeHistory() {
+  historyOpen.value = false;
+}
+
 function appendSnippet(snippet) {
   if (!snippet) return;
   const cur = text.value.trim();
@@ -49,7 +53,7 @@ function setText(value) {
   focusInput();
 }
 
-defineExpose({ appendSnippet, setText, openHistory, focusInput });
+defineExpose({ appendSnippet, setText, openHistory, closeHistory, focusInput });
 
 function updateViewport() {
   const vv = window.visualViewport;

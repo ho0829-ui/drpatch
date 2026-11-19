@@ -15,10 +15,22 @@ const TARGET_BOX = new THREE.Box3(new THREE.Vector3(-14, -3, -10), new THREE.Vec
 const CAMERA_BOX = new THREE.Box3(new THREE.Vector3(-ROOM.x, -6.5, -11), new THREE.Vector3(ROOM.x, ROOM.y, ROOM.z));
 
 export function createEngine(canvas, tween, isReduced) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  const params = new URLSearchParams(location.search);
+  const forceHigh = params.get('hq') === '1';
+  const forceLow = params.get('lq') === '1';
+  const isMobile = innerWidth < 768 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  let lowTier = forceLow || isMobile;
+
+  const getTargetPixelRatio = () => {
+    if (lowTier) return Math.min(devicePixelRatio, forceLow ? 1.0 : 1.2);
+    if (innerWidth * innerHeight > 2200000) return Math.min(devicePixelRatio, 1.25);
+    return Math.min(devicePixelRatio, 1.5);
+  };
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: !forceLow, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(getTargetPixelRatio());
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = lowTier ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 1.0;
 
@@ -36,7 +48,8 @@ export function createEngine(canvas, tween, isReduced) {
   const key = new THREE.DirectionalLight(0xfff8ef, 2.1);
   key.position.set(-7, 20, 12);
   key.castShadow = true;
-  key.shadow.mapSize.set(3072, 3072);
+  const initShadowSize = lowTier ? 1024 : 2048;
+  key.shadow.mapSize.set(initShadowSize, initShadowSize);
   Object.assign(key.shadow.camera, { left: -20, right: 24, top: 18, bottom: -18, near: 1, far: 70 });
   key.shadow.bias = -0.0005;
   key.shadow.normalBias = 0.025;
@@ -79,26 +92,46 @@ export function createEngine(canvas, tween, isReduced) {
   }
 
   let composer = null;
-  let useAO = new URLSearchParams(location.search).get('hq') === '1';
-  const forceLow = new URLSearchParams(location.search).get('lq') === '1';
-  try {
-    composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    const ao = new GTAOPass(scene, camera, innerWidth, innerHeight);
-    ao.updateGtaoMaterial({ radius: 0.9, distanceExponent: 1.2, thickness: 1.2, scale: 1.1 });
-    ao.blendIntensity = 0.85;
-    composer.addPass(ao);
-    composer.addPass(new OutputPass());
-  } catch (err) {
-    console.warn('AO 없이 그립니다', err);
-    composer = null;
+  let useAO = forceHigh && !forceLow;
+  if (useAO) {
+    try {
+      composer = new EffectComposer(renderer);
+      composer.addPass(new RenderPass(scene, camera));
+      const ao = new GTAOPass(scene, camera, innerWidth, innerHeight);
+      ao.updateGtaoMaterial({ radius: 0.9, distanceExponent: 1.2, thickness: 1.2, scale: 1.1 });
+      ao.blendIntensity = 0.85;
+      composer.addPass(ao);
+      composer.addPass(new OutputPass());
+    } catch (err) {
+      console.warn('AO 없이 그립니다', err);
+      composer = null;
+      useAO = false;
+    }
+  }
+
+  function downgradeQuality() {
+    if (useAO) {
+      useAO = false;
+      return;
+    }
+    if (!lowTier) {
+      lowTier = true;
+      renderer.setPixelRatio(1.0);
+      renderer.setSize(innerWidth, innerHeight, false);
+      renderer.shadowMap.type = THREE.PCFShadowMap;
+      renderer.shadowMap.needsUpdate = true;
+      key.shadow.mapSize.set(1024, 1024);
+      key.shadow.map?.dispose();
+      key.shadow.map = null;
+    }
   }
 
   function resize() {
     const w = innerWidth;
     const h = innerHeight;
+    renderer.setPixelRatio(getTargetPixelRatio());
     renderer.setSize(w, h, false);
-    composer?.setSize(w, h);
+    if (useAO) composer?.setSize(w, h);
     camera.aspect = w / h;
     distScale = Math.min(2.2, Math.max(1, 1.55 / camera.aspect));
     controls.maxDistance = BASE_DIST * 1.7 * distScale;
@@ -113,7 +146,7 @@ export function createEngine(canvas, tween, isReduced) {
     return [(tmpV.x + 1) / 2 * innerWidth, (1 - tmpV.y) / 2 * innerHeight, tmpV.z < 1];
   }
 
-  const perf = { n: 0, sum: 0, last: performance.now() };
+  const perf = { n: 0, sum: 0, last: performance.now(), downgraded: false };
   function updateControlsAndRender(now) {
     if (window.__freeze) {
       camera.position.copy(window.__freeze.pos);
@@ -126,12 +159,21 @@ export function createEngine(canvas, tween, isReduced) {
       camera.lookAt(controls.target);
     }
 
-    if (!forceLow && composer && perf.n < 120) {
-      perf.sum += now - perf.last;
-      perf.n++;
-      if (perf.n === 120 && perf.sum / 120 < 16.5) useAO = true;
-    }
+    const dt = now - perf.last;
     perf.last = now;
+    if (!perf.downgraded && dt > 0 && dt < 200) {
+      perf.sum += dt;
+      perf.n++;
+      if (perf.n === 90) {
+        const avg = perf.sum / 90;
+        perf.sum = 0;
+        perf.n = 0;
+        if (avg > 24) {
+          downgradeQuality();
+          if (lowTier && !useAO) perf.downgraded = true;
+        }
+      }
+    }
     if (useAO && composer) composer.render();
     else renderer.render(scene, camera);
   }

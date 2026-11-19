@@ -66,7 +66,7 @@ const thinkingText = computed(() => {
 
 function shortenForBubble(text) {
   const src = String(text || '');
-  if (!historyOpen.value) return src;
+  if (!historyOpen.value && window.innerWidth >= 768) return src;
   const lines = src.split('\n');
   if (lines.length <= 3 && src.length <= 200) return src;
   const nonEmpty = lines.map((l) => l.trim()).filter(Boolean);
@@ -362,6 +362,11 @@ function onChatTurn({ msg, finalEvent }) {
   const lastUser = [...chatMessages.value].reverse().find((m) => m.role === 'user');
   if (lastUser?.text !== msg) chatMessages.value.push({ role: 'user', text: msg });
   if (finalEvent?.answer) chatMessages.value.push({ role: 'assistant', text: finalEvent.answer });
+
+  // 모바일(<768)에서 처방(블리스터)이 나오면 열린 대화 기록이 블리스터를 가리지 않게 접는다
+  if (finalEvent?.plan?.rounds?.length && window.innerWidth < 768) {
+    chatBarRef.value?.closeHistory();
+  }
 
   // 예시로 올린 세션에서 처방(계획)이 나오면 진료함 기록 + 다음 환자 권유
   if (finalEvent?.plan && !(finalEvent.missing?.length) && activeExampleId.value) {
