@@ -140,11 +140,37 @@ export function setupNight({ world, scene, renderer, lights, room, docBody, M, t
     const box = new THREE.Box3().setFromObject(docBody);
     const top = new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2);
     docBody.worldToLocal(top);
-    cap.position.set(top.x - 0.06, top.y - 0.24, top.z - 0.08);
-    cap.rotation.set(-0.12, 0, -0.18);
+    // 모자 띠가 머리보다 좁으면 머리에 박혀 보인다 → 조금 키우고(띠 반지름 0.5→0.58) 정수리 바로 아래에 얹는다
+    cap.scale.setScalar(1.16);
+    cap.position.set(top.x - 0.04, top.y - 0.17, top.z - 0.06);
+    cap.rotation.set(-0.16, 0, -0.14);
     cap.visible = false;
     docBody.add(cap);
   }
+
+  // 잠옷: 가운(coat 재질 — 몸통·옷깃·주머니·소매)을 밤에는 줄무늬 잠옷으로.
+  // 가운 메시에 UV가 없어 그림을 붙일 수 없으므로, 셰이더에서 메시 좌표로 세로 줄무늬를 그린다.
+  const coatMeshes = [];
+  docBody?.parent?.traverse((o) => {
+    if (o.isMesh && o.material?.name === 'coat') coatMeshes.push(o);
+  });
+  const dayCoatMat = coatMeshes[0]?.material || null;
+  const pajamaMat = new THREE.MeshStandardMaterial({ color: '#BFD3F2', roughness: 0.85, metalness: 0 });
+  pajamaMat.onBeforeCompile = (shader) => {
+    shader.uniforms.stripeColor = { value: new THREE.Color('#5C7CB8') };
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vPjPos;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPjPos = position;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vPjPos;\nuniform vec3 stripeColor;')
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+        float a = atan(vPjPos.z, vPjPos.x) / 6.28318 + 0.5;
+        float s = smoothstep(0.42, 0.5, abs(fract(a * 18.0) - 0.5) * 2.0);
+        diffuseColor.rgb = mix(diffuseColor.rgb, stripeColor, s);`,
+      );
+  };
 
   // 야간 근무표 (뒷벽, 진료실 좌표에 바로 놓인 모델)
   let roster = null;
@@ -179,6 +205,7 @@ export function setupNight({ world, scene, renderer, lights, room, docBody, M, t
     if (room.sky && daySkyMat) room.sky.material = showNight ? nightSkyMat : daySkyMat;
     if (room.tvFace && dayTvMat) room.tvFace.material = showNight ? nightTvMat : dayTvMat;
     if (cap) cap.visible = showNight;
+    if (dayCoatMat) for (const m of coatMeshes) m.material = showNight ? pajamaMat : dayCoatMat;
     if (roster) roster.visible = showNight;
   }
 
@@ -197,6 +224,7 @@ export function setupNight({ world, scene, renderer, lights, room, docBody, M, t
     tvTex.tex.dispose();
     nightSkyMat.dispose();
     nightTvMat.dispose();
+    pajamaMat.dispose();
   }
 
   void renderer;
