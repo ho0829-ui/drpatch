@@ -22,14 +22,15 @@ body { font-family: var(--sans); color: var(--color-ink); background: var(--colo
 
 .brand {
   position: fixed; top: 16px; left: 20px; display: flex; align-items: center; gap: 10px;
-  color: var(--color-ink); z-index: 3; padding: 6px 22px 6px 8px; border-radius: 999px;
-  background: rgba(255,255,255,.9); box-shadow: 0 4px 0 var(--color-mint), 0 10px 24px rgba(22,49,58,.12);
+  color: var(--color-ink); z-index: 3; padding: 7px 20px 7px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.92); box-shadow: 0 4px 0 var(--color-mint), 0 10px 24px rgba(22,49,58,.12);
   user-select: none; -webkit-user-select: none;
 }
-.brand img { flex: none; -webkit-user-drag: none; }
-.brand b { font: 700 21px/1 var(--mono); letter-spacing: -.01em; white-space: nowrap; }
-.brand .dot { color: var(--color-teal); display: inline-block; width: .45em; text-align: center; margin: 0 -.06em; }
-.brand small { display: block; font: 500 12px/1.4 var(--sans); color: var(--color-deep); margin-top: 4px; }
+.brand img { flex: none; -webkit-user-drag: none; display: block; }
+.brand > div { display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+.brand b { font: 700 20px/1.05 var(--mono); letter-spacing: .01em; white-space: nowrap; }
+.brand .dot { color: var(--color-teal); display: inline-block; width: .35em; text-align: center; margin: 0 -.08em; }
+.brand small { display: block; font: 500 11.5px/1.1 var(--sans); color: var(--color-deep); margin-top: 0; }
 
 .status {
   position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 3;
@@ -174,6 +175,7 @@ body { font-family: var(--sans); color: var(--color-ink); background: var(--colo
   transform: translate(14px, 14px); opacity: 0; transition: opacity .12s;
 }
 .tip.show { opacity: 1; }
+.tip:empty { display: none; }
 #tags { position: fixed; inset: 0; pointer-events: none; z-index: 2; overflow: hidden; }
 .tag {
   position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 4px;
@@ -281,9 +283,9 @@ dd { margin: 0; }
 .fallback-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 18px; }
 
 @media (max-width: 720px) {
-  .brand { top: 10px; left: 12px; padding: 4px 14px 4px 6px; gap: 7px; }
-  .brand img { width: 38px; height: 38px; }
-  .brand b { font-size: 16.5px; }
+  .brand { top: 10px; left: 12px; padding: 5px 14px 5px 8px; gap: 7px; }
+  .brand img { width: 34px; height: 34px; }
+  .brand b { font-size: 16px; }
   .brand small { display: none; }
   .status { top: 14px; left: auto; right: 10px; transform: none; font-size: 12px; padding: 7px 11px; } /* 위 줄 오른쪽 */
   .ticker { display: none; }
