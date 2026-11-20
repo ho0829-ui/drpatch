@@ -41,6 +41,7 @@ def add_event(body: CalendarEventIn, request: Request) -> dict:
 
 
 @router.delete("/events/{event_id}", status_code=204)
-def delete_event(event_id: int, request: Request) -> None:
-    if not _calendar(request).delete_event(event_id):
+def delete_event(event_id: str, request: Request) -> None:
+    # 로컬 일정 id는 숫자, Google 일정 id는 문자열 — 어느 구현체든 같은 주소로 지운다
+    if not _calendar(request).delete_event(int(event_id) if event_id.isdigit() else event_id):
         raise HTTPException(status_code=404, detail="그런 일정이 없어요.")

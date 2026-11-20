@@ -192,7 +192,7 @@ Tool이 아니라 실행 흐름이 직접 한다 (`app/parsing/requirements.py`)
 | list_calendar_events | local | 점검 회차 날짜에 다른 일정이 있는지 알아야 할 때 | date_from, date_to | events[{id, title, date, start, end, source}] | INVALID_INPUT, CALENDAR_ERROR |
 | add_calendar_event | local | 확정한 계획을 일정으로 등록할 때 | plan_id (제목·시각은 서버가 저장된 계획에서 읽음) | event_id, title, date, start, end, created | PLAN_NOT_FOUND, CALENDAR_ERROR |
 
-- 구현체: `CalendarBackend` 인터페이스 → `LocalCalendar`(SQLite calendar_events 표). `.env`의 `CALENDAR_BACKEND=local`(기본) / `google`(교체용, OAuth 준비 후).
+- 구현체: `CalendarBackend` 인터페이스 → `LocalCalendar`(SQLite calendar_events 표). `.env`의 `CALENDAR_BACKEND=local`(기본) / `google`(`GoogleCalendar`, `app/calendar/google.py`: Calendar API v3를 `requests`로, `GOOGLE_CALENDAR_TOKEN` OAuth access token 필요 — 2026-11-20 추가, 실제 계정 연결은 미확인) / `off`. 두 구현체의 Tool 입출력이 같은지는 `tests/test_calendar_google.py`가 확인.
 - 판단 반영: 회차를 나눈 뒤 회차마다 그 날부터 7일 안의 일정을 조회 → 회차 시간대(없으면 하루 전체)와 겹치는 일정이 있으면 겹치지 않는 가장 가까운 다음 날로 옮기고 `moved_from`·"일정 충돌로 이동" 표시. 7일 안에 빈 날이 없으면 날짜는 그대로 두고 "일정 충돌" 경고.
   - 이 서비스가 등록한 일정(source=sudo-patch)은 충돌로 보지 않는다 (계획끼리 겹침은 /plans의 overlaps가 담당).
   - 조회 실패 → 날짜 그대로, `calendar_check: "확인 못 함"`. 캘린더가 꺼져 있으면 `"사용 안 함"`.

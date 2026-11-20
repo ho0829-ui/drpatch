@@ -1,6 +1,11 @@
-# 마지막 갱신: 2026-11-19 / 작성: Claude Code
+# 마지막 갱신: 2026-11-20 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-20] 셀프 체크리스트 점검 후 실패 5건 보완. 299 통과
+  - architecture.md §3: 그래프 노드 10개·분기를 코드(build_graph)에 맞춤
+  - scenario-check.md: 대표 요청 5유형 실서버 재검증(상한 도달 = Python 3.7 + idna 2.7, Tool 실패 = Ubuntu 99.04) + F3023 캘린더 켬/끔 비교표
+  - docs/logs/: 요청별 저장 실행 로그(GET /logs) 7건 = 실행 로그 샘플
+  - app/calendar/google.py: GoogleCalendar(Calendar API v3, requests, GOOGLE_CALENDAR_TOKEN) + tests/test_calendar_google.py(가짜 Google 서버로 로컬과 Tool 입출력 비교 5개). 실제 계정 연결은 안 함. DELETE /calendar/events/{id}는 문자열 id도 받음
 - [Claude Code 2026-11-19] README 첫 판(sudo-quest 형식) + docs/media(main.gif 1.4MB, 스크린샷 4장) — scripts/capture/readme_media.mjs로 다시 만듦(헤드리스 Chrome CDP + ffmpeg, 새 라이브러리 없음, 서버 8010 필요)
   - 고침: 곡반 OK 이름표 테두리 밖으로(tray.glb), 야간 근무표 끔(커튼에 가려짐 — 자리 정하면 SHOW_ROSTER), 낮은 품질 MSAA 끔·그림자 3프레임마다, ?debug=1 프레임 표시
   - 측정(Mac 헤드리스): 낮 16.7ms·밤 22.8ms, draw call ~205, 삼각형 ~440k → Windows 프레임 드랍 원인 후보는 삼각형 수(모델 분할 수 줄이기)·밤 조명. Windows 실측은 ?debug=1 값을 받아서

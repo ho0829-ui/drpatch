@@ -1,4 +1,4 @@
-# 아키텍처 (v1 · 2026-11-18)
+# 아키텍처 (v1.1 · 2026-11-20 — §3 그래프 노드를 코드에 맞춤)
 
 > 기준: docs/spec.md v1.7. 이 문서는 "어디에 무엇을 두고, 요청 하나가 어떻게 흐르는지"만 정한다. 규칙(목표 버전·재계획·회차)은 spec이 원본.
 
@@ -16,7 +16,7 @@ FastAPI (app/main.py) ── 화면 파일도 같은 서버(8000)가 내보냄 �
    └─ app/api/logs.py     /logs 조회·삭제          → app/db
                                    │
 app/agent (메인 Agent)             │ 이벤트 발행 (기다리지 않음)
-   ├─ graph.py   분석→되묻기→계획→Tool 호출→판단→재계획→응답
+   ├─ graph.py   분석→(되묻기 | Tool 계획→Tool 호출→판단→재계획→계획 만들기→응답 | 사실 조회 | 그 밖)  (§3)
    ├─ planner/   순수 함수: 목표 버전·우선순위·회차 나누기·Python 구하기 (LLM 안 씀)
    └─ app/tools  Tool 3종 + 레지스트리 (완료)
                                    ▼
@@ -54,17 +54,32 @@ web/
 
 ## 3. POST /chat 한 번의 흐름
 
+그래프 노드는 `app/agent/graph.py`의 `build_graph()`와 같다 (2026-11-20 코드 기준으로 맞춤). 노드 10개, 모든 노드는 시작·끝에 `step_start`/`step_end`를 발행한다.
+
+```
+START → analyze ─┬─ intent=plan, Tool 입력 빠짐 → ask → END
+                 ├─ intent=plan                → plan_tools → call_tools ─┬─ Tool 전부 실패 → END (안내)
+                 │                                                        └─ judge ─┬─ 위반 있음 → replan → build
+                 │                                                                  └─ 위반 없음 ──────────→ build → respond → END
+                 ├─ intent=fact                → fact → END
+                 ├─ intent=confirm·그 밖        → other → END
+                 └─ intent=error(LLM 실패)      → END (안내)
+```
+
 | 단계 (그래프 노드) | 누가 | 하는 일 | 발행 이벤트 |
 |---|---|---|---|
-| analyze | LLM | 의도 분류(계획 수립/사실 조회/확정/그 밖), OS·Python·N·날짜·간격 추출 → 세션 조건에 **바뀐 것만** 덮어씀 (F3005, F3010) | step_start/end, llm_decision |
-| ask | LLM | 빠진 입력이 있으면 Tool 부르지 않고 빠진 것만 되물음 → 끝 | step |
-| plan | LLM | 부를 Tool **종류와 순서**만 정함 (예: get_eol → get_vulns → get_package_versions) (F3006) | llm_decision(계획·이유) |
-| call_tools | 코드 | 계획을 패키지별로 펼쳐 병렬 호출(동시 4개), 실패는 "확인 못 함"으로 두고 진행 (F3007) | tool_call/tool_result(소요 시간) |
-| judge | 코드 | planner 순수 함수: 목표 버전, 위반 여부, 우선순위 (F3008) | step, judgment |
-| replan | 코드+LLM | 위반 있으면 Python 줄기 올려 get_eol·get_vulns. **이미 받은 결과 재사용**(요청 안 캐시). 상한 3회 (F3009) | replan(횟수·이유) |
-| respond | LLM | 회차별 계획 + 근거(Tool 결과) + 제외 사유 문장 (F3011) | step |
+| analyze | LLM | 의도 분류(plan/fact/confirm/other), OS·Python·N·날짜·간격 추출 → 세션 조건에 **바뀐 것만** 덮어씀 (F3005, F3010). LLM 실패면 intent=error로 안내하고 끝 | llm_decision(intent·이유) |
+| ask | 코드 | Tool 입력(파일·OS·Python)이 빠졌으면 Tool 부르지 않고 빠진 것만 정해진 문장으로 되물음 → 끝. 일정만 빠지면 ask로 가지 않고 우선순위부터 보여 줌 | — |
+| plan_tools | LLM | 부를 Tool **종류와 순서**만 정함 (예: get_eol → get_vulns → get_package_versions). LLM이 빠뜨린 필수 Tool은 코드가 덧붙이고 `added_by_code`로 남김 (F3006) | llm_decision(tool_plan·이유) |
+| call_tools | 코드 | 계획을 패키지별로 펼쳐 병렬 호출(동시 4개), 실패는 "확인 못 함"으로 두고 진행. 전부 실패하면 안내로 끝 (F3007) | tool_call/tool_result(ms·error_code) |
+| judge | 코드 | planner 순수 함수: 목표 버전(필요하면 목표 버전 취약점 재조회), 위반 여부, 우선순위 (F3008) | judgment |
+| replan | LLM+코드 | 위반 있으면 LLM은 방법(upgrade_python / hold)만 고르고, 코드가 Python 줄기를 올려 가며 get_eol·get_vulns. **같은 인자 호출은 요청 안 캐시로 재사용**. 상한 3회 (F3009, NF3004) | llm_decision(replan_strategy·이유), replan(회차·Python·이유) |
+| build | 코드 | 항목·우선순위·회차·날짜 계산, 캘린더 일정과 겹치면 회차 이동 (F3023) | plan_built, calendar_check (+ list_calendar_events tool_call/tool_result) |
+| respond | LLM | 회차별 계획 + 근거(Tool 결과) + 제외 사유 문장 (F3011). LLM 실패면 코드 문장(`fallback_text`) | — |
+| fact | LLM+코드 | 사실 조회("django 몇으로?"): 필요한 Tool을 부르고 계산은 코드, 문장만 LLM | tool_call/tool_result |
+| other | LLM / 코드 | confirm이면 고정 문장(저장은 API가 함), 그 밖(인사 등)은 Tool 없이 LLM 답 | — |
 
-- "확정해줘"는 그래프가 아니라 api가 직접 plans 표에 저장 (Tool 아님).
+- "확정해줘"는 그래프가 아니라 api가 직접 plans 표에 저장하고, 회차마다 `add_calendar_event` Tool로 캘린더에 등록 (F3015, F3023).
 - 세션 조건(패키지 목록·OS·Python·N·날짜·간격)은 sessions 표에 저장, API 결과는 저장 안 함 (spec Memory).
 
 ## 4. 이벤트와 로깅 Agent (F3012~F3013)

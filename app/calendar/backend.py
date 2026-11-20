@@ -97,7 +97,7 @@ def make_calendar(db_path: str | None = None) -> CalendarBackend | None:
     if kind == "local":
         return LocalCalendar(db_path)
     if kind == "google":
-        from app.calendar.google import GoogleCalendar  # 아직 없음: OAuth 준비 후 같은 인터페이스로 구현
+        from app.calendar.google import GoogleCalendar  # GOOGLE_CALENDAR_TOKEN(OAuth access token) 필요
 
         return GoogleCalendar()
     return None
