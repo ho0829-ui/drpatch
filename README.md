@@ -6,7 +6,7 @@ DR.PATCH(저장소 이름 sudo-patch)는 `pip freeze`로 만든 requirements.txt
 
 ![예시 고르기 → 보내기 → 처방(블리스터 3판) → 처방 확정](docs/media/main.gif)
 
-**▶️ 바로 써 보기: https://ho0829-ui.github.io/sudo-patch/** — 화면은 GitHub Pages, API는 운영자의 Mac에서 서버가 켜져 있을 때 동작합니다(꺼져 있으면 "서버에 닿지 않네요"). 파일이 없어도 **예시 차트** 10개로 바로 해 볼 수 있습니다. 배포 구성은 [배포 가이드](docs/deploy.md).
+**▶️ 바로 써 보기: https://ho0829-ui.github.io/drpatch/** — 화면은 GitHub Pages, API는 운영자의 Mac에서 서버가 켜져 있을 때 동작합니다(꺼져 있으면 "서버에 닿지 않네요"). 파일이 없어도 **예시 차트** 10개로 바로 해 볼 수 있습니다. 배포 구성은 [배포 가이드](docs/deploy.md).
 
 ## 무엇을 할 수 있나
 

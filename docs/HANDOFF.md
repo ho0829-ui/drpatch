@@ -1,6 +1,11 @@
 # 마지막 갱신: 2026-11-20 / 작성: Claude Code
 
 ## 지금 하던 것
+- [Claude Code 2026-11-20] 상호 점검 지적 2건 수정. 299 통과
+  - 취약점 0건이어도 get_package_versions로 PyPI에 패키지·버전이 있는지 확인 → 없으면 "확인 못 함"(PyPI에 없는 패키지/버전). 전에는 OSV 0건만 보고 "안전"이었음. spec 112줄 갱신, test_review_10 → test_zero_vulns_is_safe_only_if_package_and_version_exist_on_pypi
+  - 실서버 재확인: no-such-package-xyz-123 → unchecked, requests==9.9.9 → "PyPI에 없는 버전"
+  - 주의: 0건 패키지도 PyPI를 부르므로 패키지가 많으면 조회가 늘어남(130개 파일 응답 시간 다시 재 볼 것)
+  - README 바로 써 보기 주소 sudo-patch → drpatch (Pages 200 확인)
 - [Claude Code 2026-11-20] 셀프 체크리스트 점검 후 실패 5건 보완. 299 통과
   - architecture.md §3: 그래프 노드 10개·분기를 코드(build_graph)에 맞춤
   - scenario-check.md: 대표 요청 5유형 실서버 재검증(상한 도달 = Python 3.7 + idna 2.7, Tool 실패 = Ubuntu 99.04) + F3023 캘린더 켬/끔 비교표

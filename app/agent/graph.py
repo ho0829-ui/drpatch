@@ -20,7 +20,7 @@ from app.agent.planner.priority import sort_items
 from app.agent.planner.python_upgrade import UpgradePlan, candidate_versions, plan_python_upgrade
 from app.agent.planner.calendar_fit import SEARCH_DAYS, conflicts_on, find_free_date
 from app.agent.planner.rounds import RoundsResult, move_round, next_matching_date, split_rounds
-from app.agent.planner.versions import is_newer, pick_latest
+from app.agent.planner.versions import is_newer, parse_version, pick_latest
 from app.agent.render import conditions_header, fallback_text, plan_dict
 from app.agent.runner import Emit, ToolRunner, no_emit
 from app.agent.state import (
@@ -36,7 +36,7 @@ from app.agent.state import (
     tool_inputs_missing,
     normalize_python,
 )
-from app.tools.base import TIMEOUT, UPSTREAM_ERROR
+from app.tools.base import PACKAGE_NOT_FOUND, TIMEOUT, UPSTREAM_ERROR
 from app.tools.default import build_registry
 
 PLAN_TOOLS = ["get_eol", "get_vulns", "get_package_versions"]  # 계획 수립에 셋 다 필요
@@ -44,8 +44,24 @@ LLM_FAILED = "LLM 응답을 받지 못해 기본값을 썼어요"
 TOOLS_DOWN = "허허, 외부 진료 기록을 못 가져왔네요. 네트워크를 확인하고 잠시 후 다시 해 보시죠."
 
 
-def _has_vulns(result: dict | None) -> bool:
-    return bool(result and result["ok"] and result["data"]["count"] > 0)
+def _vulns_ok(result: dict | None) -> bool:
+    return bool(result and result["ok"])
+
+
+def _existence_problem(name: str, current: str, versions: dict | None) -> str | None:
+    """취약점 0건인 패키지가 PyPI에 정말 있는지. 없거나 확인 못 하면 "안전"이라 하지 않는다 (지어내지 않음).
+
+    OSV는 모르는 패키지도 0건으로 답하므로 0건만으로는 안전을 판단할 수 없다.
+    """
+    if not versions or not versions["ok"]:
+        if versions and versions["error"]["code"] == PACKAGE_NOT_FOUND:
+            return "PyPI에 없는 패키지"
+        return "패키지 정보를 확인하지 못함"
+    current_v = parse_version(current)
+    known = {parse_version(v["version"]) for v in versions["data"]["versions"]}
+    if current_v is None or current_v not in known:
+        return "PyPI에 없는 버전"
+    return None
 
 
 def _status(r: PackageResult) -> str:
@@ -178,9 +194,10 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
                 for p, r in zip(c.packages, runner.call_many(calls)):
                     results["vulns"][p["name"]] = r
             elif tool == "get_package_versions":
-                # 취약점을 먼저 조회했으면, 취약점이 있는 패키지만 버전 목록을 받는다 (0건·실패는 필요 없음)
+                # 취약점을 먼저 조회했으면, 조회에 성공한 패키지만 버전 목록을 받는다 (실패는 이미 "확인 못 함").
+                # 0건도 받는다: OSV는 없는 패키지도 0건이라, PyPI에 그 패키지·버전이 있는지 확인해야 "안전"이라 할 수 있다
                 if "get_vulns" in state["tool_plan"][: state["tool_plan"].index(tool)]:
-                    targets = [p for p in c.packages if _has_vulns(results["vulns"].get(p["name"]))]
+                    targets = [p for p in c.packages if _vulns_ok(results["vulns"].get(p["name"]))]
                 else:
                     targets = c.packages
                 calls = [("get_package_versions", {"name": p["name"]}) for p in targets]
@@ -206,10 +223,12 @@ def build_graph(brain: AgentBrain, runner: ToolRunner, emit: Emit = no_emit):
                 decided[name] = PackageResult(name, current, unchecked_reason="취약점 정보를 확인하지 못함")
                 continue
             severity = top_severity(vulns["data"]["vulns"])
-            if severity is None:
-                decided[name] = PackageResult(name, current)
-                continue
             versions = results["versions"].get(name)
+            if severity is None:
+                problem = _existence_problem(name, current, versions)
+                decided[name] = PackageResult(name, current, unchecked_reason=problem) if problem \
+                    else PackageResult(name, current)
+                continue
             if not versions or not versions["ok"]:
                 decided[name] = PackageResult(name, current, unchecked_reason="버전 정보를 확인하지 못함")
                 continue

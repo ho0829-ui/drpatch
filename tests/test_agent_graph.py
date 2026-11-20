@@ -322,12 +322,24 @@ def test_review_8_logs_explain_versions_and_order(transport):
     assert "업그레이드 다음 회차" in built["rule"]
 
 
-def test_review_10_safe_packages_skip_version_lookup(transport):
+def test_zero_vulns_is_safe_only_if_package_and_version_exist_on_pypi(transport):
+    """상호 점검(2026-11-20): PyPI에 없는 패키지가 OSV 0건이라 "안전"으로 나오던 것.
+
+    OSV는 모르는 패키지도 0건으로 답한다 → 0건이어도 PyPI에서 패키지·버전이 있는지 확인한 뒤에만 안전.
+    """
     t = transport()
-    file = Conditions(packages=[*EXAMPLE_FILE.packages, {"name": "requests-safe", "version": "1.0"}])
-    t.override["osv_requests-safe_1.0"] = (200, {})
-    run_agent("…", file, FakeBrain(EXAMPLE_MESSAGE), today=TODAY)
-    assert "pypi_requests-safe_all" not in t.calls
+    extra = [{"name": "requests", "version": "2.34.2"},         # 있는 패키지·버전, 0건 → 안전
+             {"name": "ghost-pkg-xyz", "version": "1.0"},       # PyPI에 없는 패키지
+             {"name": "django", "version": "9.9.9"}]            # 패키지는 있지만 없는 버전
+    file = Conditions(packages=[p for p in EXAMPLE_FILE.packages if p["name"] not in ("requests", "django")] + extra)
+    t.override["osv_ghost-pkg-xyz_1.0"] = (200, {})
+    t.override["osv_django_9.9.9"] = (200, {})
+    t.override["pypi_ghost-pkg-xyz_all"] = fixture("pypi_no_package")
+    out = run_agent("…", file, FakeBrain(EXAMPLE_MESSAGE), today=TODAY)
+    assert "pypi_ghost-pkg-xyz_all" in t.calls  # 0건이어도 존재 확인
+    assert out["plan"]["safe"] == ["requests"]
+    assert {(u["name"], u["reason"]) for u in out["plan"]["unchecked"]} >= {
+        ("ghost-pkg-xyz", "PyPI에 없는 패키지"), ("django", "PyPI에 없는 버전")}
 
 
 def test_review_9_user_message_reaches_replan_choice(transport):
